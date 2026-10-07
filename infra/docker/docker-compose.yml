@@ -1,0 +1,71 @@
+# HMN SaaS — local development infrastructure.
+#
+# Scope: PostgreSQL + Redis ONLY. No application services, no Cal.com (Phase 5+).
+#
+# Usage (from infra/docker):
+#   cp .env.example .env      # then set POSTGRES_PASSWORD
+#   docker compose up -d
+#   docker compose ps
+#
+# Credentials are read from infra/docker/.env, which is git-ignored.
+# Nothing in this file is used in production; production runs managed services.
+
+name: hmn-saas
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: hmn-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?missing POSTGRES_USER — copy .env.example to .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?missing POSTGRES_PASSWORD — copy .env.example to .env}
+      POSTGRES_DB: ${POSTGRES_DB:?missing POSTGRES_DB — copy .env.example to .env}
+      # Deterministic collation keeps index ordering identical across machines.
+      POSTGRES_INITDB_ARGS: '--encoding=UTF8'
+    ports:
+      # Loopback-only: never expose a dev database on the LAN.
+      - '127.0.0.1:${POSTGRES_PORT:-5432}:5432'
+    volumes:
+      # Named volume, not a Windows bind mount: avoids NTFS permission and I/O issues.
+      - hmn_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+    networks: [hmn-net]
+
+  redis:
+    image: redis:7-alpine
+    container_name: hmn-redis
+    restart: unless-stopped
+    command:
+      - redis-server
+      - --appendonly
+      - 'yes'
+      - --maxmemory-policy
+      - noeviction
+    ports:
+      - '127.0.0.1:${REDIS_PORT:-6379}:6379'
+    volumes:
+      - hmn_redisdata:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 5s
+    networks: [hmn-net]
+
+# `noeviction` is required by BullMQ: evicting keys under memory pressure would
+# silently drop queued jobs. Durability via AOF, since Redis also holds queue state.
+
+volumes:
+  hmn_pgdata:
+  hmn_redisdata:
+
+networks:
+  hmn-net:
+    driver: bridge

@@ -1,0 +1,26 @@
+{
+  "name": "@hmn/integrations",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Outbound integration adapters. Shell only: the SchedulingProvider port and CalAdapter arrive in Phase 5.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "tsc -b --clean"
+  },
+  "dependencies": {
+    "@hmn/domain": "*",
+    "@hmn/shared": "*"
+  }
+}

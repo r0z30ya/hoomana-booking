@@ -1,0 +1,45 @@
+{
+  "name": "hmn-saas",
+  "version": "0.1.0",
+  "private": true,
+  "description": "HMN SaaS — multi-tenant clinic CRM, scheduling, accounting and SMS platform",
+  "type": "module",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=24.0.0 <25.0.0",
+    "npm": ">=11.0.0"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "tsc -b && npm run build --workspace @hmn/web",
+    "clean": "tsc -b --clean && rm -rf apps/web/dist",
+    "typecheck": "tsc -b && npm run typecheck --workspace @hmn/web",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "npm run build && vitest run",
+    "test:watch": "vitest",
+    "prisma:generate": "npm run prisma:generate --workspace @hmn/db",
+    "dev:api": "npm run build && npm run dev --workspace @hmn/api",
+    "dev:worker": "npm run build && npm run dev --workspace @hmn/worker",
+    "dev:web": "npm run dev --workspace @hmn/web",
+    "infra:up": "docker compose -f infra/docker/docker-compose.yml up -d",
+    "infra:down": "docker compose -f infra/docker/docker-compose.yml down",
+    "infra:ps": "docker compose -f infra/docker/docker-compose.yml ps"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^26.6.4",
+    "eslint": "^10.12.0",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.9.9",
+    "tsx": "^4.23.15",
+    "typescript": "5.9.3",
+    "typescript-eslint": "^8.71.1",
+    "vitest": "^5.0.3"
+  }
+}

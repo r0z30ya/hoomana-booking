@@ -1,0 +1,24 @@
+// HMN SaaS — database schema.
+//
+// PHASE 2 SCOPE: connection only.
+//
+// This schema intentionally declares NO models. Phase 2 proves that client
+// generation and the database connection work end to end without committing to any
+// entity design ahead of review.
+//
+// Phase 3 adds users, tenants, tenant_memberships, subscription_plans,
+// tenant_subscriptions, domains and audit_logs — each tenant-owned table carrying a
+// tenant_id foreign key and index. No table is added here before that review.
+//
+// Note: Prisma 7 no longer accepts `url` inside the datasource block. The connection
+// string is supplied in prisma.config.ts (for CLI/migrate commands) and via the
+// driver adapter passed to PrismaClient (at runtime).
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}

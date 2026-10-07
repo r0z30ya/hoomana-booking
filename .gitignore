@@ -1,0 +1,38 @@
+# --- Secrets: never commit ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# --- Dependencies ---
+node_modules/
+.pnpm-store/
+
+# --- Build output ---
+dist/
+build/
+out/
+*.tsbuildinfo
+coverage/
+.vite/
+
+# --- Generated code (regenerate with `npm run prisma:generate`) ---
+packages/db/src/generated/
+
+# --- Tooling / OS ---
+.freebuff/
+.DS_Store
+Thumbs.db
+.eslintcache
+*.log
+npm-debug.log*
+logs/
+
+# --- Local infrastructure state ---
+infra/docker/data/
+
+# --- Legacy reference (read-only copy of the old WordPress plugin) ---
+# Kept locally for business-requirement extraction only. It is NOT part of the
+# new codebase and must never be treated as build input.
+legacy/

@@ -1,0 +1,7 @@
+node_modules
+dist
+coverage
+legacy
+package-lock.json
+infra/docker/.env
+**/src/generated
