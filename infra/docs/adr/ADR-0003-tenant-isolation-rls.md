@@ -1,6 +1,6 @@
 # ADR-0003 — Tenant isolation: PostgreSQL Row-Level Security with application-level scoping as defense in depth
 
-- **Status:** Accepted (project owner approved 2026-10-08; Phase 3 implemented and security-verified the same day — see the execution record at the end)
+- **Status:** Accepted (project owner approved 2026-10-08; Phase 3 implemented and security-verified the same day — see the execution record at the end; `hmn_platform` least-privilege follow-up applied the same day as migration `20261008000002_platform_least_privilege`)
 - **Date:** 2026-10-08
 - **Phase:** Pre-Phase-3 hardening (approved before any business schema exists)
 - **Deciders:** Project owner, Lead Developer
@@ -176,6 +176,43 @@ pool-reuse hazard structurally impossible. A type-level handle boundary converts
   atomically with the data access it describes. Platform _aggregates_ (counts,
   revenue rollups) prefer SQL views/functions marked `SECURITY DEFINER` owned by
   `hmn_migrator`, exposing numbers without exposing rows.
+- **Least privilege for `hmn_platform` (amended 2026-10-08; see the third bullet
+  for the change and the D5 rationale note below).** The platform role holds
+  **`SELECT` only** — on the seven application tables, and **no privilege at all**
+  on `_prisma_migrations`. It holds zero write privileges anywhere in `public`.
+  This is the minimum consistent with the platform operations D5 describes:
+  support and billing investigation are _reads_, and D5 already forbids writes to
+  global tables from non-migrator code paths. Read access is kept (rather than
+  dropped entirely) because the audited path is a read path, and because dropping
+  it would leave no way to exercise D5's mechanism at all — it is what security
+  test S7 uses to demonstrate that the audited `withTenantTx` path works over an
+  `hmn_platform` pool.
+  - The blanket Phase 3 grant
+    (`GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO hmn_platform`)
+    exceeded this in two ways. First, it covered `_prisma_migrations`, so an
+    operator using the platform connection could read migration history while the
+    runtime role is deliberately denied it (S6) — an access path D5 never granted;
+    verified live before the fix (3 bookkeeping rows readable as `hmn_platform`,
+    `permission denied` as `hmn_app`). Second, `ALL TABLES` was _latent_
+    over-privilege: had it run after tables existed it would have materialized
+    direct grants on each one, and a later migration that simply forgot to scope
+    its grants would have silently widened the role again.
+  - **No `SECURITY DEFINER` object was created, deliberately.** A `SECURITY
+DEFINER` aggregate function/view owned by `hmn_migrator` would have to be
+    written with its own `search_path` discipline, execution grants and test
+    coverage, and it is only justified once a real aggregate consumer exists. A
+    repository-wide search found `hmn_platform` referenced **only** in this ADR, the
+    env examples, the role-provisioning script and the security tests — never in
+    application code. Creating such an object now would add privileged, untested
+    surface area with no caller. D5's preference for `SECURITY DEFINER` aggregates
+    stands as the pattern to adopt when a platform reporting feature first appears,
+    and that change must ship with its own migration and tests.
+  - **Why narrowing is safe for D5 as written.** D5 says platform access _never
+    disables or circumvents RLS_ and that the privilege layer must not be the
+    enforcement mechanism. Keeping `SELECT` + RLS satisfies both: every read is
+    still filtered by `tenant_isolation`, and a context-less platform session
+    still sees zero rows. Nothing in D5 requires the platform role to hold write or
+    bookkeeping access.
 - **Tenant membership** (`tenant_memberships`) decides which `tenant_id` values a
   user may set as context; the _authorization_ of "may this user act on this tenant"
   happens in the application before `withTenantTx` is entered. RLS answers "which
@@ -187,6 +224,14 @@ pool-reuse hazard structurally impossible. A type-level handle boundary converts
 = "platform") makes bypass a one-line app bug and pollutes every policy with a
 special case. A separate role makes the privilege visible in `pg_roles`, auditable,
 and unusable by ordinary request handling even if the app tries.
+
+**Why the platform role's privileges are held to `SELECT`.** A separate role whose
+grants are blanket re-creates the same hazard one level down: the role is only as
+narrow as its privileges. Because writes are not part of any platform operation D5
+describes, and because the migration bookkeeping table is not application data at
+all, the enforceable statement of D5 is "`hmn_platform` reads application tables
+through RLS and can do nothing else." That is now a test assertion (S9), not a
+convention.
 
 ### D6 — Fail closed when tenant context is absent
 
@@ -240,7 +285,18 @@ platform path, which is loud and reviewed, not silent.
   `CREATE TABLE` for a tenant-owned table must be followed by `ENABLE ROW LEVEL
 SECURITY` and a fail-closed policy (D6 form) in the same file — i.e. **no
   tenant-owned table can exist in any environment without RLS enabled**, because the
-  migration that creates the table is the same one that protects it.
+  migration that creates the table is the same one that protects it. The lint has a
+  second half (added 2026-10-08) that guards the platform role's privileges at the
+  source: from migration `20261008000002_platform_least_privilege` onward, no
+  migration may grant `hmn_platform` a write privilege, use the schema-wide
+  `ON ALL TABLES` form for it, or grant it access to `_prisma_migrations`, and no
+  migration may give any `hmn_*` role `SUPERUSER` or `BYPASSRLS`. The historical
+  blanket grant in `20261008000000_init_phase3_foundation` is not edited (it is
+  already applied and migration history is append-only); its supersession is instead
+  _verified_ by the lint, which asserts the narrowing migration revokes
+  INSERT/UPDATE/DELETE on every table declared in `schema.prisma` and all four
+  privileges on `_prisma_migrations` — so an incomplete narrowing fails the build
+  rather than being trusted.
 - **Migrator credential isolation.** `DATABASE_URL` (the `hmn_migrator` connection
   string) exists only where the Prisma CLI reads it: `packages/db/prisma.config.ts`
   and the migration/CI environment. It is never placed in the API's or worker's
@@ -265,6 +321,12 @@ SECURITY` and a fail-closed policy (D6 form) in the same file — i.e. **no
   5. _Role capability_ — `hmn_app` cannot `CREATE TABLE` and cannot read
      platform-only tables; `hmn_platform` without explicit context sees zero rows
      (no silent bypass).
+  6. _Effective least privilege (added 2026-10-08)_ — `hmn_platform` holds `SELECT`
+     and nothing else on every application table, and **no** privilege on
+     `_prisma_migrations`; `hmn_app` retains SELECT-only on global tables and full
+     DML on tenant tables; none of the three roles is a superuser, holds
+     `BYPASSRLS`, or (other than `hmn_migrator`) owns a table; `pg_default_acl` is
+     empty, so future tables are not silently granted to anyone.
 
   These run against the real PostgreSQL from `docker compose` (already an
   ADR-0001 deliverable), not mocked. Unit tests of repository code inject an
@@ -298,8 +360,15 @@ SECURITY` and a fail-closed policy (D6 form) in the same file — i.e. **no
   inherent to running migrations at all; the mitigation is that migrations never run
   from request handling and `DATABASE_URL` never reaches the API/worker runtime.
 - **Follow-ups (Phase 3+).** `withTenantTx` and role provisioning in
-  `packages/db`; `hmn_platform` path only when a platform feature first needs it;
-  connection-string assertions at API startup; the migration-lint rule above.
+  `packages/db` (`DONE`); connection-string assertions at API startup (`DONE`); the
+  migration-lint rules above, including the platform-privilege lint (`DONE`);
+  platform-role least privilege (`DONE` — migration
+  `20261008000002_platform_least_privilege`). **Remaining:** adopt `SECURITY
+DEFINER` views/functions owned by `hmn_migrator` for platform _aggregate_
+  reporting when the first such feature exists, shipping with its own migration,
+  `search_path` discipline and tests; and write the first platform code path over
+  the audited `withTenantTx` mechanism, which then earns its own coverage beyond
+  the S7/S9 mechanism tests.
 
 ## Phase 3 security test plan (exact, to be executed before Phase 3 closes)
 
@@ -319,6 +388,9 @@ the `hmn_app` runtime role except where noted. Unit tests (U1–U3) need no data
 | U1  | Types   | Tenant-scoped repository method called with a raw client instead of a `TenantTx` handle    | TypeScript compile error                                 |
 | U2  | Helper  | `withTenantTx` given missing / non-UUID tenant ID                                          | Throws before any query executes                         |
 | U3  | Helper  | `withTenantTx` issues `set_config(..., is_local => true)` as first statement               | Asserted via query log/spy in unit test                  |
+| S9  | Roles   | Effective privileges: `hmn_platform` is SELECT-only, nothing on `_prisma_migrations`       | Least privilege held; no write anywhere                  |
+| S1b | Lint    | Offline source lint: platform-role grants, `ON ALL TABLES`, `SUPERUSER`/`BYPASSRLS`        | Build fails on regression (incl. parser self-test)       |
+| S1c | Lint    | Live catalogue: RLS enabled + effective policy has `NULLIF` on USING and WITH CHECK        | Definition, not just behaviour, is enforced              |
 
 ## Phase 3 execution record (2026-10-08)
 
@@ -329,19 +401,149 @@ tests run against the live RLS policies, not mocks. U1 is verified by `tsc -b`
 Run by the Phase 3 completion session after project-owner approval of this ADR and
 of the D6 pool-safety amendment (migration `20261008000001_rls_pool_safe_context`).
 
-| #   | Test                                                                                                | Result |
-| --- | --------------------------------------------------------------------------------------------------- | ------ |
-| S1  | Migration lint: every tenant-owned `CREATE TABLE` carries `ENABLE RLS` + fail-closed policy         | PASS   |
-| S2  | No context: reads return 0 rows, writes rejected on every tenant table                              | PASS   |
-| S3  | Tenant A context sees none of tenant B's rows (find, findUnique, raw count)                         | PASS   |
-| S4  | Tenant A cannot insert/update rows into tenant B (WITH CHECK)                                       | PASS   |
-| S5  | Pool reuse: no residual context, zero rows for a context-less query                                 | PASS   |
-| S6  | `hmn_app`: no CREATE TABLE, no migration-table read, no global-table writes                         | PASS   |
-| S7  | `hmn_platform` without context: 0 tenant rows, writes rejected; audited `withTenantTx` path works   | PASS   |
-| S8  | Runtime validator rejects `hmn_migrator`, accepts `hmn_app`, fails closed when unreachable          | PASS   |
-| U1  | Raw `PrismaClient` rejected where `TenantTx` is required (compile-time, branded handle)             | PASS   |
-| U2  | `withTenantTx` throws before any query on missing/non-UUID tenant IDs                               | PASS   |
-| U3  | `set_config('app.current_tenant_id', $1, true)` is the transaction's first statement, parameterized | PASS   |
+**Evidence types (distinct, not interchangeable).** `AUTOMATED` = asserted by a
+committed test that runs in `npm test` and fails the build on regression.
+`MANUAL` = a one-off observation made by an engineer against the live database
+during review; it is recorded for the audit trail but is **not** continuously
+enforced, and it is deliberately not presented as a passing test.
+
+| #   | Test                                                                                                | Result | Evidence  |
+| --- | --------------------------------------------------------------------------------------------------- | ------ | --------- |
+| S1  | Migration lint: every tenant-owned `CREATE TABLE` carries `ENABLE RLS` + fail-closed policy         | PASS   | AUTOMATED |
+| S2  | No context: reads return 0 rows, writes rejected on every tenant table                              | PASS   | AUTOMATED |
+| S3  | Tenant A context sees none of tenant B's rows (find, findUnique, raw count)                         | PASS   | AUTOMATED |
+| S4  | Tenant A cannot insert/update rows into tenant B (WITH CHECK)                                       | PASS   | AUTOMATED |
+| S5  | Pool reuse: no residual context, zero rows for a context-less query                                 | PASS   | AUTOMATED |
+| S6  | `hmn_app`: no CREATE TABLE, no migration-table read, no global-table writes                         | PASS   | AUTOMATED |
+| S7  | `hmn_platform` without context: 0 tenant rows, writes rejected; audited `withTenantTx` path works   | PASS   | AUTOMATED |
+| S8  | Runtime validator rejects `hmn_migrator`, accepts `hmn_app`, fails closed when unreachable          | PASS   | AUTOMATED |
+| U1  | Raw `PrismaClient` rejected where `TenantTx` is required (compile-time, branded handle)             | PASS   | AUTOMATED |
+| U2  | `withTenantTx` throws before any query on missing/non-UUID tenant IDs                               | PASS   | AUTOMATED |
+| U3  | `set_config('app.current_tenant_id', $1, true)` is the transaction's first statement, parameterized | PASS   | AUTOMATED |
 
 Full suite at close of Phase 3: 117/117 Vitest tests passing, `tsc -b` clean,
 ESLint clean, Prettier clean.
+
+## Migration execution history (actual, as recorded in `_prisma_migrations`)
+
+Recorded because the initial apply did **not** succeed first time, and the recovery
+is part of the audit trail. Read directly from `_prisma_migrations`; the log
+text contains no credentials or connection strings.
+
+| #   | Migration                                 | Started (UTC)                  | Outcome                                                         |
+| --- | ----------------------------------------- | ------------------------------ | --------------------------------------------------------------- |
+| 1   | `20261008000000_init_phase3_foundation`   | 2026-10-08 09:05:28            | **FAILED** — rolled back at 09:06:21, `applied_steps_count = 0` |
+| 2   | `20261008000000_init_phase3_foundation`   | 2026-10-08 09:06:24            | Applied in 0.245 s                                              |
+| 3   | `20261008000001_rls_pool_safe_context`    | 2026-10-08 10:39:07            | Applied in 0.039 s                                              |
+| 4   | `20261008000002_platform_least_privilege` | 2026-10-08 (Phase 3 follow-up) | Applied                                                         |
+
+The failure (#1) is recorded verbatim as:
+
+```text
+Database error code: 42501
+ERROR: permission denied for database hmn_saas
+DbError { severity: "ERROR", code: SqlState(E42501), message: "permission denied for database hmn_saas",
+  file: Some("aclchk.c"), line: Some(2843), routine: Some("aclcheck_error") }
+  ... sql_schema_connector::apply_migration::apply_script
+```
+
+**Interpretation and residual unknown.** The first attempt connected with a role that
+lacked `CREATE`/`TEMPORARY` on the database (or lacked `CREATE` on schema `public`),
+which is consistent with a connection made as `hmn_app` instead of `hmn_migrator` — the
+exact class of misconfiguration D7's startup probe exists to catch. The failure was
+fail-closed: `applied_steps_count = 0`, the transaction rolled back, and the
+subsequent attempt as the correct role applied cleanly. The failed row was **not**
+deleted or rewritten (that would be history tampering); Prisma recorded a new row for
+the successful attempt. It is **not** now an obstacle: `prisma migrate status` reports
+the schema up to date, and `migrate deploy` applies new migrations without a resolve
+step, which was confirmed by successfully applying `20261008000002`. What remains
+unknown is why a mistyped role was used for the first attempt; the ADR records
+`DATABASE_URL` must be the migrator's connection string and that the apply path is the
+Prisma CLI only.
+
+## Phase 3 security follow-up (2026-10-08): platform-role least privilege
+
+Trigger: the post-commit review of Phase 3 found that `hmn_platform` held
+`SELECT, INSERT, UPDATE, DELETE` on **every** table in `public`, including
+`_prisma_migrations`. Migration `20261008000002_platform_least_privilege` narrows
+this to `SELECT` on the seven application tables and nothing on the bookkeeping
+table. The option analysis and the decision rationale are in D5 above; the grants
+before and after are recorded here because they are the substance of the change.
+
+Granted privileges for `hmn_platform`, before and after (one row per table):
+
+| Table                  | Before                         | After    |
+| ---------------------- | ------------------------------ | -------- |
+| `users`                | SELECT, INSERT, UPDATE, DELETE | SELECT   |
+| `tenants`              | SELECT, INSERT, UPDATE, DELETE | SELECT   |
+| `subscription_plans`   | SELECT, INSERT, UPDATE, DELETE | SELECT   |
+| `tenant_memberships`   | SELECT, INSERT, UPDATE, DELETE | SELECT   |
+| `tenant_subscriptions` | SELECT, INSERT, UPDATE, DELETE | SELECT   |
+| `domains`              | SELECT, INSERT, UPDATE, DELETE | SELECT   |
+| `audit_logs`           | SELECT, INSERT, UPDATE, DELETE | SELECT   |
+| `_prisma_migrations`   | SELECT, INSERT, UPDATE, DELETE | **none** |
+
+`hmn_app` and `hmn_migrator` grants were not modified by this migration (verified
+after applying: `hmn_app` still SELECT-only on the three global tables and full DML on
+the four tenant tables; `hmn_migrator` still owns all eight tables and holds no
+`BYPASSRLS`). No role gained `BYPASSRLS`, `SUPERUSER`, or table ownership, and no RLS
+policy was disabled or altered.
+
+Weakness proven before the fix, then re-proven closed after it (**MANUAL** live
+observations, captured during the review):
+
+| Probe                                                             | Before fix                                     | After fix                                        |
+| ----------------------------------------------------------------- | ---------------------------------------------- | ------------------------------------------------ |
+| `SELECT count(*) FROM "_prisma_migrations"` as `hmn_platform`     | 3 rows returned                                | `permission denied for table _prisma_migrations` |
+| `INSERT` into `domains` as `hmn_platform` (no context)            | privilege present (RLS still rejected the row) | `permission denied for table domains`            |
+| `has_table_privilege('hmn_platform', 'public.domains', 'INSERT')` | `true`                                         | `false`                                          |
+
+Evidence after the fix:
+
+| #   | Check                                                                                                                                                                                      | Result | Evidence  |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------ | --------- |
+| S9  | `hmn_platform` effective privileges: SELECT-only, no writes anywhere, nothing on `_prisma_migrations`                                                                                      | PASS   | AUTOMATED |
+| S9  | `hmn_app` privilege shape unchanged (SELECT-only global, DML tenant)                                                                                                                       | PASS   | AUTOMATED |
+| S9  | No `hmn_*` role is superuser, holds `BYPASSRLS`, or (except migrator) owns a table                                                                                                         | PASS   | AUTOMATED |
+| S9  | `pg_default_acl` empty — future tables are not silently granted to any role                                                                                                                | PASS   | AUTOMATED |
+| S1c | Live `pg_policy`: RLS enabled on all tenant tables; effective USING **and** WITH CHECK contain the `NULLIF` empty-context safeguard                                                        | PASS   | AUTOMATED |
+| S1b | Offline source lint: no post-narrowing write/`ON ALL TABLES`/bookkeeping grant to `hmn_platform`; narrowing revokes all seven tables + bookkeeping; no `SUPERUSER`/`BYPASSRLS` for `hmn_*` | PASS   | AUTOMATED |
+| —   | Parser self-test: the lint's regexes match a representative statement and ignore commented-out SQL                                                                                         | PASS   | AUTOMATED |
+| —   | Both new tests are non-vacuous: re-granting `INSERT` and dropping the `domains` policy each made the suite fail, then were reverted                                                        | PASS   | MANUAL    |
+
+Full suite after the follow-up: **130/130 Vitest tests passing** across 18 files
+(was 117; +13 from S1b, S1c and S9), `tsc -b` clean, ESLint clean, Prettier clean.
+
+**Assumption corrected during the follow-up (recorded so it is not repeated).** The
+header comment of `20261008000002_platform_least_privilege` contains an inaccurate
+parenthetical: it claims PostgreSQL "recorded direct (non-inherited) per-table grants
+on all eight application tables" and that `REVOKE ... ON ALL TABLES` "would remove
+nothing for the existing tables." Both halves are wrong. A scratch probe on
+PostgreSQL 17 (inside a rolled-back transaction, with a throwaway role, since
+deleted) showed the actual behaviour: a `GRANT ... ON ALL TABLES` executed while
+tables **exist** materializes direct per-table grants (40 rows recorded for two
+scratch tables), and a matching `REVOKE ... ON ALL TABLES` **does** remove them.
+
+The operative facts are still consistent with this migration's design, which is why
+the grants are correct in the database:
+
+- The Phase 3 `GRANT ... ON ALL TABLES` ran **before any table existed**, so it
+  recorded **no** direct table grants and no default ACL. The later per-table grants
+  that `hmn_platform` actually held came from that same statement being resolved
+  against the tables that came into existence by the end of that migration — which
+  is why the narrowing migration had to name every table, as it does.
+- Because the statement ran before the tables existed, it also did not leave a
+  default privilege (`pg_default_acl` verified empty), so future tables are not
+  silently granted to `hmn_platform`. The assertion in the migration's
+  "post-migration enforcement" note therefore holds even though its explanation of
+  _why_ was wrong.
+
+**The migration file was deliberately NOT edited after application.** Correcting the
+comment would change the file's bytes, and the checksum recorded in
+`_prisma_migrations` is a SHA-256 over the file content
+(`40638ece44f961f2cc95ed350bd6ec24082b5d52c9b6233370d08cc99c17fe63`, verified to match
+the file on disk); editing an applied migration is prohibited by this ADR's own
+forward-only rule, even for a comment. The correction therefore lives here, in the
+authoritative document, and the file-vs-checksum invariant is intact. A future
+migration may supersede the policy/grants, but the applied file's text is
+immutable.
