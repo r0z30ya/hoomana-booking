@@ -71,6 +71,15 @@ describe('error taxonomy', () => {
     expect(error.details).toEqual({ field: 'email' });
   });
 
+  it('accepts an explicitly-undefined details property without coercion', () => {
+    // Under exactOptionalPropertyTypes, callers may still pass `details: undefined`
+    // deliberately (e.g. spread of an optional source object); the error must
+    // tolerate that and surface it as an absent property, not a crash.
+    const error = new ValidationError('spread source', { details: undefined });
+
+    expect(error.details).toBeUndefined();
+  });
+
   it('identifies AppError instances and rejects everything else', () => {
     expect(isAppError(new ConflictError())).toBe(true);
     expect(isAppError(new Error('plain'))).toBe(false);

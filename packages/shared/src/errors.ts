@@ -15,22 +15,22 @@ export interface AppErrorOptions {
   readonly code: string;
   readonly statusCode: number;
   readonly cause?: unknown;
-  readonly details?: Readonly<Record<string, unknown>>;
+  readonly details?: Readonly<Record<string, unknown>> | undefined;
   /** Override whether `message` may be returned to a client. */
-  readonly expose?: boolean;
+  readonly expose?: boolean | undefined;
 }
 
 export type ErrorSubclassOptions = {
-  readonly code?: string;
+  readonly code?: string | undefined;
   readonly cause?: unknown;
-  readonly details?: Readonly<Record<string, unknown>>;
-  readonly expose?: boolean;
+  readonly details?: Readonly<Record<string, unknown>> | undefined;
+  readonly expose?: boolean | undefined;
 };
 
 export class AppError extends Error {
   readonly code: string;
   readonly statusCode: number;
-  readonly details?: Readonly<Record<string, unknown>>;
+  readonly details?: Readonly<Record<string, unknown>> | undefined;
   readonly expose: boolean;
 
   constructor(options: AppErrorOptions) {
