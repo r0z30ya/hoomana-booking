@@ -1,3 +1,4 @@
+import { validateRuntimeDatabaseRole } from '@hmn/db';
 import {
   checkRedis,
   createLogger,
@@ -10,6 +11,11 @@ import { SYSTEM_QUEUE_NAME, createSystemQueue, createSystemWorker } from './queu
 
 async function main(): Promise<void> {
   const environment = loadEnvironment();
+
+  // ADR-0003 D7: refuse to boot on migration credentials or a role that can
+  // bypass tenant isolation, even though this process does not query the
+  // database yet — configuration must never silently carry privileged roles.
+  await validateRuntimeDatabaseRole({ connectionString: environment.DATABASE_APP_URL });
 
   const logger = createLogger({
     name: 'hmn-worker',

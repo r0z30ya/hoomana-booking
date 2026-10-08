@@ -23,12 +23,20 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:?missing POSTGRES_DB — copy .env.example to .env}
       # Deterministic collation keeps index ordering identical across machines.
       POSTGRES_INITDB_ARGS: '--encoding=UTF8'
+      # ADR-0003 D2: application database roles, provisioned by
+      # docker-entrypoint-initdb.d on first volume init (see ./initdb).
+      HMN_MIGRATOR_PASSWORD: ${HMN_MIGRATOR_PASSWORD:?missing HMN_MIGRATOR_PASSWORD — see .env.example}
+      HMN_APP_PASSWORD: ${HMN_APP_PASSWORD:?missing HMN_APP_PASSWORD — see .env.example}
+      HMN_PLATFORM_PASSWORD: ${HMN_PLATFORM_PASSWORD:?missing HMN_PLATFORM_PASSWORD — see .env.example}
     ports:
       # Loopback-only: never expose a dev database on the LAN.
       - '127.0.0.1:${POSTGRES_PORT:-5432}:5432'
     volumes:
       # Named volume, not a Windows bind mount: avoids NTFS permission and I/O issues.
       - hmn_pgdata:/var/lib/postgresql/data
+      # Role provisioning (ADR-0003 D2). Runs only on first volume initialisation;
+      # re-apply to an existing cluster with the command documented in the script.
+      - './initdb:/docker-entrypoint-initdb.d:ro'
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB']
       interval: 5s

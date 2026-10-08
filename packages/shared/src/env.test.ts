@@ -81,7 +81,8 @@ describe('loadEnvironment', () => {
       {
         NODE_ENV: 'test',
         LOG_LEVEL: undefined,
-        DATABASE_URL: 'postgresql://hmn:pw@127.0.0.1:5432/hmn_saas',
+        DATABASE_URL: 'postgresql://hmn_migrator:pw@127.0.0.1:5432/hmn_saas',
+        DATABASE_APP_URL: 'postgresql://hmn_app:pw@127.0.0.1:5432/hmn_saas',
         REDIS_URL: 'redis://127.0.0.1:6379',
       },
       () => {
@@ -119,7 +120,8 @@ describe('loadEnvironment', () => {
     const environment = loadEnvironment({
       searchForEnvFile: false,
       source: {
-        DATABASE_URL: 'postgresql://hmn:pw@127.0.0.1:5432/hmn_saas',
+        DATABASE_URL: 'postgresql://hmn_migrator:pw@127.0.0.1:5432/hmn_saas',
+        DATABASE_APP_URL: 'postgresql://hmn_app:pw@127.0.0.1:5432/hmn_saas',
         REDIS_URL: 'redis://127.0.0.1:6379',
       },
     });

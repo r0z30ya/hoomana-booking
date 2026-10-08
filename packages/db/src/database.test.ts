@@ -41,8 +41,10 @@ describe('database connectivity', () => {
   });
 });
 
-describe('phase 2 scope guard', () => {
-  it('creates no application tables — the schema is deliberately model-free', async ({ skip }) => {
+describe('phase 3 scope guard', () => {
+  it('exposes exactly the approved Phase 3 tables — no unapproved entity exists', async ({
+    skip,
+  }) => {
     const probe = await checkDatabase(client, 5_000);
     if (probe.status !== 'ok') {
       skip('PostgreSQL unreachable — run `npm run infra:up`.');
@@ -55,19 +57,19 @@ describe('phase 2 scope guard', () => {
       WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
     `;
 
-    const tableNames = tables.map((table) => table.table_name);
-
-    // These belong to Phase 3+. If one appears, an entity was added before review.
-    for (const forbidden of [
-      'users',
-      'tenants',
-      'tenant_memberships',
-      'subscription_plans',
-      'tenant_subscriptions',
-      'domains',
+    // The approved Phase 3 foundation plus Prisma's migration bookkeeping.
+    // Anything else means a table was added outside the reviewed schema.
+    const approvedTables = [
+      '_prisma_migrations',
       'audit_logs',
-    ]) {
-      expect(tableNames).not.toContain(forbidden);
-    }
+      'domains',
+      'subscription_plans',
+      'tenant_memberships',
+      'tenant_subscriptions',
+      'tenants',
+      'users',
+    ].sort();
+
+    expect(tables.map((table) => table.table_name).sort()).toEqual(approvedTables);
   });
 });

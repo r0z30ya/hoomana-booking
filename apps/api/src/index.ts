@@ -1,4 +1,4 @@
-import { checkDatabase, createDatabaseClient } from '@hmn/db';
+import { checkDatabase, createDatabaseClient, validateRuntimeDatabaseRole } from '@hmn/db';
 import { checkRedis, createLogger, createRedisClient, loadEnvironment } from '@hmn/shared';
 import { buildServer } from './server.js';
 
@@ -11,7 +11,11 @@ async function main(): Promise<void> {
     environment: environment.NODE_ENV,
   });
 
-  const database = createDatabaseClient({ connectionString: environment.DATABASE_URL });
+  // ADR-0003 D7: refuse to boot on migration credentials or a role that can
+  // bypass tenant isolation. Must run BEFORE the client is constructed.
+  await validateRuntimeDatabaseRole({ connectionString: environment.DATABASE_APP_URL });
+
+  const database = createDatabaseClient({ connectionString: environment.DATABASE_APP_URL });
   const redis = createRedisClient({
     url: environment.REDIS_URL,
     onError: (error) => {

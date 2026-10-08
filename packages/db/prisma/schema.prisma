@@ -1,18 +1,23 @@
-// HMN SaaS — database schema.
+// HMN SaaS — database schema (Phase 3: foundation).
 //
-// PHASE 2 SCOPE: connection only.
+// Models: users, tenants, tenant_memberships, subscription_plans,
+// tenant_subscriptions, domains, audit_logs. Nothing else — no business features.
 //
-// This schema intentionally declares NO models. Phase 2 proves that client
-// generation and the database connection work end to end without committing to any
-// entity design ahead of review.
+// Tenant isolation (ADR-0003): every tenant-owned table carries a `tenant_id`
+// foreign key plus an index. Row-Level Security is ENABLED and a fail-closed
+// policy is installed for every tenant-owned table in the SAME initial migration
+// that creates it (packages/db/prisma/migrations), because Prisma cannot declare
+// RLS in the schema — policies are versioned migration SQL.
 //
-// Phase 3 adds users, tenants, tenant_memberships, subscription_plans,
-// tenant_subscriptions, domains and audit_logs — each tenant-owned table carrying a
-// tenant_id foreign key and index. No table is added here before that review.
+// Role model (ADR-0003 D2):
+//   hmn_migrator  owns the tables and runs the migrations (Prisma CLI only).
+//   hmn_app       is a non-owner runtime role: unconditionally subject to RLS.
+//   hmn_platform  is a non-owner audited platform role: also subject to RLS.
 //
-// Note: Prisma 7 no longer accepts `url` inside the datasource block. The connection
-// string is supplied in prisma.config.ts (for CLI/migrate commands) and via the
-// driver adapter passed to PrismaClient (at runtime).
+// Connection strings: the Prisma CLI reads DATABASE_URL from prisma.config.ts
+// (hmn_migrator); runtime code connects via the driver adapter using
+// DATABASE_APP_URL (hmn_app). `url` is forbidden inside the datasource block
+// in Prisma 7.
 
 generator client {
   provider = "prisma-client"
@@ -21,4 +26,167 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+/// Platform-level and per-tenant role taxonomy (architecture decision, Phase 2).
+enum UserRole {
+  PLATFORM_OWNER
+  TENANT_ADMIN
+  DOCTOR
+  RECEPTION
+}
+
+/// Plan ladder for the feature/entitlement system.
+enum SubscriptionTier {
+  FREE
+  STARTER
+  PRO
+  BUSINESS
+  ENTERPRISE
+}
+
+/// Lifecycle of a tenant's subscription.
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+}
+
+// ---------------------------------------------------------------------------
+// Global tables (no RLS — readable platform-level data per ADR-0003 D5)
+// ---------------------------------------------------------------------------
+
+/// An account that can sign in (Phase 4+). Global: a user may belong to
+/// several tenants through tenant_memberships.
+model User {
+  id          String   @id @db.Uuid @default(dbgenerated("gen_random_uuid()"))
+  email       String   @unique @db.VarChar(320)
+  displayName String   @db.VarChar(200)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  memberships TenantMembership[]
+
+  @@map("users")
+}
+
+/// A clinic (tenant). Global routing row; tenant-owned data lives in tables
+/// that reference this one and are protected by RLS.
+model Tenant {
+  id        String   @id @db.Uuid @default(dbgenerated("gen_random_uuid()"))
+  name      String   @db.VarChar(200)
+  slug      String   @unique @db.VarChar(120)
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  memberships   TenantMembership[]
+  domains       Domain[]
+  subscriptions TenantSubscription[]
+  auditLogs     AuditLog[]
+
+  @@map("tenants")
+}
+
+/// The catalogue of plans. Global: identical for every tenant; a tenant's
+/// current choice lives in tenant_subscriptions (tenant-owned).
+model SubscriptionPlan {
+  id                  String           @id @db.Uuid @default(dbgenerated("gen_random_uuid()"))
+  tier                SubscriptionTier @unique
+  name                String           @db.VarChar(120)
+  maxUsers            Int
+  monthlyMessageUnits Int
+  isActive            Boolean          @default(true)
+  createdAt           DateTime         @default(now()) @db.Timestamptz(6)
+  updatedAt           DateTime         @default(now()) @updatedAt @db.Timestamptz(6)
+
+  subscriptions TenantSubscription[]
+
+  @@map("subscription_plans")
+}
+
+// ---------------------------------------------------------------------------
+// Tenant-owned tables (RLS enabled + fail-closed policy in the initial migration)
+// ---------------------------------------------------------------------------
+
+/// Links a user to a tenant with a role. Authorization ("may this user act on
+/// this tenant?") is decided here, read by the application BEFORE tenant context
+/// is set (ADR-0003 D5); RLS then enforces row visibility.
+model TenantMembership {
+  id        String    @id @db.Uuid @default(dbgenerated("gen_random_uuid()"))
+  tenantId  String    @db.Uuid
+  userId    String    @db.Uuid
+  role      UserRole
+  createdAt DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, userId])
+  @@index([userId])
+  @@map("tenant_memberships")
+}
+
+/// A tenant's subscription state. Billing logic arrives in a later phase; this
+/// is the schema foundation only.
+model TenantSubscription {
+  id                 String             @id @db.Uuid @default(dbgenerated("gen_random_uuid()"))
+  tenantId           String             @db.Uuid
+  planId             String             @db.Uuid
+  status             SubscriptionStatus @default(TRIALING)
+  currentPeriodStart DateTime           @default(now()) @db.Timestamptz(6)
+  currentPeriodEnd   DateTime           @db.Timestamptz(6)
+  cancelAtPeriodEnd  Boolean            @default(false)
+  createdAt          DateTime           @default(now()) @db.Timestamptz(6)
+  updatedAt          DateTime           @default(now()) @updatedAt @db.Timestamptz(6)
+
+  tenant Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  plan   SubscriptionPlan @relation(fields: [planId], references: [id])
+
+  @@index([tenantId])
+  @@map("tenant_subscriptions")
+}
+
+/// A custom hostname routed to a tenant (public site / booking links).
+model Domain {
+  id         String    @id @db.Uuid @default(dbgenerated("gen_random_uuid()"))
+  tenantId   String    @db.Uuid
+  hostname   String    @unique @db.VarChar(253)
+  isVerified Boolean   @default(false)
+  verifiedAt DateTime? @db.Timestamptz(6)
+  createdAt  DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt  DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@map("domains")
+}
+
+/// Security-relevant audit trail. Rows with a NULL tenant_id record
+/// platform-level actions and are readable by NO runtime role directly — they
+/// surface only through the audited platform path (ADR-0003 D5/D6): the policy
+/// compares tenant_id against the transaction-local context, so a NULL row is
+/// invisible to any session (fail closed).
+model AuditLog {
+  id         String    @id @db.Uuid @default(dbgenerated("gen_random_uuid()"))
+  tenantId   String?   @db.Uuid
+  actorUserId String?  @db.Uuid
+  actorRole  UserRole?
+  action     String    @db.VarChar(120)
+  targetType String?   @db.VarChar(120)
+  targetId   String?   @db.VarChar(120)
+  details    Json?
+  createdAt  DateTime  @default(now()) @db.Timestamptz(6)
+
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, createdAt])
+  @@map("audit_logs")
 }

@@ -12,6 +12,7 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
+    "@hmn/db": "*",
     "@hmn/shared": "*",
     "bullmq": "^6.3.11",
     "ioredis": "^6.0.0"

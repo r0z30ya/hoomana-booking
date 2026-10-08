@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { environmentSchema } from './env.js';
 
 const validInput = {
-  DATABASE_URL: 'postgresql://hmn:secret@127.0.0.1:5432/hmn_saas?schema=public',
+  DATABASE_URL: 'postgresql://hmn_migrator:secret@127.0.0.1:5432/hmn_saas?schema=public',
+  DATABASE_APP_URL: 'postgresql://hmn_app:secret@127.0.0.1:5432/hmn_saas?schema=public',
   REDIS_URL: 'redis://127.0.0.1:6379',
 };
 
@@ -49,6 +50,22 @@ describe('environmentSchema', () => {
 
   it('accepts a rediss:// URL so TLS deployments do not need a schema change', () => {
     const result = environmentSchema.safeParse({ ...validInput, REDIS_URL: 'rediss://cache:6379' });
+
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects a missing DATABASE_APP_URL — runtime has no fallback to migration credentials', () => {
+    const { DATABASE_APP_URL: _omitted, ...withoutAppUrl } = validInput;
+
+    expect(environmentSchema.safeParse(withoutAppUrl).success).toBe(false);
+  });
+
+  it('accepts an optional DATABASE_PLATFORM_URL for the audited platform path', () => {
+    const result = environmentSchema.safeParse({
+      ...validInput,
+      DATABASE_PLATFORM_URL:
+        'postgresql://hmn_platform:secret@127.0.0.1:5432/hmn_saas?schema=public',
+    });
 
     expect(result.success).toBe(true);
   });

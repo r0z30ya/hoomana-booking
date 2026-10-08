@@ -38,7 +38,12 @@ export const environmentSchema = z.object({
   API_HOST: z.string().min(1).default('127.0.0.1'),
   API_PORT: z.coerce.number().int().min(1).max(65_535).default(3001),
 
+  /** Migration credentials: Prisma CLI ONLY. Runtime processes reject them (ADR-0003 D7). */
   DATABASE_URL: z.url(),
+  /** API/worker runtime connection as the RLS-bound hmn_app role. */
+  DATABASE_APP_URL: z.url(),
+  /** Audited platform operations (hmn_platform). Optional: only ops/tests use it. */
+  DATABASE_PLATFORM_URL: z.url().optional(),
   REDIS_URL: z.url(),
 });
 
