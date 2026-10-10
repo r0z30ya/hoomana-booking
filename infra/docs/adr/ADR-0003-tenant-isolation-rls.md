@@ -168,14 +168,33 @@ pool-reuse hazard structurally impossible. A type-level handle boundary converts
   context-less session. Legitimate platform access to a tenant's data therefore
   goes through the _same_ transaction-context mechanism as ordinary code
   (`withTenantTx` over a separate `hmn_platform` pool) with the tenant ID chosen
-  explicitly per operation and written to `audit_logs` together with the acting
-  platform user, the target tenant, and the operation performed, inside the same
-  transaction. Isolation of the platform path is procedural (separate module
-  family per D4, code review, audit entries), not a database privilege: nothing
-  about `hmn_platform` weakens the policy layer, and the audit record is written
-  atomically with the data access it describes. Platform _aggregates_ (counts,
-  revenue rollups) prefer SQL views/functions marked `SECURITY DEFINER` owned by
-  `hmn_migrator`, exposing numbers without exposing rows.
+  explicitly per operation. Isolation of the platform path is procedural (separate
+  module family per D4, code review, audit entries), not a database privilege:
+  nothing about `hmn_platform` weakens the policy layer.
+- **Atomic administrative audit — architecture requirement, not yet implemented
+  (owner decision 2026-10-08).** Every platform access to tenant data must produce
+  an `audit_logs` record committed in the **same** transaction as that access, so
+  that if the audit write fails the whole operation rolls back. This requirement is
+  **retained in full**; it is **not implemented**, and it is deliberately not
+  satisfied by granting `hmn_platform` direct `INSERT` on `audit_logs`. Its
+  implementation is deferred to the platform-owner panel phase, where it must ship
+  with its own migration, the privileged-function gate recorded below, and tests.
+- **Platform authority must not come from tenant membership (owner decision
+  2026-10-08).** `PLATFORM_OWNER` currently sits in the `UserRole` enum that also
+  types `tenant_memberships.role`, so platform authority is presently expressible
+  through a tenant membership row. That is an architecture defect, not a design:
+  platform-level privilege must not be obtained through `tenant_memberships`. The
+  replacement identity model (its tables, enums and migration) is deferred to a
+  dedicated identity ADR in Phase 4; this ADR records only the prohibition.
+- **Multi-factor authentication is required for platform-owner sign-in (owner
+  decision 2026-10-08).** This is a product-architecture requirement; the MFA
+  mechanism, enrolment and recovery flow are specified in the Phase 4 identity ADR.
+- Platform _aggregates_ (counts, revenue rollups) are a **candidate** use for SQL
+  views/functions marked `SECURITY DEFINER` owned by `hmn_migrator`, exposing
+  numbers without exposing rows. This is a **possibility for the future, not an
+  architectural decision**: no such object exists today, none is created by this
+  phase, and one may be added only when a real consumer needs it and it is
+  explicitly approved.
 - **Least privilege for `hmn_platform` (amended 2026-10-08; see the third bullet
   for the change and the D5 rationale note below).** The platform role holds
   **`SELECT` only** — on the seven application tables, and **no privilege at all**
@@ -211,8 +230,10 @@ DEFINER` aggregate function/view owned by `hmn_migrator` would have to be
     disables or circumvents RLS_ and that the privilege layer must not be the
     enforcement mechanism. Keeping `SELECT` + RLS satisfies both: every read is
     still filtered by `tenant_isolation`, and a context-less platform session
-    still sees zero rows. Nothing in D5 requires the platform role to hold write or
-    bookkeeping access.
+    still sees zero rows. Nothing in D5 requires the platform role to hold
+    **direct** write or bookkeeping privileges; the retained administrative-audit
+    obligation above must be satisfied without granting the platform role direct
+    `INSERT` on `audit_logs`.
 - **Tenant membership** (`tenant_memberships`) decides which `tenant_id` values a
   user may set as context; the _authorization_ of "may this user act on this tenant"
   happens in the application before `withTenantTx` is entered. RLS answers "which
@@ -232,6 +253,42 @@ describes, and because the migration bookkeeping table is not application data a
 all, the enforceable statement of D5 is "`hmn_platform` reads application tables
 through RLS and can do nothing else." That is now a test assertion (S9), not a
 convention.
+
+**Future privileged-function gate — none built, none approved (2026-10-08).** If a
+future platform feature needs an audited write that `hmn_platform` must not perform
+directly, the candidate mechanism is a narrowly-scoped `SECURITY DEFINER` function
+owned by `hmn_migrator`. A `SECURITY DEFINER` object escalates privilege, so it is
+accepted only when all of the following ship in the same migration as the function:
+
+- `SECURITY DEFINER` with `OWNER = hmn_migrator`; the function is the single
+  sanctioned write path, and no other role writes the audit row.
+- An explicit, minimal `SET search_path` with fully schema-qualified identifiers, so
+  a caller-influenced `search_path` cannot select a shadowing object that then
+  executes with the definer's rights.
+- `REVOKE EXECUTE ON FUNCTION … FROM PUBLIC`, then `GRANT EXECUTE` to exactly the
+  role that needs it. PostgreSQL grants `EXECUTE` to `PUBLIC` by default and this is
+  not governed by table grants or `pg_default_acl` (verified on this cluster: a
+  function holding the default ACL is executable by `hmn_app`), so omitting the
+  revoke silently makes a privileged function callable by every runtime role.
+- No dynamic SQL: bound parameters only, never caller-controlled identifiers.
+- Validation of the acting user (must resolve to an active `users` row), the target
+  tenant (must equal the transaction's `app.current_tenant_id`), and the audited
+  action (allow-listed, so the audited surface is enumerable).
+- Atomicity: invoked inside the same `withTenantTx` unit of work, so the audit row
+  and the access commit or fail together — never a separate transaction, never
+  fire-and-forget.
+- Tests with real connector identities: the permitted role succeeds, every other
+  role is denied execution, invalid actor/tenant/action is rejected, a forced
+  audit-write failure rolls the operation back, and no cross-tenant row is returned.
+
+**Implementation note for the future implementer (verified 2026-10-08).** `audit_logs`
+is RLS-protected with `WITH CHECK ("tenantId" = …)` while `audit_logs."tenantId"` is
+nullable, and no table has `FORCE ROW LEVEL SECURITY`. A tenant-less (platform-level)
+audit row is therefore impossible for any runtime role today — `hmn_app`'s insert is
+rejected by the policy, and `hmn_platform` holds no `INSERT` at all — and is reachable
+only through an owner-privileged path or a deliberate, reviewed policy change. This is
+recorded because it determines why the deferred audit path cannot be implemented with
+`hmn_platform` or `hmn_app` alone.
 
 ### D6 — Fail closed when tenant context is absent
 
