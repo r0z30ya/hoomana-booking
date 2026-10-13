@@ -1,4 +1,5 @@
 import { checkDatabase, createDatabaseClient, validateRuntimeDatabaseRole } from '@hmn/db';
+import { createSmsProviderFromEnvironment, isSmsConfigured } from '@hmn/integrations';
 import { checkRedis, createLogger, createRedisClient, loadEnvironment } from '@hmn/shared';
 import { buildServer } from './server.js';
 
@@ -16,6 +17,9 @@ async function main(): Promise<void> {
   await validateRuntimeDatabaseRole({ connectionString: environment.DATABASE_APP_URL });
 
   const database = createDatabaseClient({ connectionString: environment.DATABASE_APP_URL });
+  const smsProvider = isSmsConfigured(environment)
+    ? createSmsProviderFromEnvironment(environment)
+    : undefined;
   const redis = createRedisClient({
     url: environment.REDIS_URL,
     onError: (error) => {
@@ -29,6 +33,20 @@ async function main(): Promise<void> {
     health: {
       database: () => checkDatabase(database),
       redis: () => checkRedis(redis),
+    },
+    auth: {
+      client: database,
+      cookieSecure: environment.NODE_ENV !== 'development',
+      // Without a wired SMS provider the code is only revealed outside production, so
+      // local runs stay testable and a production deployment fails loudly instead.
+      exposeOtpInResponse: environment.NODE_ENV !== 'production',
+      ...(smsProvider === undefined
+        ? {}
+        : {
+            otpSender: async (mobile: string, code: string) => {
+              await smsProvider.sendOtp({ to: mobile, code });
+            },
+          }),
     },
   });
 

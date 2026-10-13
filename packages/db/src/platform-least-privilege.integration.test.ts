@@ -9,8 +9,10 @@ import { checkDatabase, createDatabaseClient } from './database.js';
  * Two independent guarantees are checked against the real PostgreSQL, connecting as
  * the least-privilege runtime role `hmn_app`:
  *
- * 1. **Effective privileges.** `hmn_platform` must hold SELECT-only on the eight
- *    application tables and nothing at all on `_prisma_migrations`. The previous
+ * 1. **Effective privileges.** `hmn_platform` must hold SELECT-only on the
+ *    application tables — except the ADR-0004 fenced identity-secret tables
+ *    (`credentials`, `sessions`, `platform_mfa_factors`), where it must hold nothing
+ *    at all — and nothing at all on `_prisma_migrations`. The previous
  *    state (a blanket `GRANT ... ON ALL TABLES`, which had put INSERT/UPDATE/DELETE
  *    on every table and handed the platform role read access to the migration
  *    bookkeeping table) is exactly what migration
@@ -134,11 +136,35 @@ describe.skipIf(!dbAvailable)('S9 — platform role holds least privilege (ADR-0
     expect(tables.length).toBe(modelTables.length);
     expect([...tables].sort()).toEqual(modelTables);
 
-    for (const table of tables) {
+    // ADR-0004 D-C / A-4 fence (extended 2026-10-13): these identity tables deliberately
+    // receive no grant to hmn_platform at all (asserted negatively below), so the audited
+    // platform path can never read password hashes, session tokens, MFA secrets, one-time
+    // codes, or login-attempt identifiers and IPs.
+    const fencedTables = [
+      'auth_attempts',
+      'auth_otps',
+      'credentials',
+      'platform_mfa_factors',
+      'sessions',
+    ];
+
+    for (const table of tables.filter((candidate) => !fencedTables.includes(candidate))) {
       const rows = await app.$queryRaw<PrivilegeRow[]>`
         SELECT has_table_privilege('hmn_platform', 'public.' || quote_ident(${table}), 'SELECT') AS allowed
       `;
       expect(rows[0]?.allowed, `hmn_platform must retain SELECT on ${table}`).toBe(true);
+    }
+
+    for (const table of fencedTables) {
+      for (const privilege of PRIVILEGES_TO_AUDIT) {
+        const rows = await app.$queryRaw<PrivilegeRow[]>`
+          SELECT has_table_privilege('hmn_platform', 'public.' || quote_ident(${table}), ${privilege}) AS allowed
+        `;
+        expect(
+          rows[0]?.allowed,
+          `hmn_platform must hold no ${privilege} on the ADR-0004 fenced table ${table}`,
+        ).toBe(false);
+      }
     }
   });
 
@@ -170,11 +196,15 @@ describe.skipIf(!dbAvailable)('S9 — platform role holds least privilege (ADR-0
     expect(violations).toEqual([]);
   });
 
-  it('hmn_app stays SELECT-only on global tables and DML-capable on tenant tables (unchanged by the narrowing)', async () => {
-    const globalTables = ['users', 'tenants', 'subscription_plans'];
+  it('hmn_app: SELECT-only on the plan catalogue, SELECT+INSERT on identity tables, DML on tenant and auth tables, fenced from platform tables', async () => {
+    // ADR-0005 D-C: self-service registration creates users and tenants, so the
+    // runtime role holds INSERT on exactly these two global tables. Everything
+    // else on global tables stays SELECT-only.
+    const selectOnlyTables = ['subscription_plans'];
+    const selectAndInsertTables = ['users', 'tenants'];
     const tenantTables = ['tenant_memberships', 'tenant_subscriptions', 'domains', 'audit_logs'];
 
-    for (const table of globalTables) {
+    for (const table of selectOnlyTables) {
       const selectRows = await app.$queryRaw<PrivilegeRow[]>`
         SELECT has_table_privilege('hmn_app', 'public.' || quote_ident(${table}), 'SELECT') AS allowed
       `;
@@ -191,6 +221,29 @@ describe.skipIf(!dbAvailable)('S9 — platform role holds least privilege (ADR-0
       }
     }
 
+    for (const table of selectAndInsertTables) {
+      for (const privilege of ['SELECT', 'INSERT'] as const) {
+        const rows = await app.$queryRaw<PrivilegeRow[]>`
+          SELECT has_table_privilege('hmn_app', 'public.' || quote_ident(${table}), ${privilege}) AS allowed
+        `;
+        expect(rows[0]?.allowed, `hmn_app must hold ${privilege} on identity table ${table}`).toBe(
+          true,
+        );
+      }
+
+      // The ADR-0005 boundary: INSERT only. The runtime role never updates or
+      // deletes global identity rows — corrections go through the platform path.
+      for (const privilege of ['UPDATE', 'DELETE', 'TRUNCATE'] as const) {
+        const rows = await app.$queryRaw<PrivilegeRow[]>`
+          SELECT has_table_privilege('hmn_app', 'public.' || quote_ident(${table}), ${privilege}) AS allowed
+        `;
+        expect(
+          rows[0]?.allowed,
+          `hmn_app must not hold ${privilege} on identity table ${table}`,
+        ).toBe(false);
+      }
+    }
+
     for (const table of tenantTables) {
       for (const privilege of ['SELECT', 'INSERT', 'UPDATE', 'DELETE'] as const) {
         const rows = await app.$queryRaw<PrivilegeRow[]>`
@@ -199,6 +252,33 @@ describe.skipIf(!dbAvailable)('S9 — platform role holds least privilege (ADR-0
         expect(rows[0]?.allowed, `hmn_app must hold ${privilege} on tenant table ${table}`).toBe(
           true,
         );
+      }
+    }
+
+    // Phase 4 identity tables (ADR-0004 A-4): global by design yet app-writable,
+    // because the auth flows run as the tenant runtime role.
+    const appWritableGlobalTables = ['credentials', 'sessions', 'auth_attempts'];
+    for (const table of appWritableGlobalTables) {
+      for (const privilege of ['SELECT', 'INSERT', 'UPDATE', 'DELETE'] as const) {
+        const rows = await app.$queryRaw<PrivilegeRow[]>`
+          SELECT has_table_privilege('hmn_app', 'public.' || quote_ident(${table}), ${privilege}) AS allowed
+        `;
+        expect(rows[0]?.allowed, `hmn_app must hold ${privilege} on ${table}`).toBe(true);
+      }
+    }
+
+    // Platform authority must stay unreachable from the tenant runtime: no grant
+    // at all, not even SELECT (ADR-0004 D-A/D-C).
+    const appFencedTables = ['platform_admins', 'platform_mfa_factors'];
+    for (const table of appFencedTables) {
+      for (const privilege of PRIVILEGES_TO_AUDIT) {
+        const rows = await app.$queryRaw<PrivilegeRow[]>`
+          SELECT has_table_privilege('hmn_app', 'public.' || quote_ident(${table}), ${privilege}) AS allowed
+        `;
+        expect(
+          rows[0]?.allowed,
+          `hmn_app must hold no ${privilege} on platform table ${table}`,
+        ).toBe(false);
       }
     }
   });

@@ -28,7 +28,7 @@ export type JsonDetail =
 export interface RecordAuditEventInput {
   readonly tenantId: string;
   readonly actorUserId?: string;
-  readonly actorRole?: 'PLATFORM_OWNER' | 'TENANT_ADMIN' | 'DOCTOR' | 'RECEPTION';
+  readonly actorRole?: 'OWNER' | 'DOCTOR' | 'RECEPTION' | 'CUSTOM';
   readonly action: string;
   readonly targetType?: string;
   readonly targetId?: string;

@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from './App';
 
@@ -101,12 +101,30 @@ describe('App', () => {
     });
   });
 
-  it('renders the scaffolding copy and no unimplemented features', () => {
+  it('opens on the login screen with the Persian brand and no English scaffolding copy', () => {
     fetchMock.mockResolvedValue(jsonResponse({ status: 'ok' }));
 
     render(<App />);
 
-    expect(screen.getByRole('heading', { name: 'HMN SaaS' })).toBeInTheDocument();
+    // The owner removed the English masthead; the screen is Persian-first.
+    expect(screen.queryByText('HMN SaaS')).not.toBeInTheDocument();
+    expect(screen.getByText('هومانا')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'ورود به پنل' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /sign in/i })).not.toBeInTheDocument();
+  });
+
+  it('leads from the login footer to the plans screen and then to signup', () => {
+    fetchMock.mockResolvedValue(jsonResponse({ status: 'ok' }));
+
+    render(<App />);
+
+    // The owner asked for both "free demo" and "signup" to open the comparison page.
+    fireEvent.click(screen.getByRole('button', { name: 'ثبت‌نام رایگان' }));
+    expect(screen.getByText('پکیج‌های هومانا')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'کلینیک' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'شروع دورهٔ آزمایشی' }));
+    expect(screen.getByLabelText('شمارهٔ موبایل')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'دریافت کد تأیید' })).toBeInTheDocument();
   });
 });

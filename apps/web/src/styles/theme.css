@@ -1,0 +1,766 @@
+/*
+ * HMN design language — extracted from the owner-approved references
+ * (`infra/docs/design/style-reference/panel.html` and `login.html`).
+ *
+ * Plain CSS with custom properties on purpose: the references use Tailwind from a
+ * CDN, and this file is the least invasive way to make the *same* visual language
+ * real in the product without committing to a UI library yet (see
+ * `infra/docs/design/style-reference/README.md` section 6).
+ */
+
+:root {
+  --bg: #e9e5dd;
+  --ink: #2e2b26;
+  --sub: #7a756b;
+  --sd: #c9c3b6;
+  --sl: #ffffff;
+  --bar: rgba(46, 43, 38, 0.13);
+  --accent: #0d9488;
+  --accent-2: #14b8a6;
+  --danger: #dc2626;
+  --danger-bg: rgba(239, 68, 68, 0.14);
+}
+
+[data-theme='dark'] {
+  --bg: #262421;
+  --ink: #ede9e1;
+  --sub: #a09a8e;
+  --sd: #1d1b18;
+  --sl: #32302b;
+  --bar: rgba(237, 233, 225, 0.13);
+  --danger: #f87171;
+  --danger-bg: rgba(239, 68, 68, 0.2);
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: Vazirmatn, 'Segoe UI', Tahoma, system-ui, sans-serif;
+  transition:
+    background 0.3s,
+    color 0.3s;
+}
+
+::selection {
+  background: rgba(13, 148, 136, 0.25);
+}
+
+button {
+  font-family: inherit;
+}
+
+.t-sub {
+  color: var(--sub);
+}
+
+/* --- neumorphic surfaces ------------------------------------------------- */
+
+.neu {
+  background: var(--bg);
+  box-shadow:
+    9px 9px 20px var(--sd),
+    -9px -9px 20px var(--sl);
+  transition:
+    box-shadow 0.25s,
+    transform 0.25s;
+}
+
+.neu-sm {
+  background: var(--bg);
+  box-shadow:
+    5px 5px 12px var(--sd),
+    -5px -5px 12px var(--sl);
+  transition: 0.2s;
+}
+
+.neu-in {
+  background: var(--bg);
+  box-shadow:
+    inset 5px 5px 10px var(--sd),
+    inset -5px -5px 10px var(--sl);
+}
+
+.press:active {
+  transform: translateY(0);
+  box-shadow:
+    inset 4px 4px 10px var(--sd),
+    inset -4px -4px 10px var(--sl);
+}
+
+.cta {
+  background: linear-gradient(135deg, var(--accent-2), var(--accent));
+  color: #fff;
+  box-shadow:
+    6px 6px 14px var(--sd),
+    -6px -6px 14px var(--sl),
+    0 8px 24px rgba(13, 148, 136, 0.35);
+  transition: 0.25s;
+}
+
+.cta:hover:not(:disabled) {
+  filter: brightness(1.06);
+  transform: translateY(-2px);
+}
+
+.cta:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+/* --- login shell --------------------------------------------------------- */
+
+.auth-shell {
+  position: relative;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  overflow: hidden;
+}
+
+.auth-wrap {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 420px;
+}
+
+.glow {
+  position: fixed;
+  border-radius: 9999px;
+  filter: blur(110px);
+  pointer-events: none;
+  opacity: 0.22;
+  z-index: 0;
+}
+
+[data-theme='dark'] .glow {
+  opacity: 0.1;
+}
+
+.glow-teal {
+  width: 480px;
+  height: 480px;
+  background: var(--accent-2);
+  top: -160px;
+  left: -140px;
+}
+
+.glow-amber {
+  width: 420px;
+  height: 420px;
+  background: #f59e0b;
+  bottom: -160px;
+  right: -140px;
+  opacity: 0.16;
+}
+
+.auth-card {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  border-radius: 36px;
+  padding: 32px 28px;
+}
+
+/* --- brand + logo -------------------------------------------------------- */
+
+.brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 28px;
+  text-align: center;
+}
+
+.beat-host {
+  cursor: pointer;
+}
+
+.brand-fa {
+  margin: 16px 0 0;
+  font-size: 24px;
+  font-weight: 900;
+}
+
+.brand-en {
+  margin: 4px 0 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--sub);
+}
+
+.brand-sub {
+  margin: 6px 0 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sub);
+}
+
+.pulse {
+  stroke-dasharray: 70;
+  stroke-dashoffset: 70;
+  animation: draw 1.2s 0.5s ease forwards;
+}
+
+.beat {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.beat-host:hover .beat {
+  animation: hb 1s ease infinite;
+}
+
+@keyframes draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes hb {
+  25% {
+    transform: scaleY(1.55);
+  }
+  55% {
+    transform: scaleY(0.85);
+  }
+  80% {
+    transform: scaleY(1.2);
+  }
+}
+
+/* --- fields -------------------------------------------------------------- */
+
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.field-label {
+  display: block;
+  margin: 0 0 8px 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--sub);
+}
+
+.field-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-radius: 16px;
+  padding: 0 16px;
+  transition: box-shadow 0.2s;
+}
+
+/* Focus: the inset stays, plus an inner teal ring (reference `login.html`). */
+.fld:focus-within {
+  box-shadow:
+    inset 5px 5px 10px var(--sd),
+    inset -5px -5px 10px var(--sl),
+    0 0 0 2px rgba(13, 148, 136, 0.45);
+}
+
+.field-input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  padding: 14px 0;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.field-input::placeholder {
+  color: var(--sub);
+  font-weight: 400;
+}
+
+.ltr {
+  direction: ltr;
+  text-align: left;
+}
+
+.field-input-area {
+  padding: 12px 0;
+  min-height: 54px;
+  resize: vertical;
+  font-size: 13.5px;
+}
+
+.icon-btn {
+  flex-shrink: 0;
+  border: 0;
+  background: transparent;
+  padding: 2px;
+  cursor: pointer;
+  color: var(--sub);
+  display: grid;
+  place-items: center;
+}
+
+.icon-btn:hover {
+  color: var(--accent);
+}
+
+.icon-dim {
+  opacity: 0.45;
+}
+
+/* --- remember me / links ------------------------------------------------- */
+
+.row-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4px;
+  margin-top: 16px;
+}
+
+.remember {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--sub);
+  cursor: pointer;
+}
+
+.cbx {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 7px;
+  cursor: pointer;
+  flex-shrink: 0;
+  background: var(--bg);
+  box-shadow:
+    inset 3px 3px 6px var(--sd),
+    inset -3px -3px 6px var(--sl);
+  transition: 0.2s;
+  position: relative;
+}
+
+.cbx:checked {
+  background: linear-gradient(135deg, var(--accent-2), var(--accent));
+  box-shadow:
+    2px 2px 6px var(--sd),
+    -2px -2px 6px var(--sl);
+}
+
+.cbx:checked::after {
+  content: '✓';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.link-btn {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--accent);
+  transition: opacity 0.2s;
+}
+
+.link-btn:hover {
+  opacity: 0.7;
+}
+
+/* --- actions ------------------------------------------------------------- */
+
+.btn-cta {
+  width: 100%;
+  margin-top: 22px;
+  border: 0;
+  border-radius: 16px;
+  padding: 16px 18px;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.btn-cta:disabled {
+  opacity: 0.72;
+  cursor: progress;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 24px 0;
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  height: 1px;
+  flex: 1;
+  background: var(--bar);
+}
+
+.divider span {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--sub);
+}
+
+.ghost-btn {
+  width: 100%;
+  border: 0;
+  border-radius: 16px;
+  padding: 13px 16px;
+  cursor: pointer;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--sub);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.ghost-btn:hover {
+  color: var(--accent);
+}
+
+.footer-note {
+  margin: 26px 0 0;
+  text-align: center;
+  font-size: 12px;
+  color: var(--sub);
+}
+
+.theme-float {
+  position: fixed;
+  z-index: 4;
+  top: 18px;
+  left: 18px;
+}
+
+.footer-note-tight {
+  margin-top: 10px;
+}
+
+/* --- plans / comparison ------------------------------------------------- */
+
+.plans-shell {
+  position: relative;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+.plans-wrap {
+  position: relative;
+  z-index: 2;
+  max-width: 1060px;
+  margin: 0 auto;
+  padding: 28px 20px 60px;
+}
+
+.plans-head {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.plans-cards {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: 1fr;
+}
+
+/* The owner asked for the three plans side by side on desktop. */
+@media (min-width: 720px) {
+  .plans-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1000px) {
+  .plans-cards {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.plan {
+  border-radius: 28px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+}
+
+.plan-popular {
+  box-shadow:
+    9px 9px 20px var(--sd),
+    -9px -9px 20px var(--sl),
+    0 0 0 2px var(--accent);
+}
+
+.plan-badge {
+  align-self: flex-start;
+  font-size: 11.5px;
+  font-weight: 800;
+  padding: 5px 13px;
+  border-radius: 9999px;
+  background: var(--bar);
+  color: var(--sub);
+}
+
+.plan-badge-ok {
+  background: rgba(16, 185, 129, 0.16);
+  color: #059669;
+}
+
+[data-theme='dark'] .plan-badge-ok {
+  color: #34d399;
+}
+
+.plan h2 {
+  margin: 14px 0 6px;
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.plan-lead {
+  margin: 0 0 14px;
+  color: var(--sub);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.9;
+}
+
+.plan-price {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--sub);
+  margin-bottom: 16px;
+}
+
+.plan-features {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 22px;
+  display: grid;
+  gap: 10px;
+}
+
+.plan-features li {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.tick {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 7px;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 900;
+  background: rgba(16, 185, 129, 0.16);
+  color: #059669;
+}
+
+.tick-off {
+  background: var(--bar);
+  color: var(--sub);
+}
+
+[data-theme='dark'] .tick {
+  color: #34d399;
+}
+
+.plan-btn {
+  margin-top: auto;
+  border-radius: 16px;
+  padding: 14px;
+  font-size: 14.5px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.plans-section-title {
+  margin: 44px 0 14px;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.plans-table-card {
+  border-radius: 24px;
+  padding: 8px 6px;
+  overflow-x: auto;
+}
+
+.plans-table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 720px;
+}
+
+.plans-table th,
+.plans-table td {
+  padding: 13px 16px;
+  text-align: right;
+  font-size: 13.5px;
+}
+
+.plans-table thead th {
+  font-size: 12px;
+  color: var(--sub);
+  font-weight: 800;
+}
+
+.plans-table th:not(:first-child),
+.plans-table td:not(:first-child) {
+  text-align: center;
+  width: 150px;
+}
+
+.plans-table tbody tr {
+  border-top: 1px solid var(--bar);
+}
+
+.plans-table tr.plans-group td {
+  background: var(--bar);
+  font-weight: 900;
+  font-size: 12.5px;
+}
+
+.cell-yes {
+  color: #059669;
+  font-weight: 900;
+}
+
+.cell-no {
+  color: var(--sub);
+}
+
+[data-theme='dark'] .cell-yes {
+  color: #34d399;
+}
+
+.plans-note {
+  margin-top: 22px;
+  color: var(--sub);
+  font-size: 12.5px;
+  line-height: 2;
+}
+
+.plans-back {
+  display: flex;
+  justify-content: center;
+  margin-top: 26px;
+}
+
+.theme-btn {
+  width: 46px;
+  height: 46px;
+  padding: 0;
+  border: 0;
+  border-radius: 16px;
+  cursor: pointer;
+  color: var(--sub);
+  display: grid;
+  place-items: center;
+  line-height: 0;
+}
+
+.theme-btn:hover {
+  color: var(--accent);
+}
+
+/* --- messages ------------------------------------------------------------ */
+
+.alert {
+  margin: 0 0 16px;
+  border-radius: 14px;
+  padding: 11px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.notice {
+  margin: 0 0 16px;
+  border-radius: 14px;
+  padding: 11px 14px;
+  font-size: 12.5px;
+  font-weight: 700;
+  background: var(--bar);
+  color: var(--sub);
+}
+
+.shake {
+  animation: shake 0.4s;
+}
+
+@keyframes shake {
+  20%,
+  60% {
+    transform: translateX(-6px);
+  }
+  40%,
+  80% {
+    transform: translateX(6px);
+  }
+}
+
+/* --- session view -------------------------------------------------------- */
+
+.session-name {
+  margin: 4px 0 20px;
+  font-size: 20px;
+  font-weight: 900;
+  text-align: center;
+}
+
+/* --- server status chip -------------------------------------------------- */
+
+.status-chip {
+  position: fixed;
+  z-index: 3;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--sub);
+  background: var(--bar);
+}

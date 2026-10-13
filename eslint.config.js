@@ -44,7 +44,7 @@ export default tseslint.config(
     // They must never reach the raw client factory or the generated client, and
     // must never import the platform repository family.
     files: ['packages/db/src/repositories/**/*.ts'],
-    ignores: ['packages/db/src/repositories/platform/**'],
+    ignores: ['packages/db/src/repositories/platform/**', 'packages/db/src/repositories/identity/**'],
     rules: {
       'no-restricted-imports': [
         'error',

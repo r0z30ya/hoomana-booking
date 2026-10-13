@@ -11,8 +11,7 @@ import { defineConfig } from 'vitest/config';
  * is why the root `test` script builds before running. Tests therefore exercise the
  * same artifacts that run in production rather than raw source.
  *
- * `packages/domain` and `packages/integrations` have no config: they contain no
- * implementation yet (Phase 3+).
+ * `packages/domain` has no config: it contains no implementation yet (Phase 3+).
  */
 export default defineConfig({
   test: {
@@ -20,6 +19,7 @@ export default defineConfig({
       'packages/validation',
       'packages/shared',
       'packages/db',
+      'packages/integrations',
       'apps/api',
       'apps/worker',
       'apps/web',

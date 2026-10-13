@@ -32,12 +32,17 @@ datasource db {
 // Enums
 // ---------------------------------------------------------------------------
 
-/// Platform-level and per-tenant role taxonomy (architecture decision, Phase 2).
+/// Per-tenant role taxonomy (ADR-0004 D-A/D-B, owner-approved 2026-10-12):
+/// `PLATFORM_OWNER` and the separate `TENANT_ADMIN` are removed — platform
+/// authority now lives only in `platform_admins`, and the in-clinic `OWNER`
+/// carries administration.
 enum UserRole {
-  PLATFORM_OWNER
-  TENANT_ADMIN
+  OWNER
   DOCTOR
   RECEPTION
+  /// Manager-created user whose access is exactly the per-module set stored in
+  /// `tenant_memberships.permissions` (never a fixed default). Added 2026-10-12.
+  CUSTOM
 }
 
 /// Plan ladder for the feature/entitlement system.
@@ -65,13 +70,20 @@ enum SubscriptionStatus {
 /// several tenants through tenant_memberships.
 model User {
   id          String   @id @db.Uuid @default(dbgenerated("gen_random_uuid()"))
-  email       String   @unique @db.VarChar(320)
+  /// Optional profile field only — the product has no email service, so email
+  /// is never a channel (ADR-0004 A-2 amendment, 2026-10-12).
+  email       String?  @unique @db.VarChar(320)
+  /// Login identifier for clinic staff; patients book without an account.
+  mobile      String?  @unique @db.VarChar(20)
   displayName String   @db.VarChar(200)
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now()) @db.Timestamptz(6)
   updatedAt   DateTime @default(now()) @updatedAt @db.Timestamptz(6)
 
-  memberships TenantMembership[]
+  memberships   TenantMembership[]
+  credential    Credential?
+  platformAdmin PlatformAdmin?
+  sessions      Session[]
 
   @@map("users")
 }
@@ -82,6 +94,9 @@ model Tenant {
   id        String   @id @db.Uuid @default(dbgenerated("gen_random_uuid()"))
   name      String   @db.VarChar(200)
   slug      String   @unique @db.VarChar(120)
+  /// Collected right after OTP signup (owner decision 2026-10-13).
+  address   String?  @db.VarChar(500)
+  city      String?  @db.VarChar(120)
   createdAt DateTime @default(now()) @db.Timestamptz(6)
   updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(6)
 
@@ -89,6 +104,7 @@ model Tenant {
   domains       Domain[]
   subscriptions TenantSubscription[]
   auditLogs     AuditLog[]
+  sessions      Session[]
 
   @@map("tenants")
 }
@@ -111,6 +127,131 @@ model SubscriptionPlan {
 }
 
 // ---------------------------------------------------------------------------
+// Phase 4 identity tables (ADR-0004, owner-approved 2026-10-12) — global, no RLS
+//
+// Global on purpose (ADR-0004 A-4): a session must exist before a tenant is
+// chosen and may span several memberships, so there is no tenant_id to filter
+// and RLS has nothing to enforce. That is a recorded decision — access is
+// controlled by explicit per-table grants in the creating migration plus
+// application checks (ADR-0003 review rule: "no tenantId" alone is not enough).
+// ---------------------------------------------------------------------------
+
+/// The only expression of platform-owner authority (ADR-0004 D-A). A platform
+/// session is recognised by joining this table — never by tenant membership.
+model PlatformAdmin {
+  id          String   @id @db.Uuid @default(dbgenerated("gen_random_uuid()"))
+  userId      String   @unique @db.Uuid
+  mfaEnrolled Boolean  @default(false)
+  createdAt   DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  user    User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  factors PlatformMfaFactor[]
+
+  @@map("platform_admins")
+}
+
+/// MFA material for platform sign-in (ADR-0004 D-A). Two row shapes, enforced by
+/// a CHECK constraint in the migration: `TOTP` (AES-256-GCM ciphertext with a
+/// fresh 12-byte IV, `AAD = userId || factorId`, `keyVersion` for rotation) and
+/// `RECOVERY` (single-use code stored only as a SHA-256 hash).
+model PlatformMfaFactor {
+  id               String    @id @db.Uuid @default(dbgenerated("gen_random_uuid()"))
+  platformAdminId  String    @db.Uuid
+  kind             String    @db.VarChar(20)
+  secretCiphertext Bytes?
+  secretIv         Bytes?
+  secretAuthTag    Bytes?
+  keyVersion       Int?
+  codeHash         String?   @db.VarChar(64)
+  usedAt           DateTime? @db.Timestamptz(6)
+  createdAt        DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt        DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
+
+  platformAdmin PlatformAdmin @relation(fields: [platformAdminId], references: [id], onDelete: Cascade)
+
+  @@index([platformAdminId])
+  @@map("platform_mfa_factors")
+}
+
+/// Password credential for a user (ADR-0004 A-2/A-3). One row per user; the login
+/// identifier is `users.mobile` — the product has no email channel, so `email` is
+/// only an optional profile field. The hash format is self-describing
+/// (`scrypt$N$r$p$salt$hash`).
+model Credential {
+  id                String   @id @db.Uuid @default(dbgenerated("gen_random_uuid()"))
+  userId            String   @unique @db.Uuid
+  passwordHash      String   @db.VarChar(255)
+  passwordUpdatedAt DateTime @default(now()) @db.Timestamptz(6)
+  createdAt         DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt         DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("credentials")
+}
+
+/// Opaque server-side session (ADR-0004 A-4/A-5). Only `SHA-256(token)` is ever
+/// stored; TTLs are 12 h idle / 30 d absolute, with rotation on login and
+/// privilege change and a 60 s single-use grace. `activeTenantId` is re-validated
+/// against a live membership on every request; any client-supplied tenant id is
+/// ignored as authority.
+model Session {
+  id             String    @id @db.Uuid @default(dbgenerated("gen_random_uuid()"))
+  userId         String    @db.Uuid
+  tokenHash      String    @unique @db.VarChar(64)
+  activeTenantId String?   @db.Uuid
+  rotatedFromId  String?   @db.Uuid
+  expiresAt      DateTime  @db.Timestamptz(6)
+  idleExpiresAt  DateTime  @db.Timestamptz(6)
+  lastSeenAt     DateTime  @default(now()) @db.Timestamptz(6)
+  revokedAt      DateTime? @db.Timestamptz(6)
+  createdAt      DateTime  @default(now()) @db.Timestamptz(6)
+
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activeTenant Tenant?   @relation(fields: [activeTenantId], references: [id], onDelete: SetNull)
+  rotatedFrom  Session?  @relation("SessionRotation", fields: [rotatedFromId], references: [id], onDelete: SetNull)
+  rotations    Session[] @relation("SessionRotation")
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+/// Rate-limiting counters for registration/login (ADR-0004 D-B): 10 failed
+/// attempts per 15 min per identifier + IP. Keyed by identifier, not by user, so
+/// unknown accounts are counted too (anti-enumeration by counting, not by
+/// responding differently).
+model AuthAttempt {
+  id          String   @id @db.Uuid @default(dbgenerated("gen_random_uuid()"))
+  identifier  String   @db.VarChar(320)
+  ipAddress   String?  @db.Inet
+  succeeded   Boolean  @default(false)
+  attemptedAt DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([identifier, attemptedAt])
+  @@map("auth_attempts")
+}
+
+/// One-time SMS code (owner decision 2026-10-13). Global: signup has no user yet and a
+/// code must be verifiable before a session exists, so there is no tenant_id to filter.
+/// Only `SHA-256(code)` is stored. `hmn_platform` holds nothing here — a live code is a
+/// credential (ADR-0004 D-C fence).
+model AuthOtp {
+  id         String    @id @db.Uuid @default(dbgenerated("gen_random_uuid()"))
+  identifier String    @db.VarChar(320)
+  purpose    String    @db.VarChar(20)
+  codeHash   String    @db.VarChar(64)
+  expiresAt  DateTime  @db.Timestamptz(6)
+  attempts   Int       @default(0)
+  consumedAt DateTime? @db.Timestamptz(6)
+  createdAt  DateTime  @default(now()) @db.Timestamptz(6)
+
+  @@index([identifier, purpose, createdAt])
+  @@map("auth_otps")
+}
+
+// ---------------------------------------------------------------------------
 // Tenant-owned tables (RLS enabled + fail-closed policy in the initial migration)
 // ---------------------------------------------------------------------------
 
@@ -122,6 +263,10 @@ model TenantMembership {
   tenantId  String    @db.Uuid
   userId    String    @db.Uuid
   role      UserRole
+  /// Per-module permission set (module keys chosen by the manager). NULL means
+  /// "role defaults apply"; required for `CUSTOM` — enforced by a CHECK
+  /// constraint in the Phase-4 migration.
+  permissions Json?
   createdAt DateTime  @default(now()) @db.Timestamptz(6)
   updatedAt DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
 

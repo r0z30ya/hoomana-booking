@@ -1,16 +1,33 @@
+import cookie from '@fastify/cookie';
+import type { PrismaClient } from '@hmn/db';
 import { InternalError, isAppError, type HealthProbeResult, type HealthStatus } from '@hmn/shared';
-import Fastify, { type FastifyError } from 'fastify';
+import Fastify, { type FastifyError, type FastifyRequest } from 'fastify';
 import type { Logger } from 'pino';
+import { authRoutes } from './auth/auth-routes.js';
 
 export interface HealthChecks {
   readonly database: () => Promise<HealthProbeResult>;
   readonly redis: () => Promise<HealthProbeResult>;
 }
 
+/** Auth wiring (ADR-0005). When omitted, the API exposes no auth routes. */
+export interface AuthOptions {
+  readonly client: PrismaClient;
+  /** Development servers may drop the cookie's Secure flag so plain HTTP works. */
+  readonly cookieSecure: boolean;
+  /** Defaults to `request.ip`; production supplies a proxy-aware implementation. */
+  readonly clientIp?: (request: FastifyRequest) => string;
+  /** Injected SMS sender; without it a code is only revealed outside production. */
+  readonly otpSender?: ((mobile: string, code: string) => Promise<void>) | undefined;
+  /** True outside production: the OTP comes back in the response for local testing. */
+  readonly exposeOtpInResponse?: boolean | undefined;
+}
+
 export interface ServerOptions {
   /** Injected so tests can silence logs and production can tune levels. */
   readonly logger: Logger;
   readonly health: HealthChecks;
+  readonly auth?: AuthOptions;
   /**
    * Whether dependency error text may appear in health responses. Enabled outside
    * production because the message ("connection refused", "password authentication
@@ -66,6 +83,21 @@ function toHealthBody(result: HealthProbeResult, options: ServerOptions): Health
 export function buildServer(options: ServerOptions) {
   const app = Fastify({ loggerInstance: options.logger });
 
+  if (options.auth !== undefined) {
+    // Registered synchronously on purpose: Fastify loads plugins on ready(), which
+    // `inject()` and `listen()` trigger, so buildServer stays a plain factory.
+    void app.register(cookie);
+    void app.register(authRoutes, {
+      client: options.auth.client,
+      cookieSecure: options.auth.cookieSecure,
+      clientIp: options.auth.clientIp ?? ((request) => request.ip),
+      ...(options.auth.otpSender === undefined ? {} : { otpSender: options.auth.otpSender }),
+      ...(options.auth.exposeOtpInResponse === undefined
+        ? {}
+        : { exposeOtpInResponse: options.auth.exposeOtpInResponse }),
+    });
+  }
+
   // Liveness: proves the process is up. Deliberately touches no dependency, so a
   // database outage must not cause an orchestrator to restart a healthy API process.
   app.get('/health', (): { status: 'ok' } => ({ status: 'ok' }));
@@ -116,6 +148,19 @@ export function buildServer(options: ServerOptions) {
       };
 
       return reply.code(400).send(body);
+    }
+
+    // Fastify's own client errors (unsupported media type, malformed JSON, …) carry a
+    // 4xx status. Surface that status instead of collapsing every unknown error into a
+    // 500 — a client mistake must not look like a server outage.
+    if (typeof error.statusCode === 'number' && error.statusCode >= 400 && error.statusCode < 500) {
+      request.log.warn({ err: error }, 'request rejected');
+
+      const body: ErrorResponseBody = {
+        error: { code: error.code ?? 'BAD_REQUEST', message: error.message },
+      };
+
+      return reply.code(error.statusCode).send(body);
     }
 
     // Unknown failure: log the real error, return nothing that could leak internals.

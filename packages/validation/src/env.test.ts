@@ -69,4 +69,49 @@ describe('environmentSchema', () => {
 
     expect(result.success).toBe(true);
   });
+
+  it('applies the proposed scrypt defaults when no tuning is provided', () => {
+    const parsed = environmentSchema.parse(validInput);
+
+    expect(parsed.AUTH_SCRYPT_N).toBe(32_768);
+    expect(parsed.AUTH_SCRYPT_R).toBe(8);
+    expect(parsed.AUTH_SCRYPT_P).toBe(1);
+    expect(parsed.AUTH_SCRYPT_KEYLEN).toBe(64);
+    expect(parsed.AUTH_SCRYPT_MAXMEM).toBeUndefined();
+  });
+
+  it('rejects scrypt parameters below the hard floors instead of trusting them', () => {
+    expect(environmentSchema.safeParse({ ...validInput, AUTH_SCRYPT_N: '1024' }).success).toBe(
+      false,
+    );
+    expect(environmentSchema.safeParse({ ...validInput, AUTH_SCRYPT_R: '1' }).success).toBe(false);
+    expect(environmentSchema.safeParse({ ...validInput, AUTH_SCRYPT_P: '0' }).success).toBe(false);
+    expect(
+      environmentSchema.safeParse({ ...validInput, AUTH_SCRYPT_KEYLEN: '16' }).success,
+    ).toBe(false);
+  });
+
+  it('boots without the platform SMS panel and defaults the provider name', () => {
+    const parsed = environmentSchema.parse(validInput);
+
+    expect(parsed.SMS_PROVIDER).toBe('melipayamak');
+    expect(parsed.SMS_MELIPAYAMAK_PANEL_REF).toBeUndefined();
+    expect(parsed.SMS_MELIPAYAMAK_SENDER).toBeUndefined();
+  });
+
+  it('accepts a valid sender line and rejects a malformed one', () => {
+    // No panel credential is written into this file (workspace rule), so the key's
+    // `min(16)` rule is exercised through the integration factory tests instead.
+    expect(
+      environmentSchema.safeParse({ ...validInput, SMS_MELIPAYAMAK_SENDER: '50002710077565' })
+        .success,
+    ).toBe(true);
+    expect(
+      environmentSchema.safeParse({ ...validInput, SMS_MELIPAYAMAK_SENDER: 'not-a-number' })
+        .success,
+    ).toBe(false);
+    expect(environmentSchema.safeParse({ ...validInput, SMS_PROVIDER: 'other' }).success).toBe(
+      false,
+    );
+  });
 });

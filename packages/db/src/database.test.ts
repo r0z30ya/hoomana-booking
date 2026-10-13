@@ -41,8 +41,8 @@ describe('database connectivity', () => {
   });
 });
 
-describe('phase 3 scope guard', () => {
-  it('exposes exactly the approved Phase 3 tables — no unapproved entity exists', async ({
+describe('schema scope guard', () => {
+  it('exposes exactly the approved tables — no unapproved entity exists', async ({
     skip,
   }) => {
     const probe = await checkDatabase(client, 5_000);
@@ -57,12 +57,19 @@ describe('phase 3 scope guard', () => {
       WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
     `;
 
-    // The approved Phase 3 foundation plus Prisma's migration bookkeeping.
+    // The approved foundation — Phase 3 tables plus the Phase 4 identity tables
+    // (ADR-0004, owner-approved 2026-10-12) — and Prisma's migration bookkeeping.
     // Anything else means a table was added outside the reviewed schema.
     const approvedTables = [
       '_prisma_migrations',
       'audit_logs',
+      'auth_attempts',
+      'auth_otps',
+      'credentials',
       'domains',
+      'platform_admins',
+      'platform_mfa_factors',
+      'sessions',
       'subscription_plans',
       'tenant_memberships',
       'tenant_subscriptions',

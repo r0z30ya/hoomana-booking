@@ -16,7 +16,7 @@ import type { TenantTx } from '../tenant.js';
 export interface CreateMembershipInput {
   readonly tenantId: string;
   readonly userId: string;
-  readonly role: 'PLATFORM_OWNER' | 'TENANT_ADMIN' | 'DOCTOR' | 'RECEPTION';
+  readonly role: 'OWNER' | 'DOCTOR' | 'RECEPTION' | 'CUSTOM';
 }
 
 export async function createMembership(tx: TenantTx, input: CreateMembershipInput) {

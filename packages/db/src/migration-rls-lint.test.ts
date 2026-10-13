@@ -318,9 +318,26 @@ describe('S1 — migration lint: platform-role privileges stay least-privilege (
       return privileges;
     };
 
-    // Every application table loses the write privileges the blanket grant gave it.
-    const tables = [...modelTables()];
+    // Every application table that existed when the blanket grant ran loses the
+    // write privileges it gave. That set is the tables created by migrations up to
+    // and including the narrowing migration: tables added later never received the
+    // grant (it ran before they existed), and the migration history is
+    // append-only, so demanding revokes for future tables would fail forever.
+    const tables = [
+      ...new Set(
+        migrationDirectories()
+          .filter((migration) => migration.name <= LEAST_PRIVILEGE_MIGRATION)
+          .flatMap((migration) => [...tablesCreatedIn(readFileSync(migration.path, 'utf8'))]),
+      ),
+    ];
     expect(tables.length).toBeGreaterThan(0);
+
+    // Those tables must still be modelled: if a model were deleted while its table
+    // stayed, the revoke check below would silently stop covering it.
+    const modelled = modelTables();
+    for (const table of tables) {
+      expect(modelled.has(table), `schema.prisma no longer models "${table}"`).toBe(true);
+    }
     for (const table of tables) {
       const privileges = revokedFor(table);
       for (const write of ['insert', 'update', 'delete']) {

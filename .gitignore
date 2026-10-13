@@ -36,3 +36,8 @@ infra/docker/data/
 # Kept locally for business-requirement extraction only. It is NOT part of the
 # new codebase and must never be treated as build input.
 legacy/
+
+# --- Agent workspace (attachments and run artifacts) ---
+# Owner-supplied files can contain live credentials (e.g. an SMS panel token);
+# they stay local and are never part of the repository.
+.zwork/

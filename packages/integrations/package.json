@@ -2,7 +2,7 @@
   "name": "@hmn/integrations",
   "version": "0.1.0",
   "private": true,
-  "description": "Outbound integration adapters. Shell only: the SchedulingProvider port and CalAdapter arrive in Phase 5.",
+  "description": "Outbound integration adapters: the provider-agnostic SMS port with the Melipayamak adapter. The SchedulingProvider port and CalAdapter arrive in Phase 5.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
