@@ -2,6 +2,7 @@ import { useEffect, useState, type JSX } from 'react';
 import { LoginPage, type SessionProfile } from './auth/LoginPage';
 import { RegisterPage } from './auth/RegisterPage';
 import { PlansPage } from './plans/PlansPage';
+import { PanelShell } from './panel/PanelShell';
 
 /**
  * Client shell.
@@ -11,6 +12,9 @@ import { PlansPage } from './plans/PlansPage';
  * entry point: the login screen. The health check stays — it is the connection
  * indicator at the bottom of the screen and the reason a broken API is visible
  * before anyone tries to sign in.
+ * Phase 5 (owner approval, 2026-10-13) adds the panel shell behind the session: the
+ * approved design is `infra/docs/design/proposals/shell-navigation.html`. The shell owns
+ * the sidebar, the top bar and the mobile navigation; each section grows into it from here.
  */
 
 type HealthState =
@@ -46,34 +50,6 @@ function statusText(health: HealthState): string | null {
     case 'error':
       return development ? `API is unavailable: ${health.message}` : 'اتصال به سرور برقرار نیست';
   }
-}
-
-interface SessionHomeProps {
-  readonly profile: SessionProfile;
-  readonly onSignOut: () => void;
-}
-
-function SessionHome({ profile, onSignOut }: SessionHomeProps): JSX.Element {
-  return (
-    <div className="auth-shell">
-      <div className="glow glow-teal" />
-
-      <section className="auth-card neu">
-        <header className="brand">
-          <p className="brand-fa">هومانا</p>
-        </header>
-
-        <p className="field-label">خوش آمدید</p>
-        <p className="session-name">{profile.displayName}</p>
-
-        <button type="button" className="btn-cta cta" onClick={onSignOut}>
-          خروج
-        </button>
-
-        <p className="auth-note">داشبورد، نوبت‌ها و بیماران در گام بعدی</p>
-      </section>
-    </div>
-  );
 }
 
 export function App(): JSX.Element {
@@ -135,7 +111,7 @@ export function App(): JSX.Element {
   return (
     <>
       {profile !== null ? (
-        <SessionHome
+        <PanelShell
           profile={profile}
           onSignOut={() => {
             void signOut();

@@ -1,0 +1,616 @@
+<!doctype html>
+<html lang="fa" dir="rtl" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>هومانا | بیماران</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #e9e5dd; --ink: #2e2b26; --sub: #7a756b; --sd: #c9c3b6; --sl: #ffffff;
+        --bar: rgba(46, 43, 38, 0.13); --accent: #0d9488; --accent-2: #14b8a6;
+        --ok: #059669; --ok-bg: rgba(16, 185, 129, 0.16);
+        --warn: #b45309; --warn-bg: rgba(245, 158, 11, 0.18);
+        --no: #dc2626; --no-bg: rgba(239, 68, 68, 0.14);
+      }
+      [data-theme='dark'] {
+        --bg: #262421; --ink: #ede9e1; --sub: #a09a8e; --sd: #1d1b18; --sl: #32302b;
+        --bar: rgba(237, 233, 225, 0.13); --ok: #34d399; --warn: #fbbf24; --no: #f87171;
+      }
+      * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+      body {
+        margin: 0; background: var(--bg); color: var(--ink);
+        font-family: Vazirmatn, 'Segoe UI', Tahoma, sans-serif; transition: background 0.3s, color 0.3s;
+      }
+      button, input, select, textarea { font-family: inherit; }
+      .neu { background: var(--bg); box-shadow: 9px 9px 20px var(--sd), -9px -9px 20px var(--sl); }
+      .neu-sm { background: var(--bg); box-shadow: 5px 5px 12px var(--sd), -5px -5px 12px var(--sl); }
+      .neu-in { background: var(--bg); box-shadow: inset 5px 5px 10px var(--sd), inset -5px -5px 10px var(--sl); }
+      .cta {
+        background: linear-gradient(135deg, var(--accent-2), var(--accent)); color: #fff; border: 0;
+        box-shadow: 6px 6px 14px var(--sd), -6px -6px 14px var(--sl), 0 8px 22px rgba(13, 148, 136, 0.3);
+      }
+      .mini {
+        border: 0; border-radius: 12px; padding: 10px 13px; font-size: 12.5px; font-weight: 700; color: var(--sub);
+        cursor: pointer; min-height: 40px; background: var(--bg); box-shadow: 4px 4px 9px var(--sd), -4px -4px 9px var(--sl);
+      }
+      .mini:hover { color: var(--accent); }
+      .icon-btn {
+        width: 44px; height: 44px; border: 0; border-radius: 15px; cursor: pointer; color: var(--sub);
+        display: grid; place-items: center; flex-shrink: 0; background: var(--bg);
+      }
+      :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+      .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+      .pill { font-size: 11.5px; font-weight: 800; padding: 5px 12px; border-radius: 9999px; background: var(--bar); color: var(--sub); white-space: nowrap; }
+      .pill-ok { background: var(--ok-bg); color: var(--ok); }
+      .pill-warn { background: var(--warn-bg); color: var(--warn); }
+      /* ═══ پوستهٔ پنل: سایدبار (یکسان در همهٔ صفحه‌ها — پیش‌فرض جمع‌شده) ═══ */
+      .app { display: grid; grid-template-columns: 262px minmax(0, 1fr); align-items: start; }
+      .main { min-width: 0; }
+      .sidebar {
+        padding: 18px 14px; display: flex; flex-direction: column; gap: 14px; position: sticky; top: 0;
+        max-height: 100vh; overflow-y: auto; box-shadow: inset -1px 0 0 var(--bar);
+      }
+      .sb-brand { display: flex; align-items: center; gap: 10px; padding: 4px 6px; }
+      .sb-mark {
+        width: 40px; height: 40px; border-radius: 14px; display: grid; place-items: center; color: #fff;
+        font-weight: 900; font-size: 17px; flex-shrink: 0; background: linear-gradient(135deg, var(--accent-2), var(--accent));
+      }
+      .sb-name { margin: 0; font-size: 14px; font-weight: 900; }
+      .sb-sub { margin: 2px 0 0; font-size: 11px; color: var(--sub); }
+      .sb-nav { display: grid; gap: 5px; }
+      .sb-nav a {
+        display: flex; align-items: center; gap: 11px; text-decoration: none; color: var(--sub);
+        font-size: 13.5px; font-weight: 700; padding: 11px 12px; border-radius: 15px; min-height: 44px;
+      }
+      .sb-nav a:hover { color: var(--accent); }
+      .sb-nav a[aria-current='page'] { color: var(--accent); box-shadow: inset 4px 4px 10px var(--sd), inset -4px -4px 10px var(--sl); }
+      .sb-nav svg { width: 20px; height: 20px; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 1.8; }
+      .sb-nav .sp { flex: 1; }
+      .sb-nav .tag { font-size: 10.5px; font-weight: 800; padding: 3px 8px; border-radius: 9999px; background: var(--bar); color: var(--sub); }
+      .sb-nav .tag.warn { background: var(--warn-bg); color: var(--warn); }
+      .sb-spacer { flex: 1; }
+      .sb-credit { border-radius: 18px; padding: 13px; }
+      .sb-credit p { margin: 0; font-size: 12.5px; font-weight: 800; }
+      .sb-credit small { font-size: 11px; color: var(--sub); }
+      .sb-credit .bar { height: 7px; border-radius: 9999px; background: var(--bar); margin: 9px 0; overflow: hidden; }
+      .sb-credit .bar span { display: block; height: 100%; width: 38%; border-radius: 9999px; background: linear-gradient(90deg, var(--accent-2), var(--accent)); }
+      .sb-credit a {
+        display: block; text-align: center; text-decoration: none; font-size: 12.5px; font-weight: 800; color: var(--sub);
+        border-radius: 12px; padding: 10px; margin-top: 4px; background: var(--bg); box-shadow: 4px 4px 9px var(--sd), -4px -4px 9px var(--sl);
+      }
+      .sb-user { display: flex; align-items: center; gap: 10px; padding: 4px 6px; }
+      .sb-av {
+        width: 38px; height: 38px; border-radius: 13px; display: grid; place-items: center; color: #fff;
+        font-weight: 800; flex-shrink: 0; background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+      }
+      .sb-user p { margin: 0; font-size: 13px; font-weight: 800; }
+      .sb-user small { color: var(--sub); font-size: 11px; }
+      html.sidebar-collapsed .app { grid-template-columns: 86px minmax(0, 1fr); }
+      html.sidebar-collapsed .sb-name,
+      html.sidebar-collapsed .sb-sub,
+      html.sidebar-collapsed .sb-user p,
+      html.sidebar-collapsed .sb-user small,
+      html.sidebar-collapsed .sb-nav .sp,
+      html.sidebar-collapsed .sb-nav .tag,
+      html.sidebar-collapsed .sb-credit .sb-hide,
+      html.sidebar-collapsed .sb-credit .bar { display: none; }
+      html.sidebar-collapsed .sb-brand,
+      html.sidebar-collapsed .sb-user { justify-content: center; padding-inline: 0; }
+      html.sidebar-collapsed .sb-nav a { justify-content: center; padding: 12px 0; }
+      html.sidebar-collapsed .sb-credit { padding: 11px 6px; text-align: center; }
+      html.sidebar-collapsed .sb-credit p { font-size: 13px; font-weight: 900; color: var(--accent); }
+      .sidebar-toggle { cursor: pointer; }
+      @media (max-width: 900px) {
+        .app,
+        html.sidebar-collapsed .app { grid-template-columns: minmax(0, 1fr); }
+        .sidebar { display: none; }
+      }
+
+      .shell { max-width: 1320px; margin: 0 auto; padding: 18px 18px 40px; }
+
+      .topbar { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+      .brand { display: flex; align-items: center; gap: 11px; }
+      .brand-mark {
+        width: 44px; height: 44px; border-radius: 15px; display: grid; place-items: center; color: #fff;
+        font-weight: 900; font-size: 19px; background: linear-gradient(135deg, var(--accent-2), var(--accent));
+      }
+      .brand-name { margin: 0; font-weight: 900; font-size: 16px; }
+      .brand-sub { margin: 2px 0 0; font-size: 11.5px; color: var(--sub); }
+      .search { display: flex; align-items: center; gap: 8px; padding: 11px 15px; border-radius: 16px; flex: 1; min-width: 200px; }
+      .search input { border: 0; outline: 0; background: transparent; font: inherit; font-size: 13.5px; width: 100%; color: var(--ink); }
+
+      .tabs { display: inline-flex; gap: 5px; padding: 5px; border-radius: 18px; margin-bottom: 16px; }
+      .tabs button {
+        border: 0; background: transparent; color: var(--sub); font-size: 13.5px; font-weight: 800;
+        padding: 11px 20px; border-radius: 14px; cursor: pointer; min-height: 44px;
+      }
+      .tabs button[aria-selected='true'] { color: var(--accent); box-shadow: inset 4px 4px 9px var(--sd), inset -4px -4px 9px var(--sl); }
+
+      .controls { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 22px; margin-bottom: 14px; flex-wrap: wrap; }
+      .spacer { flex: 1; }
+      .chips { display: flex; gap: 8px; flex-wrap: wrap; }
+      .chip {
+        border: 0; border-radius: 9999px; padding: 10px 15px; font-size: 12.5px; font-weight: 700; color: var(--sub);
+        cursor: pointer; min-height: 40px; background: var(--bg); box-shadow: 5px 5px 12px var(--sd), -5px -5px 12px var(--sl);
+      }
+      .chip[aria-pressed='true'] { color: var(--accent); box-shadow: inset 4px 4px 9px var(--sd), -4px -4px 9px var(--sl); }
+
+      .grid-main { display: grid; gap: 16px; grid-template-columns: 1fr; align-items: start; }
+      @media (min-width: 1080px) { .grid-main { grid-template-columns: minmax(0, 2.1fr) minmax(300px, 1fr); } }
+      .card { border-radius: 26px; padding: 20px; }
+      .card-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+      .card-head h2 { margin: 0; font-size: 16px; font-weight: 900; }
+      .card-head h3 { margin: 0; font-size: 14.5px; font-weight: 900; }
+      .avatar {
+        width: 40px; height: 40px; border-radius: 9999px; display: grid; place-items: center; color: #fff;
+        font-weight: 800; flex-shrink: 0; background: linear-gradient(135deg, var(--accent-2), #0f766e);
+      }
+
+      .table-wrap { overflow-x: auto; }
+      table { border-collapse: collapse; width: 100%; min-width: 760px; }
+      table th, table td { padding: 13px 12px; text-align: right; font-size: 13px; }
+      table thead th { font-size: 11.5px; color: var(--sub); font-weight: 800; }
+      table tbody tr { border-top: 1px solid var(--bar); }
+      table tbody tr:hover { background: var(--bar); }
+      td.actions { display: flex; gap: 8px; }
+      .who-cell { display: flex; align-items: center; gap: 10px; }
+      .scrolhint { font-size: 11.5px; color: var(--sub); margin: 8px 0 0; }
+
+      .pager { display: flex; align-items: center; gap: 10px; margin-top: 14px; font-size: 12.5px; color: var(--sub); flex-wrap: wrap; }
+
+      .stat-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; font-size: 13px; border-top: 1px solid var(--bar); }
+      .stat-row:first-of-type { border-top: 0; }
+      .stat-row b { margin-inline-start: auto; font-weight: 900; }
+      .task { display: flex; align-items: center; gap: 10px; padding: 11px 0; border-top: 1px solid var(--bar); flex-wrap: wrap; }
+      .task:first-of-type { border-top: 0; }
+      .task p { margin: 0; font-size: 13px; font-weight: 700; }
+      .task small { color: var(--sub); font-size: 11.5px; }
+      .dup { border-radius: 16px; padding: 12px; border: 1px dashed var(--bar); margin-bottom: 10px; }
+      .dup .pair { font-size: 12.5px; line-height: 1.9; }
+      .dup .pair b { color: var(--ink); }
+
+      /* پروندهٔ بیمار */
+      .record-head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+      .record-head .avatar { width: 56px; height: 56px; border-radius: 20px; font-size: 20px; }
+      .record-meta { display: grid; gap: 6px; font-size: 12.5px; color: var(--sub); }
+      .record-meta b { color: var(--ink); }
+      .record-grid { display: grid; gap: 16px; grid-template-columns: 1fr; margin-top: 16px; }
+      @media (min-width: 1000px) { .record-grid { grid-template-columns: minmax(0, 1.6fr) minmax(280px, 1fr); } }
+      .timeline { display: grid; gap: 10px; }
+      .aprow { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 18px; border: 1px solid var(--bar); }
+      .aprow .date { font-size: 12.5px; font-weight: 800; min-width: 96px; }
+      .aprow .what { font-size: 13px; font-weight: 700; margin: 0; }
+      .aprow .meta { font-size: 11.5px; color: var(--sub); margin: 3px 0 0; }
+      .sms-row { display: flex; align-items: flex-start; gap: 10px; padding: 11px 0; border-top: 1px solid var(--bar); font-size: 12.5px; }
+      .sms-row:first-of-type { border-top: 0; }
+      .sms-body { flex: 1; }
+      .sms-body p { margin: 0; }
+      .sms-body small { color: var(--sub); }
+      .field > label { display: block; font-size: 12.5px; font-weight: 800; margin-bottom: 7px; }
+      .input-wrap { display: flex; align-items: center; gap: 8px; border-radius: 15px; padding: 11px 14px; }
+      .input-wrap input, .input-wrap textarea { border: 0; outline: 0; background: transparent; font: inherit; font-size: 13.5px; color: var(--ink); width: 100%; }
+      .input-wrap textarea { resize: vertical; min-height: 66px; }
+      .hint { font-size: 11.5px; color: var(--sub); margin: 7px 0 0; line-height: 1.9; }
+
+      .notes { margin-top: 26px; border-radius: 26px; padding: 22px; }
+      .notes h2 { margin: 0 0 10px; font-size: 16px; font-weight: 900; }
+      .notes ol { margin: 0; padding-inline-start: 20px; color: var(--sub); font-size: 13px; line-height: 2.15; }
+      .notes b { color: var(--ink); }
+
+      @media (max-width: 600px) {
+        td.actions { flex-direction: column; }
+      }
+    </style>
+  </head>
+  <body>
+  <div class="app" data-active="patients" data-role="owner">
+    <div class="main">
+    <div class="shell">
+      <header class="topbar">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">هـ</div>
+          <div>
+            <p class="brand-name">هومانا</p>
+            <p class="brand-sub">کلینیک سلامت پارس</p>
+          </div>
+        </div>
+        <div class="search neu-in" style="max-width: 340px">
+          <span aria-hidden="true" style="color: var(--sub)">⌕</span>
+          <input type="search" placeholder="جستجوی بیمار با نام یا موبایل…" aria-label="جستجو" />
+        </div>
+        <button class="icon-btn neu-sm" aria-label="اعلان‌ها">🔔</button>
+        <button class="icon-btn neu-sm" id="theme" aria-label="تعویض تم">◐</button>
+      </header>
+
+      <h1 style="margin: 0 0 4px; font-size: 22px; font-weight: 900">بیماران</h1>
+      <p style="margin: 0 0 16px; color: var(--sub); font-size: 13px">
+        موبایل، شناسهٔ بیمار است؛ سابقهٔ نوبت‌ها و پیامک‌ها در پروندهٔ هر بیمار جمع می‌شود.
+      </p>
+
+      <div class="tabs neu" role="tablist" aria-label="بخش‌ها">
+        <button role="tab" aria-selected="true" data-tab="list">فهرست بیماران<span class="pill" style="margin-inline-start: 6px">۱٬۲۴۰</span></button>
+        <button role="tab" aria-selected="false" data-tab="record">پروندهٔ یک بیمار (نمونه)</button>
+      </div>
+
+      <!-- ═══════════ تب ۱: فهرست بیماران ═══════════ -->
+      <section id="tab-list" role="tabpanel" aria-label="فهرست بیماران">
+        <div class="controls neu">
+          <div class="search neu-in" style="max-width: 380px">
+            <span aria-hidden="true" style="color: var(--sub)">⌕</span>
+            <input type="search" value="زهرا" placeholder="نام، موبایل یا شمارهٔ پرونده…" aria-label="جستجوی بیمار" />
+          </div>
+          <button class="mini">⬆ ایمپورت از اکسل</button>
+          <div class="spacer"></div>
+          <button class="cta" style="border-radius: 15px; padding: 13px 20px; font-size: 14px; font-weight: 800; cursor: pointer">＋ بیمار جدید</button>
+        </div>
+
+        <div class="chips" role="group" aria-label="فیلترها" style="margin-bottom: 14px">
+          <button class="chip" aria-pressed="false">همه (۱٬۲۴۰)</button>
+          <button class="chip" aria-pressed="true">دارای نوبت پیش‌رو (۸۷)</button>
+          <button class="chip" aria-pressed="false">بیماران جدید این ماه (۴۲)</button>
+          <button class="chip" aria-pressed="false">بدون شمارهٔ پرونده (۲)</button>
+          <button class="chip" aria-pressed="false">نام‌های نزدیک به تکراری (۵)</button>
+        </div>
+
+        <div class="grid-main">
+          <section class="card neu" aria-labelledby="list-title">
+            <div class="card-head">
+              <h2 id="list-title">نتیجهٔ جستجو: «زهرا»</h2>
+              <span class="pill">۲ بیمار</span>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">بیمار</th>
+                    <th scope="col">موبایل</th>
+                    <th scope="col">پرونده</th>
+                    <th scope="col">آخرین مراجعه</th>
+                    <th scope="col">تعداد مراجعه</th>
+                    <th scope="col">پزشکان</th>
+                    <th scope="col"><span class="visually-hidden">اقدام‌ها</span></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>
+                      <div class="who-cell">
+                        <span class="avatar" aria-hidden="true" style="width: 34px; height: 34px; font-size: 13px">ز</span>
+                        زهرا محمدی
+                      </div>
+                    </td>
+                    <td dir="ltr">۰۹۱۲۳۴۵۶۷۸۹</td>
+                    <td>۰۸۸۷</td>
+                    <td>۳ هفته پیش</td>
+                    <td>۱۴</td>
+                    <td>دکتر رضایی، دکتر نوری</td>
+                    <td class="actions"><button class="mini">پرونده</button><button class="mini">＋ نوبت</button></td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <div class="who-cell">
+                        <span class="avatar" aria-hidden="true" style="width: 34px; height: 34px; font-size: 13px; background: linear-gradient(135deg, #8b5cf6, #7c3aed)">ز</span>
+                        زهرا کریمی
+                      </div>
+                    </td>
+                    <td dir="ltr">۰۹۳۵۱۱۱۲۲۳۳</td>
+                    <td>۱۱۴۵</td>
+                    <td>۲ ماه پیش</td>
+                    <td>۳</td>
+                    <td>دکتر احمدی</td>
+                    <td class="actions"><button class="mini">پرونده</button><button class="mini">＋ نوبت</button></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="scrolhint">در موبایل، جدول به‌صورت افقی اسکرول می‌شود تا ستون‌ها خوانا بمانند.</p>
+            <div class="pager">
+              <span>نمایش ۱ تا ۲۵ از ۱٬۲۴۰ بیمار</span>
+              <div class="spacer"></div>
+              <button class="mini" disabled style="opacity: 0.5">قبلی</button>
+              <button class="mini">بعدی</button>
+            </div>
+          </section>
+
+          <div style="display: grid; gap: 16px">
+            <section class="card neu" aria-labelledby="stats-title">
+              <div class="card-head"><h3 id="stats-title">نگاه کلی</h3></div>
+              <div class="stat-row">کل بیماران<b>۱٬۲۴۰</b></div>
+              <div class="stat-row">بیمار جدید این ماه<b>۴۲</b></div>
+              <div class="stat-row">دارای نوبت پیش‌رو<b>۸۷</b></div>
+              <div class="stat-row">بدون شمارهٔ پرونده<b>۲</b></div>
+            </section>
+
+            <section class="card neu" aria-labelledby="imp-title">
+              <div class="card-head"><h3 id="imp-title">ایمپورت از اکسل</h3></div>
+              <p class="hint" style="margin-top: 0">
+                ستون‌های لازم: <b>نام</b> و <b>موبایل</b> (اجباری)، شهر (اختیاری). سرویس ایمیل نداریم، پس
+                ایمیل در فایل نادیده گرفته می‌شود.
+              </p>
+              <div class="neu-in" style="border-radius: 16px; padding: 14px; margin: 10px 0; font-size: 12.5px; color: var(--sub)">
+                بیماران.xlsx — ۱۸۴ ردیف · ۱۸۱ موبایل معتبر · ۳ ردیف مشکوک
+              </div>
+              <p class="hint">ردیف‌های مشکوک (موبایل تکراری یا خالی) قبل از ثبت به شما نشان داده می‌شوند.</p>
+              <button class="mini" style="width: 100%">مشاهدهٔ ردیف‌های مشکوک</button>
+            </section>
+
+            <section class="card neu" aria-labelledby="dup-title">
+              <div class="card-head">
+                <h3 id="dup-title">نام‌های نزدیک به تکراری</h3>
+                <span class="pill pill-warn">۵</span>
+              </div>
+              <div class="dup">
+                <p class="pair">
+                  <b>زهرا محمدی</b> — ۰۹۱۲۳۴۵۶۷۸۹ (پرونده ۰۸۸۷)<br />
+                  <b>زهرا محمدى</b> — ۰۹۱۲۳۴۵۶۷۸۹ (پرونده ۱۰۹۰) — <span style="color: var(--warn)">موبایل یکسان</span>
+                </p>
+                <div style="display: flex; gap: 8px; margin-top: 10px">
+                  <button class="mini" style="color: var(--accent)">ادغام کن</button>
+                  <button class="mini">دو نفر جدا هستند</button>
+                </div>
+              </div>
+              <p class="hint" style="margin-top: 0">
+                ادغام یعنی نوبت‌ها و پیامک‌های هر دو پرونده زیر یکی جمع می‌شود؛ پروندهٔ خالی حذف می‌شود.
+              </p>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══════════ تب ۲: پروندهٔ بیمار ═══════════ -->
+      <section id="tab-record" role="tabpanel" aria-label="پروندهٔ بیمار" hidden>
+        <section class="card neu">
+          <div class="record-head">
+            <span class="avatar" aria-hidden="true">ز</span>
+            <div>
+              <p class="brand-name" style="font-size: 19px">زهرا محمدی</p>
+              <div class="record-meta">
+                <span>موبایل: <b dir="ltr">۰۹۱۲۳۴۵۶۷۸۹</b> · پرونده <b>۰۸۸۷</b> · تهران</span>
+                <span>۱۴ مراجعه · آخرین مراجعه: ۳ هفته پیش · پزشکان: دکتر رضایی، دکتر نوری</span>
+              </div>
+            </div>
+            <div class="spacer"></div>
+            <button class="mini">ارسال پیامک</button>
+            <button class="mini">ویرایش مشخصات</button>
+            <button class="cta" style="border-radius: 14px; padding: 12px 18px; font-size: 13.5px; font-weight: 800; cursor: pointer">＋ نوبت جدید برای این بیمار</button>
+          </div>
+        </section>
+
+        <div class="record-grid">
+          <div style="display: grid; gap: 16px">
+            <section class="card neu" aria-labelledby="hist-title">
+              <div class="card-head">
+                <h2 id="hist-title">تاریخچهٔ نوبت‌ها</h2>
+                <div class="spacer"></div>
+                <span class="pill">۱۴ نوبت</span>
+              </div>
+              <div class="timeline">
+                <div class="aprow">
+                  <span class="date">۳ هفته پیش<br /><small style="color: var(--sub)">۳۰ شهریور</small></span>
+                  <div style="flex: 1">
+                    <p class="what">ویزیت عمومی</p>
+                    <p class="meta">دکتر رضایی · ۲۰ دقیقه · ۳۵۰٬۰۰۰ تومان</p>
+                  </div>
+                  <button class="mini">جزئیات</button>
+                </div>
+                <div class="aprow">
+                  <span class="date">۲ ماه پیش<br /><small style="color: var(--sub)">۲۳ مرداد</small></span>
+                  <div style="flex: 1">
+                    <p class="what">مشاوره تغذیه</p>
+                    <p class="meta">دکتر نوری · ۳۰ دقیقه · ۴۵۰٬۰۰۰ تومان</p>
+                  </div>
+                  <button class="mini">جزئیات</button>
+                </div>
+                <div class="aprow">
+                  <span class="date">۴ ماه پیش<br /><small style="color: var(--sub)">۱۸ تیر</small></span>
+                  <div style="flex: 1">
+                    <p class="what">کنترل فشار خون</p>
+                    <p class="meta">دکتر احمدی · ۱۵ دقیقه · ۲۵۰٬۰۰۰ تومان</p>
+                  </div>
+                  <button class="mini">جزئیات</button>
+                </div>
+              </div>
+              <p class="hint">نوبت پیش‌روی این بیمار: <b>سه‌شنبه ۲۱ مهر — ۱۰:۲۰</b> با دکتر رضایی. <span style="color: var(--accent)">مشاهده در تقویم</span></p>
+            </section>
+
+            <section class="card neu" aria-labelledby="smslog-title">
+              <div class="card-head">
+                <h2 id="smslog-title">پیامک‌های این بیمار</h2>
+                <div class="spacer"></div>
+                <span class="pill">آخرین ۴ پیامک</span>
+              </div>
+              <div class="sms-row">
+                <span class="pill pill-ok">تحویل شد</span>
+                <div class="sms-body">
+                  <p>یادآوری نوبت فردا ساعت ۱۰:۲۰ با دکتر رضایی</p>
+                  <small>امروز ۱۰:۰۰</small>
+                </div>
+              </div>
+              <div class="sms-row">
+                <span class="pill pill-ok">تحویل شد</span>
+                <div class="sms-body">
+                  <p>تأیید نوبت: سه‌شنبه ۲۱ مهر ساعت ۱۰:۲۰ — کلینیک سلامت پارس</p>
+                  <small>۳ روز پیش</small>
+                </div>
+              </div>
+              <div class="sms-row">
+                <span class="pill pill-warn">ناموفق</span>
+                <div class="sms-body">
+                  <p>یادآوری نوبت ۲۳ مرداد</p>
+                  <small>۲ ماه پیش · دلیل: گوشی خاموش — ارسال مجدد ممکن است</small>
+                </div>
+              </div>
+              <p class="hint">متن پیامک‌ها از الگوهای پنل ساخته می‌شود؛ در صفحهٔ «پیامک» قابل ویرایش است.</p>
+            </section>
+          </div>
+
+          <div style="display: grid; gap: 16px">
+            <section class="card neu" aria-labelledby="info-title">
+              <div class="card-head"><h3 id="info-title">مشخصات</h3></div>
+              <div class="field">
+                <label for="p-name">نام و نام خانوادگی</label>
+                <div class="input-wrap neu-in"><input id="p-name" value="زهرا محمدی" /></div>
+              </div>
+              <div class="field">
+                <label for="p-mobile">موبایل</label>
+                <div class="input-wrap neu-in"><input id="p-mobile" value="۰۹۱۲۳۴۵۶۷۸۹" /></div>
+                <p class="hint">تغییر موبایل، شمارهٔ ورود بیمار به پورتال را هم عوض می‌کند.</p>
+              </div>
+              <div class="field">
+                <label for="p-city">شهر</label>
+                <div class="input-wrap neu-in"><input id="p-city" value="تهران" /></div>
+              </div>
+              <div class="field" style="margin-bottom: 0">
+                <label for="p-note">یادداشت پنل (غیربالینی)</label>
+                <div class="input-wrap neu-in">
+                  <textarea id="p-note">ترجیح می‌دهد نوبت‌ها بعدازظهر باشد. یادآوری پیامکی همیشه فعال.</textarea>
+                </div>
+                <p class="hint">
+                  این پرونده <b>پروندهٔ پزشکی نیست</b>: فقط سابقهٔ نوبت و پیامک و همین یادداشت پنل. مدارک بالینی
+                  در این پنل نگه‌داری نمی‌شود.
+                </p>
+              </div>
+            </section>
+
+            <section class="card neu" aria-labelledby="danger-title">
+              <div class="card-head"><h3 id="danger-title">حذف و آرشیو</h3></div>
+              <p class="hint" style="margin-top: 0">
+                <b>سیاست تعیین‌شدهٔ شما:</b> با درخواست حذف، فقط <b>نام و موبایل</b> پاک (بی‌نام) می‌شود؛
+                سابقهٔ نوبت‌ها برای گزارش و حسابداری باقی می‌ماند. حذف کامل بدون تأثیر روی سابقه معنی ندارد
+                و فقط توسط مالک پنل انجام می‌شود.
+              </p>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap">
+                <button class="mini">آرشیو بیمار</button>
+                <button class="mini" style="color: var(--no)">حذف مشخصات (بی‌نام‌سازی)</button>
+              </div>
+              <p class="hint">
+                بی‌نام‌سازی، نام و موبایل را جایگزین «بیمار حذف‌شده» می‌کند و سابقهٔ نوبت‌ها و پیامک‌ها سر
+                جای خود می‌مانند؛ در گزارش‌ها شمارش آن‌ها درست می‌ماند.
+              </p>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══════════ یادداشت ساختار ═══════════ -->
+      <section class="notes neu" aria-labelledby="notes-title">
+        <h2 id="notes-title">چرا این ساختار؟ (برای بازبینی شما)</h2>
+        <ol>
+          <li><b>یک صفحه، دو تب:</b> «فهرست» برای پیدا کردن سریع بیمار و «پرونده» برای دیدن سابقه — بدون رفت‌وبرگشت بین دو صفحهٔ جدا؛ از فهرست با یک کلیک وارد پرونده می‌شوید.</li>
+          <li><b>موبایل، شناسهٔ اصلی است:</b> در ستون دوم جدول و در جستجو؛ چون ورود بیمار به پورتال هم با موبایل است.</li>
+          <li><b>ستون‌های تصمیم‌ساز:</b> پرونده، آخرین مراجعه، تعداد مراجعه و پزشکان — چیزهایی که منشی برای شناختن بیمار لازم دارد، نه اطلاعات تزئینی.</li>
+          <li><b>فیلترها واقعی‌اند:</b> «دارای نوبت پیش‌رو»، «بیماران جدید این ماه»، «بدون شمارهٔ پرونده» و «نام‌های نزدیک به تکراری» — هیچ فیلتر وضعیتی وجود ندارد.</li>
+          <li><b>نزدیک‌به‌تکراری:</b> سیستم با مقایسهٔ موبایل و شباهت نام، دو پروندهٔ مشکوک را نشان می‌دهد و تصمیم ادغام را به شما می‌سپارد (چون موبایل یکی است ولی شاید واقعاً دو نفر باشند).</li>
+          <li><b>ایمپورت اکسل روی همان صفحه:</b> با پیش‌نمایش «۱۸۴ ردیف، ۱۸۱ معتبر، ۳ مشکوک» و بررسی مشکوک‌ها قبل از ثبت نهایی.</li>
+          <li><b>پروندهٔ صادق:</b> تاریخچهٔ نوبت‌ها با خدمت، پزشک، مدت و تعرفه؛ پیامک‌ها با وضعیت تحویل؛ و یادداشت پنلِ <b>غیربالینی</b> — با تأکید روشن که این پروندهٔ پزشکی نیست.</li>
+          <li><b>آرشیو و بی‌نام‌سازی:</b> «آرشیو» پنهان‌سازی امن است و «حذف مشخصات» (طبق تصمیم شما) فقط نام و موبایل را بی‌نام می‌کند و سابقهٔ نوبت‌ها را دست‌نخورده نگه می‌دارد.</li>
+          <li><b>ریسپانسیو:</b> دسکتاپ: جدول + ستون کناری؛ موبایل: جدول با اسکرول افقی و دکمه‌های تمام‌عرض؛ در پرونده، دو ستون به یک ستون تبدیل می‌شود.</li>
+        </ol>
+      </section>
+    </div>
+    </div>
+  </div>
+
+    <script>
+      // ═══ سایدبار پوسته (یکسان در همهٔ صفحه‌های پنل — پیش‌فرض جمع‌شده) ═══
+      (function () {
+        var ICONS = {
+          dashboard: '<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>',
+          appointments: '<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/>',
+          patients: '<circle cx="9" cy="8" r="3.2"/><path d="M3.5 20c0-3 2.5-5 5.5-5s5.5 2 5.5 5"/><path d="M16 5.5a3 3 0 0 1 0 5.6M17 20c0-2.2-.6-3.8-1.6-5"/>',
+          doctors: '<path d="M6 3v6a4 4 0 0 0 8 0V3"/><path d="M10 13v3a4 4 0 0 0 8 0v-2"/><circle cx="18" cy="11" r="2"/>',
+          accounting: '<rect x="3" y="6" width="18" height="13" rx="3"/><path d="M3 10h18"/><path d="M16 14.5h2"/>',
+          sms: '<path d="M4 5.5h16v10H9l-5 4z"/>',
+          settings: '<circle cx="12" cy="12" r="3.2"/><path d="M12 3.5v2M12 18.5v2M4.9 7.5l1.7 1M17.4 15.5l1.7 1M4.9 16.5l1.7-1M17.4 8.5l1.7-1"/>'
+        };
+        var ITEMS = [
+          { key: 'dashboard', href: 'dashboard.html', label: 'داشبورد' },
+          { key: 'appointments', href: 'appointments.html', label: 'نوبت‌ها', tag: '۴۸' },
+          { key: 'patients', href: 'patients.html', label: 'بیماران' },
+          { key: 'doctors', href: 'doctors-services.html', label: 'پزشکان و خدمات' },
+          { key: 'accounting', href: 'accounting.html', label: 'حسابداری' },
+          { key: 'sms', href: 'sms.html', label: 'پیامک', tag: '۱ ناموفق', warn: true },
+          { key: 'settings', href: 'settings.html', label: 'تنظیمات' }
+        ];
+        var ROLES = {
+          doctors: ['owner', 'reception'],
+          accounting: ['owner', 'reception'],
+          sms: ['owner', 'reception'],
+          settings: ['owner']
+        };
+        var app = document.querySelector('.app');
+        if (!app) { return; }
+        var active = app.dataset.active || '';
+        var role = app.dataset.role || 'owner';
+        var items = ITEMS.filter(function (it) {
+          var allowed = ROLES[it.key];
+          return !allowed || allowed.indexOf(role) !== -1;
+        });
+        var nav = items.map(function (it) {
+          var mark = active === it.key ? ' aria-current="page"' : '';
+          var tag = it.tag ? '<span class="tag' + (it.warn ? ' warn' : '') + '">' + it.tag + '</span>' : '';
+          return '<a href="' + it.href + '"' + mark + ' title="' + it.label + '"><svg viewBox="0 0 24 24" aria-hidden="true">' +
+            ICONS[it.key] + '</svg><span class="sp">' + it.label + '</span>' + tag + '</a>';
+        }).join('');
+        var aside = document.createElement('aside');
+        aside.className = 'sidebar';
+        aside.setAttribute('aria-label', 'منوی اصلی پنل');
+        aside.innerHTML =
+          '<div class="sb-brand"><span class="sb-mark" aria-hidden="true">هـ</span><div>' +
+          '<p class="sb-name">کلینیک سلامت پارس</p><p class="sb-sub">پنل کلینیک · ۴ پزشک</p></div></div>' +
+          '<nav class="sb-nav" aria-label="منوی اصلی">' + nav + '</nav>' +
+          '<div class="sb-spacer"></div>' +
+          '<div class="sb-credit neu-in" title="اعتبار پیامک: ۹۶۰"><p><span class="sb-hide">اعتبار پیامک: </span>۹۶۰</p><small class="sb-hide">۱۰۰ پیامک تا هشدار</small>' +
+          '<div class="bar" aria-hidden="true"><span></span></div><a class="sb-hide" href="sms.html">شارژ پیامک</a></div>' +
+          '<div class="sb-user"><span class="sb-av" aria-hidden="true">س</span><div><p>سارا رضایی</p><small>مدیر کلینیک</small></div></div>';
+        app.insertBefore(aside, app.firstChild);
+
+        document.documentElement.classList.add('sidebar-collapsed');
+        var bar = document.querySelector('.topbar') || document.querySelector('.controls');
+        if (bar) {
+          var toggle = document.createElement('button');
+          toggle.type = 'button';
+          toggle.className = 'icon-btn neu-sm sidebar-toggle';
+          toggle.setAttribute('aria-label', 'باز یا بستن منو');
+          toggle.setAttribute('aria-expanded', 'false');
+          toggle.textContent = '⟨';
+          toggle.addEventListener('click', function () {
+            var isCollapsed = document.documentElement.classList.toggle('sidebar-collapsed');
+            toggle.setAttribute('aria-expanded', isCollapsed ? 'false' : 'true');
+            toggle.textContent = isCollapsed ? '⟨' : '⟩';
+          });
+          bar.insertBefore(toggle, bar.firstChild);
+        }
+      })();
+      // تم
+      document.getElementById('theme').addEventListener('click', function () {
+        var root = document.documentElement;
+        root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark';
+      });
+
+      // تب‌ها
+      document.querySelectorAll('[data-tab]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          document.querySelectorAll('[data-tab]').forEach(function (b) {
+            b.setAttribute('aria-selected', b === btn ? 'true' : 'false');
+          });
+          document.getElementById('tab-list').hidden = btn.dataset.tab !== 'list';
+          document.getElementById('tab-record').hidden = btn.dataset.tab !== 'record';
+        });
+      });
+
+      // فیلترها (نمایشی)
+      document.querySelectorAll('.chip').forEach(function (chip) {
+        chip.addEventListener('click', function () {
+          document.querySelectorAll('.chip').forEach(function (o) { o.setAttribute('aria-pressed', 'false'); });
+          chip.setAttribute('aria-pressed', 'true');
+        });
+      });
+    </script>
+  </body>
+</html>

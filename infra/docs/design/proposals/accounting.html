@@ -1,0 +1,676 @@
+<!doctype html>
+<html lang="fa" dir="rtl" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>هومانا | حسابداری</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #e9e5dd; --ink: #2e2b26; --sub: #7a756b; --sd: #c9c3b6; --sl: #ffffff;
+        --bar: rgba(46, 43, 38, 0.13); --accent: #0d9488; --accent-2: #14b8a6;
+        --ok: #059669; --ok-bg: rgba(16, 185, 129, 0.16);
+        --warn: #b45309; --warn-bg: rgba(245, 158, 11, 0.18);
+        --no: #dc2626; --no-bg: rgba(239, 68, 68, 0.14);
+      }
+      [data-theme='dark'] {
+        --bg: #262421; --ink: #ede9e1; --sub: #a09a8e; --sd: #1d1b18; --sl: #32302b;
+        --bar: rgba(237, 233, 225, 0.13); --ok: #34d399; --warn: #fbbf24; --no: #f87171;
+      }
+      * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+      body {
+        margin: 0; background: var(--bg); color: var(--ink);
+        font-family: Vazirmatn, 'Segoe UI', Tahoma, sans-serif; transition: background 0.3s, color 0.3s;
+      }
+      button, input, select, textarea { font-family: inherit; }
+      .neu { background: var(--bg); box-shadow: 9px 9px 20px var(--sd), -9px -9px 20px var(--sl); }
+      .neu-sm { background: var(--bg); box-shadow: 5px 5px 12px var(--sd), -5px -5px 12px var(--sl); }
+      .neu-in { background: var(--bg); box-shadow: inset 5px 5px 10px var(--sd), inset -5px -5px 10px var(--sl); }
+      .cta {
+        background: linear-gradient(135deg, var(--accent-2), var(--accent)); color: #fff; border: 0;
+        box-shadow: 6px 6px 14px var(--sd), -6px -6px 14px var(--sl), 0 8px 22px rgba(13, 148, 136, 0.3);
+      }
+      .mini {
+        border: 0; border-radius: 12px; padding: 10px 13px; font-size: 12.5px; font-weight: 700; color: var(--sub);
+        cursor: pointer; min-height: 40px; background: var(--bg); box-shadow: 4px 4px 9px var(--sd), -4px -4px 9px var(--sl);
+      }
+      .mini:hover { color: var(--accent); }
+      .icon-btn {
+        width: 44px; height: 44px; border: 0; border-radius: 15px; cursor: pointer; color: var(--sub);
+        display: grid; place-items: center; flex-shrink: 0; background: var(--bg);
+      }
+      :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+      .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); }
+      .pill { font-size: 11.5px; font-weight: 800; padding: 5px 12px; border-radius: 9999px; background: var(--bar); color: var(--sub); white-space: nowrap; }
+      .pill-ok { background: var(--ok-bg); color: var(--ok); }
+      .pill-warn { background: var(--warn-bg); color: var(--warn); }
+      .pill-no { background: var(--no-bg); color: var(--no); }
+      /* ═══ پوستهٔ پنل: سایدبار (یکسان در همهٔ صفحه‌ها — پیش‌فرض جمع‌شده) ═══ */
+      .app { display: grid; grid-template-columns: 262px minmax(0, 1fr); align-items: start; }
+      .main { min-width: 0; }
+      .sidebar {
+        padding: 18px 14px; display: flex; flex-direction: column; gap: 14px; position: sticky; top: 0;
+        max-height: 100vh; overflow-y: auto; box-shadow: inset -1px 0 0 var(--bar);
+      }
+      .sb-brand { display: flex; align-items: center; gap: 10px; padding: 4px 6px; }
+      .sb-mark {
+        width: 40px; height: 40px; border-radius: 14px; display: grid; place-items: center; color: #fff;
+        font-weight: 900; font-size: 17px; flex-shrink: 0; background: linear-gradient(135deg, var(--accent-2), var(--accent));
+      }
+      .sb-name { margin: 0; font-size: 14px; font-weight: 900; }
+      .sb-sub { margin: 2px 0 0; font-size: 11px; color: var(--sub); }
+      .sb-nav { display: grid; gap: 5px; }
+      .sb-nav a {
+        display: flex; align-items: center; gap: 11px; text-decoration: none; color: var(--sub);
+        font-size: 13.5px; font-weight: 700; padding: 11px 12px; border-radius: 15px; min-height: 44px;
+      }
+      .sb-nav a:hover { color: var(--accent); }
+      .sb-nav a[aria-current='page'] { color: var(--accent); box-shadow: inset 4px 4px 10px var(--sd), inset -4px -4px 10px var(--sl); }
+      .sb-nav svg { width: 20px; height: 20px; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 1.8; }
+      .sb-nav .sp { flex: 1; }
+      .sb-nav .tag { font-size: 10.5px; font-weight: 800; padding: 3px 8px; border-radius: 9999px; background: var(--bar); color: var(--sub); }
+      .sb-nav .tag.warn { background: var(--warn-bg); color: var(--warn); }
+      .sb-spacer { flex: 1; }
+      .sb-credit { border-radius: 18px; padding: 13px; }
+      .sb-credit p { margin: 0; font-size: 12.5px; font-weight: 800; }
+      .sb-credit small { font-size: 11px; color: var(--sub); }
+      .sb-credit .bar { height: 7px; border-radius: 9999px; background: var(--bar); margin: 9px 0; overflow: hidden; }
+      .sb-credit .bar span { display: block; height: 100%; width: 38%; border-radius: 9999px; background: linear-gradient(90deg, var(--accent-2), var(--accent)); }
+      .sb-credit a {
+        display: block; text-align: center; text-decoration: none; font-size: 12.5px; font-weight: 800; color: var(--sub);
+        border-radius: 12px; padding: 10px; margin-top: 4px; background: var(--bg); box-shadow: 4px 4px 9px var(--sd), -4px -4px 9px var(--sl);
+      }
+      .sb-user { display: flex; align-items: center; gap: 10px; padding: 4px 6px; }
+      .sb-av {
+        width: 38px; height: 38px; border-radius: 13px; display: grid; place-items: center; color: #fff;
+        font-weight: 800; flex-shrink: 0; background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+      }
+      .sb-user p { margin: 0; font-size: 13px; font-weight: 800; }
+      .sb-user small { color: var(--sub); font-size: 11px; }
+      html.sidebar-collapsed .app { grid-template-columns: 86px minmax(0, 1fr); }
+      html.sidebar-collapsed .sb-name,
+      html.sidebar-collapsed .sb-sub,
+      html.sidebar-collapsed .sb-user p,
+      html.sidebar-collapsed .sb-user small,
+      html.sidebar-collapsed .sb-nav .sp,
+      html.sidebar-collapsed .sb-nav .tag,
+      html.sidebar-collapsed .sb-credit .sb-hide,
+      html.sidebar-collapsed .sb-credit .bar { display: none; }
+      html.sidebar-collapsed .sb-brand,
+      html.sidebar-collapsed .sb-user { justify-content: center; padding-inline: 0; }
+      html.sidebar-collapsed .sb-nav a { justify-content: center; padding: 12px 0; }
+      html.sidebar-collapsed .sb-credit { padding: 11px 6px; text-align: center; }
+      html.sidebar-collapsed .sb-credit p { font-size: 13px; font-weight: 900; color: var(--accent); }
+      .sidebar-toggle { cursor: pointer; }
+      @media (max-width: 900px) {
+        .app,
+        html.sidebar-collapsed .app { grid-template-columns: minmax(0, 1fr); }
+        .sidebar { display: none; }
+      }
+
+      .shell { max-width: 1320px; margin: 0 auto; padding: 18px 18px 40px; }
+
+      .topbar { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+      .brand { display: flex; align-items: center; gap: 11px; }
+      .brand-mark {
+        width: 44px; height: 44px; border-radius: 15px; display: grid; place-items: center; color: #fff;
+        font-weight: 900; font-size: 19px; background: linear-gradient(135deg, var(--accent-2), var(--accent));
+      }
+      .brand-name { margin: 0; font-weight: 900; font-size: 16px; }
+      .brand-sub { margin: 2px 0 0; font-size: 11.5px; color: var(--sub); }
+      .search { display: flex; align-items: center; gap: 8px; padding: 11px 15px; border-radius: 16px; flex: 1; min-width: 200px; }
+      .search input { border: 0; outline: 0; background: transparent; font: inherit; font-size: 13.5px; width: 100%; color: var(--ink); }
+
+      .controls { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 22px; margin-bottom: 14px; flex-wrap: wrap; }
+      .spacer { flex: 1; }
+      .chips { display: flex; gap: 8px; flex-wrap: wrap; }
+      .chip {
+        border: 0; border-radius: 9999px; padding: 10px 15px; font-size: 12.5px; font-weight: 700; color: var(--sub);
+        cursor: pointer; min-height: 40px; background: var(--bg); box-shadow: 5px 5px 12px var(--sd), -5px -5px 12px var(--sl);
+      }
+      .chip[aria-pressed='true'] { color: var(--accent); box-shadow: inset 4px 4px 9px var(--sd), -4px -4px 9px var(--sl); }
+      .range { display: flex; align-items: center; gap: 8px; border-radius: 15px; padding: 7px 12px; }
+      .range input { border: 0; outline: 0; background: transparent; font: inherit; font-size: 12.5px; color: var(--ink); width: 96px; text-align: center; }
+      .range span { font-size: 12px; color: var(--sub); }
+
+      .kpis { display: grid; gap: 12px; grid-template-columns: 1fr; margin-bottom: 16px; }
+      @media (min-width: 880px) { .kpis { grid-template-columns: repeat(4, 1fr); } }
+      .kpi { border-radius: 22px; padding: 16px 18px; }
+      .kpi p { margin: 0; }
+      .kpi .v { font-size: 21px; font-weight: 900; }
+      .kpi .l { font-size: 11.5px; color: var(--sub); margin-top: 3px !important; }
+
+      .tabs { display: inline-flex; gap: 5px; padding: 5px; border-radius: 18px; margin-bottom: 16px; }
+      .tabs button {
+        border: 0; background: transparent; color: var(--sub); font-size: 13.5px; font-weight: 800;
+        padding: 11px 20px; border-radius: 14px; cursor: pointer; min-height: 44px;
+      }
+      .tabs button[aria-selected='true'] { color: var(--accent); box-shadow: inset 4px 4px 9px var(--sd), -4px -4px 9px var(--sl); }
+
+      .grid-main { display: grid; gap: 16px; grid-template-columns: 1fr; align-items: start; }
+      @media (min-width: 1080px) { .grid-main { grid-template-columns: minmax(0, 2.1fr) minmax(310px, 1fr); } }
+      .card { border-radius: 26px; padding: 20px; }
+      .card-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+      .card-head h2 { margin: 0; font-size: 16px; font-weight: 900; }
+      .card-head h3 { margin: 0; font-size: 14.5px; font-weight: 900; }
+
+      .bars { display: flex; align-items: flex-end; gap: 10px; height: 150px; }
+      .bar { flex: 1; border-radius: 10px 10px 5px 5px; background: var(--bar); position: relative; }
+      .bar.is-today { background: linear-gradient(180deg, var(--accent-2), var(--accent)); }
+      .bar .val { position: absolute; top: -20px; inset-inline: 0; text-align: center; font-size: 10.5px; color: var(--sub); }
+      .bars-labels { display: flex; gap: 10px; margin-top: 8px; }
+      .bars-labels span { flex: 1; text-align: center; font-size: 11px; color: var(--sub); }
+
+      .table-wrap { overflow-x: auto; }
+      table { border-collapse: collapse; width: 100%; min-width: 700px; }
+      table th, table td { padding: 13px 12px; text-align: right; font-size: 13px; }
+      table thead th { font-size: 11.5px; color: var(--sub); font-weight: 800; }
+      table tbody tr { border-top: 1px solid var(--bar); }
+      table tbody tr:hover { background: var(--bar); }
+      table tfoot td { border-top: 2px solid var(--bar); font-weight: 900; }
+      td.actions { display: flex; gap: 8px; }
+      .share { height: 7px; border-radius: 9999px; background: var(--bar); overflow: hidden; min-width: 70px; }
+      .share span { display: block; height: 100%; border-radius: 9999px; background: linear-gradient(90deg, var(--accent-2), var(--accent)); }
+      .pager { display: flex; align-items: center; gap: 10px; margin-top: 14px; font-size: 12.5px; color: var(--sub); flex-wrap: wrap; }
+      .scrolhint { font-size: 11.5px; color: var(--sub); margin: 8px 0 0; }
+
+      .setting { display: flex; align-items: flex-start; gap: 10px; padding: 12px 0; border-top: 1px solid var(--bar); }
+      .setting:first-of-type { border-top: 0; }
+      .setting .body { flex: 1; }
+      .setting p { margin: 0; font-size: 13px; font-weight: 800; }
+      .setting small { color: var(--sub); font-size: 11.5px; line-height: 1.9; display: block; margin-top: 3px; }
+      .field > label { display: block; font-size: 12.5px; font-weight: 800; margin-bottom: 7px; }
+      .input-wrap { display: flex; align-items: center; gap: 8px; border-radius: 15px; padding: 11px 14px; }
+      .input-wrap input, .input-wrap select, .input-wrap textarea {
+        border: 0; outline: 0; background: transparent; font: inherit; font-size: 13.5px; color: var(--ink); width: 100%;
+      }
+      .input-wrap textarea { resize: vertical; min-height: 56px; }
+      .hint { font-size: 11.5px; color: var(--sub); margin: 8px 0 0; line-height: 1.9; }
+      .callout { border-radius: 18px; padding: 14px; font-size: 12.5px; line-height: 1.95; }
+      .callout-warn { background: var(--warn-bg); color: var(--warn); }
+      .callout b { color: var(--ink); }
+
+      .notes { margin-top: 26px; border-radius: 26px; padding: 22px; }
+      .notes h2 { margin: 0 0 10px; font-size: 16px; font-weight: 900; }
+      .notes ol { margin: 0; padding-inline-start: 20px; color: var(--sub); font-size: 13px; line-height: 2.15; }
+      .notes b { color: var(--ink); }
+
+      @media (max-width: 600px) {
+        td.actions { flex-direction: column; }
+        .bars { height: 120px; gap: 6px; }
+        .bar .val { display: none; }
+      }
+    </style>
+  </head>
+  <body>
+  <div class="app" data-active="accounting" data-role="owner">
+    <div class="main">
+    <div class="shell">
+      <header class="topbar">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">هـ</div>
+          <div>
+            <p class="brand-name">هومانا</p>
+            <p class="brand-sub">کلینیک سلامت پارس</p>
+          </div>
+        </div>
+        <div class="search neu-in" style="max-width: 320px">
+          <span aria-hidden="true" style="color: var(--sub)">⌕</span>
+          <input type="search" placeholder="جستجوی بیمار یا مبلغ…" aria-label="جستجو" />
+        </div>
+        <button class="icon-btn neu-sm" aria-label="اعلان‌ها">🔔</button>
+        <button class="icon-btn neu-sm" id="theme" aria-label="تعویض تم">◐</button>
+      </header>
+
+      <h1 style="margin: 0 0 4px; font-size: 22px; font-weight: 900">حسابداری</h1>
+      <p style="margin: 0 0 16px; color: var(--sub); font-size: 13px">
+        درآمد از «نوبت‌های ثبت‌شده × تعرفهٔ خدمات» محاسبه می‌شود؛ تعرفه‌ها در صفحهٔ «پزشکان و خدمات» تعیین می‌شوند.
+      </p>
+
+      <!-- نوار بازهٔ زمانی -->
+      <div class="controls neu">
+        <div class="chips" role="group" aria-label="بازهٔ زمانی">
+          <button class="chip" aria-pressed="false">امروز</button>
+          <button class="chip" aria-pressed="false">این هفته</button>
+          <button class="chip" aria-pressed="true">این ماه</button>
+          <button class="chip" aria-pressed="false">بازهٔ دلخواه</button>
+        </div>
+        <div class="range neu-in">
+          <span>از</span><input value="۱ مهر ۱۴۰۵" aria-label="از تاریخ" />
+          <span>تا</span><input value="۲۱ مهر ۱۴۰۵" aria-label="تا تاریخ" />
+        </div>
+        <div class="spacer"></div>
+        <button class="mini">⬇ خروجی اکسل</button>
+      </div>
+
+      <!-- شاخص‌ها -->
+      <section class="kpis">
+        <div class="kpi neu">
+          <p class="v">۲۸۰٬۲۵۰٬۰۰۰</p>
+          <p class="l">درآمد این ماه (تومان)</p>
+        </div>
+        <div class="kpi neu">
+          <p class="v">۸۲۶</p>
+          <p class="l">نوبت‌های این ماه</p>
+        </div>
+        <div class="kpi neu">
+          <p class="v">۳۳۹٬۰۰۰</p>
+          <p class="l">میانگین درآمد هر نوبت (تقریبی)</p>
+        </div>
+        <div class="kpi neu">
+          <p class="v" style="font-size: 17px">ویزیت عمومی</p>
+          <p class="l">بیشترین درآمد: ۱۲۳٬۹۰۰٬۰۰۰ تومان</p>
+        </div>
+      </section>
+
+      <div class="tabs neu" role="tablist" aria-label="بخش‌ها">
+        <button role="tab" aria-selected="true" data-tab="revenue">درآمد و تحلیل</button>
+        <button role="tab" aria-selected="false" data-tab="payments">دفتر پرداخت‌ها<span class="pill" style="margin-inline-start: 6px">۲۷</span></button>
+      </div>
+
+      <!-- ═══════════ تب ۱: درآمد و تحلیل ═══════════ -->
+      <section id="tab-revenue" role="tabpanel" aria-label="درآمد و تحلیل">
+        <div class="grid-main">
+          <div style="display: grid; gap: 16px">
+            <section class="card neu" aria-labelledby="trend-title">
+              <div class="card-head">
+                <h2 id="trend-title">روند درآمد هفته (میلیون تومان)</h2>
+                <div class="spacer"></div>
+                <span class="pill">۱۵ تا ۲۱ مهر</span>
+              </div>
+              <div class="bars" role="img" aria-label="چهارشنبه ۹٫۲ · پنجشنبه ۱۱٫۵ · جمعه تعطیل · شنبه ۱۴٫۶ · یکشنبه ۱۰٫۱ · دوشنبه ۸٫۸ · سه‌شنبه ۱۲٫۴ میلیون تومان">
+                <div class="bar" style="height: 63%"><span class="val">۹٫۲</span></div>
+                <div class="bar" style="height: 79%"><span class="val">۱۱٫۵</span></div>
+                <div class="bar" style="height: 3%"></div>
+                <div class="bar" style="height: 100%"><span class="val">۱۴٫۶</span></div>
+                <div class="bar" style="height: 69%"><span class="val">۱۰٫۱</span></div>
+                <div class="bar" style="height: 60%"><span class="val">۸٫۸</span></div>
+                <div class="bar is-today" style="height: 85%"><span class="val">۱۲٫۴</span></div>
+              </div>
+              <div class="bars-labels" aria-hidden="true">
+                <span>چهارشنبه</span><span>پنجشنبه</span><span>جمعه</span><span>شنبه</span><span>یک‌شنبه</span><span>دوشنبه</span><span>سه‌شنبه</span>
+              </div>
+              <p class="hint">جمعه‌ها تعطیل است و درآمدی ثبت نمی‌شود؛ میلهٔ سه‌شنبه (امروز) در حال تکمیل است.</p>
+            </section>
+
+            <section class="card neu" aria-labelledby="svc-title">
+              <div class="card-head">
+                <h2 id="svc-title">درآمد به تفکیک خدمت</h2>
+                <div class="spacer"></div>
+                <span class="pill">این ماه</span>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th scope="col">خدمت</th>
+                      <th scope="col">تعداد نوبت</th>
+                      <th scope="col">تعرفه</th>
+                      <th scope="col">درآمد (تومان)</th>
+                      <th scope="col">سهم</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>ویزیت عمومی</td><td>۳۵۴</td><td>۳۵۰٬۰۰۰</td><td>۱۲۳٬۹۰۰٬۰۰۰</td>
+                      <td><span class="share" title="۴۴٪"><span style="width: 44%"></span></span></td>
+                    </tr>
+                    <tr>
+                      <td>کنترل فشار خون</td><td>۲۳۰</td><td>۲۵۰٬۰۰۰</td><td>۵۷٬۵۰۰٬۰۰۰</td>
+                      <td><span class="share" title="۲۱٪"><span style="width: 21%"></span></span></td>
+                    </tr>
+                    <tr>
+                      <td>ویزیت پوست</td><td>۹۴</td><td>۵۰۰٬۰۰۰</td><td>۴۷٬۰۰۰٬۰۰۰</td>
+                      <td><span class="share" title="۱۷٪"><span style="width: 17%"></span></span></td>
+                    </tr>
+                    <tr>
+                      <td>مشاوره تغذیه</td><td>۸۹</td><td>۴۵۰٬۰۰۰</td><td>۴۰٬۰۵۰٬۰۰۰</td>
+                      <td><span class="share" title="۱۴٪"><span style="width: 14%"></span></span></td>
+                    </tr>
+                    <tr>
+                      <td>واکسیناسیون</td><td>۵۹</td><td>۲۰۰٬۰۰۰</td><td>۱۱٬۸۰۰٬۰۰۰</td>
+                      <td><span class="share" title="۴٪"><span style="width: 4%"></span></span></td>
+                    </tr>
+                  </tbody>
+                  <tfoot>
+                    <tr><td>جمع</td><td>۸۲۶</td><td>—</td><td>۲۸۰٬۲۵۰٬۰۰۰</td><td>۱۰۰٪</td></tr>
+                  </tfoot>
+                </table>
+              </div>
+              <p class="scrolhint">برای ویرایش تعرفه‌ها: صفحهٔ «پزشکان و خدمات» → تب خدمات.</p>
+            </section>
+
+            <section class="card neu" aria-labelledby="doc-title">
+              <div class="card-head">
+                <h2 id="doc-title">درآمد به تفکیک پزشک</h2>
+                <div class="spacer"></div>
+                <span class="pill">این ماه</span>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th scope="col">پزشک</th>
+                      <th scope="col">تعداد نوبت</th>
+                      <th scope="col">درآمد (تومان)</th>
+                      <th scope="col">سهم</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>دکتر سعید رضایی</td><td>۳۰۰</td><td>۹۸٬۰۰۰٬۰۰۰</td>
+                      <td><span class="share" title="۳۵٪"><span style="width: 35%"></span></span></td>
+                    </tr>
+                    <tr>
+                      <td>دکتر مریم احمدی</td><td>۳۲۳</td><td>۹۰٬۲۰۰٬۰۰۰</td>
+                      <td><span class="share" title="۳۲٪"><span style="width: 32%"></span></span></td>
+                    </tr>
+                    <tr>
+                      <td>دکتر حمید کریمی</td><td>۹۴</td><td>۴۷٬۰۰۰٬۰۰۰</td>
+                      <td><span class="share" title="۱۷٪"><span style="width: 17%"></span></span></td>
+                    </tr>
+                    <tr>
+                      <td>دکتر لیلا نوری</td><td>۱۰۹</td><td>۴۵٬۰۵۰٬۰۰۰</td>
+                      <td><span class="share" title="۱۶٪"><span style="width: 16%"></span></span></td>
+                    </tr>
+                  </tbody>
+                  <tfoot>
+                    <tr><td>جمع</td><td>۸۲۶</td><td>۲۸۰٬۲۵۰٬۰۰۰</td><td>۱۰۰٪</td></tr>
+                  </tfoot>
+                </table>
+              </div>
+              <p class="scrolhint">یادآوری: دکتر کریمی تا ۳۰ مهر در مرخصی است؛ کاهش سهم او طبیعی است.</p>
+            </section>
+          </div>
+
+          <div style="display: grid; gap: 16px">
+            <section class="card neu" aria-labelledby="src-title">
+              <div class="card-head"><h3 id="src-title">این اعداد از کجا می‌آید؟</h3></div>
+              <div class="setting" style="border: 0">
+                <div class="body">
+                  <p>۱. تعرفهٔ هر خدمت</p>
+                  <small>از صفحهٔ «پزشکان و خدمات» → تب خدمات (قابل ویرایش توسط شما).</small>
+                </div>
+              </div>
+              <div class="setting">
+                <div class="body">
+                  <p>۲. نوبت‌های ثبت‌شده</p>
+                  <small>هزینهٔ هر نوبت = تعرفهٔ خدمتِ همان نوبت، در لحظهٔ ثبت.</small>
+                </div>
+              </div>
+              <div class="setting">
+                <div class="body">
+                  <p>۳. تغییر بعدی تعرفه</p>
+                  <small>تغییر تعرفه، درآمد نوبت‌های گذشته را عوض نمی‌کند؛ هر نوبت با تعرفهٔ زمان خودش حساب می‌شود.</small>
+                </div>
+              </div>
+              <p class="hint">تخفیف و هزینهٔ اضافه (مثل نوار قلب در مطب) فعلاً طراحی نشده — اگر لازم است بگویید تا فیلد «تخفیف/افزودنی» را به فرم ثبت نوبت اضافه کنم.</p>
+            </section>
+
+            <section class="card neu" aria-labelledby="export-title">
+              <div class="card-head"><h3 id="export-title">گزارش برای حسابدار</h3></div>
+              <p class="hint" style="margin-top: 0">فایل اکسل ماهانه با این ستون‌ها آماده می‌شود:</p>
+              <div class="neu-in" style="border-radius: 16px; padding: 13px; font-size: 12px; color: var(--sub); line-height: 2">
+                تاریخ · ساعت · بیمار · موبایل · خدمت · پزشک · تعرفه · مبلغ · روش پرداخت · ثبت‌کننده
+              </div>
+              <button class="mini" style="width: 100%; margin-top: 10px">⬇ خروجی اکسل مهر ۱۴۰۵</button>
+              <p class="hint">گزارش فقط خواندنی است و تغییری در داده‌ها نمی‌دهد.</p>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══════════ تب ۲: دفتر پرداخت‌ها ═══════════ -->
+      <section id="tab-payments" role="tabpanel" aria-label="دفتر پرداخت‌ها" hidden>
+        <div class="chips" role="group" aria-label="فیلتر روش پرداخت" style="margin-bottom: 14px">
+          <button class="chip" aria-pressed="true">همه (۲۷ پرداخت امروز)</button>
+          <button class="chip" aria-pressed="false">نقدی</button>
+          <button class="chip" aria-pressed="false">کارت</button>
+          <button class="chip" aria-pressed="false">پرداخت آنلاین</button>
+          <button class="chip" aria-pressed="false">پرداخت‌نشده‌ها (۴)</button>
+        </div>
+
+        <div class="grid-main">
+          <section class="card neu" aria-labelledby="pay-title">
+            <div class="card-head">
+              <h2 id="pay-title">پرداخت‌های امروز</h2>
+              <span class="pill pill-ok">جمع: ۹٬۸۵۰٬۰۰۰ تومان</span>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">زمان</th>
+                    <th scope="col">بیمار</th>
+                    <th scope="col">مبلغ (تومان)</th>
+                    <th scope="col">روش</th>
+                    <th scope="col">خدمت</th>
+                    <th scope="col">پزشک</th>
+                    <th scope="col">ثبت‌کننده</th>
+                    <th scope="col"><span class="visually-hidden">اقدام</span></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>۰۹:۱۲</td><td>ندا اکبری</td><td>۵۰۰٬۰۰۰</td><td><span class="pill">کارت</span></td>
+                    <td>ویزیت پوست</td><td>دکتر کریمی</td><td>سارا رضایی</td>
+                    <td class="actions"><button class="mini">رسید</button></td>
+                  </tr>
+                  <tr>
+                    <td>۰۹:۳۴</td><td>زهرا محمدی</td><td>۳۵۰٬۰۰۰</td><td><span class="pill">نقدی</span></td>
+                    <td>ویزیت عمومی</td><td>دکتر رضایی</td><td>سارا رضایی</td>
+                    <td class="actions"><button class="mini">رسید</button></td>
+                  </tr>
+                  <tr>
+                    <td>۱۰:۰۴</td><td>علی کریمی</td><td>۲۵۰٬۰۰۰</td><td><span class="pill pill-ok">پرداخت آنلاین</span></td>
+                    <td>کنترل فشار خون</td><td>دکتر احمدی</td><td>—</td>
+                    <td class="actions"><button class="mini">رسید</button></td>
+                  </tr>
+                  <tr>
+                    <td>۱۰:۳۱</td><td>مریم حسینی</td><td>۴۵۰٬۰۰۰</td><td><span class="pill">کارت</span></td>
+                    <td>مشاوره تغذیه</td><td>دکتر نوری</td><td>سارا رضایی</td>
+                    <td class="actions"><button class="mini">رسید</button></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="scrolhint">«پرداخت آنلاین» یعنی بیمار در سایت خودش پرداخت کرده و ثبت‌کنندهٔ انسانی ندارد.</p>
+            <div class="pager">
+              <span>نمایش ۱ تا ۴ از ۲۷ پرداخت امروز</span>
+              <div class="spacer"></div>
+              <button class="mini" disabled style="opacity: 0.5">قبلی</button>
+              <button class="mini">بعدی</button>
+            </div>
+          </section>
+
+          <div style="display: grid; gap: 16px">
+            <section class="card neu" aria-labelledby="reg-title">
+              <div class="card-head"><h3 id="reg-title">ثبت پرداخت</h3></div>
+              <div class="field">
+                <label for="pay-patient">بیمار</label>
+                <div class="input-wrap neu-in"><input id="pay-patient" value="زهرا محمدی" /></div>
+              </div>
+              <div class="field">
+                <label for="pay-amount">مبلغ (تومان)</label>
+                <div class="input-wrap neu-in"><input id="pay-amount" value="۳۵۰٬۰۰۰" /></div>
+              </div>
+              <div class="field">
+                <label for="pay-method">روش پرداخت</label>
+                <div class="input-wrap neu-in">
+                  <select id="pay-method"><option>نقدی</option><option selected>کارت</option><option>پرداخت آنلاین</option></select>
+                </div>
+              </div>
+              <div class="field">
+                <label for="pay-svc">خدمت مرتبط (اختیاری)</label>
+                <div class="input-wrap neu-in">
+                  <select id="pay-svc">
+                    <option>ویزیت عمومی — ۳۵۰٬۰۰۰ تومان</option>
+                    <option>کنترل فشار خون — ۲۵۰٬۰۰۰ تومان</option>
+                    <option>ویزیت پوست — ۵۰۰٬۰۰۰ تومان</option>
+                  </select>
+                </div>
+              </div>
+              <div class="field" style="margin-bottom: 0">
+                <label for="pay-note">یادداشت (اختیاری)</label>
+                <div class="input-wrap neu-in"><textarea id="pay-note" placeholder="مثلاً: نصف مبلغ نقدی، بقیه کارت"></textarea></div>
+              </div>
+              <button class="cta" style="width: 100%; border-radius: 14px; padding: 13px; font-size: 14px; font-weight: 800; cursor: pointer; margin-top: 14px">
+                ثبت پرداخت
+              </button>
+              <p class="hint">
+                اگر خدمت مرتبط انتخاب شود، مبلغ پیشنهادی از تعرفهٔ همان خدمت می‌آید ولی قابل تغییر است.
+              </p>
+            </section>
+
+            <section class="card neu" aria-labelledby="unpaid-title">
+              <div class="card-head">
+                <h3 id="unpaid-title">نوبت‌های پرداخت‌نشدهٔ امروز</h3>
+                <span class="pill pill-warn">۴ نوبت</span>
+              </div>
+              <div class="setting">
+                <div class="body"><p>مریم حسینی — مشاوره تغذیه</p><small>دکتر نوری · ۴۵۰٬۰۰۰ تومان · ساعت ۱۰:۳۰</small></div>
+                <button class="mini">ثبت پرداخت</button>
+              </div>
+              <div class="setting">
+                <div class="body"><p>سارا احمدی — ویزیت عمومی</p><small>دکتر رضایی · ۳۵۰٬۰۰۰ تومان · ساعت ۱۱:۰۰</small></div>
+                <button class="mini">ثبت پرداخت</button>
+              </div>
+              <div class="setting">
+                <div class="body"><p>علی کریمی — کنترل فشار خون</p><small>دکتر احمدی · ۲۵۰٬۰۰۰ تومان · ساعت ۱۰:۰۰</small></div>
+                <button class="mini">ثبت پرداخت</button>
+              </div>
+              <div class="setting">
+                <div class="body"><p>ندا اکبری — ویزیت پوست</p><small>دکتر کریمی · ۵۰۰٬۰۰۰ تومان · ساعت ۰۹:۰۰</small></div>
+                <button class="mini">ثبت پرداخت</button>
+              </div>
+              <p class="hint">
+                جمع: <b>۱٬۵۵۰٬۰۰۰ تومان</b>. طبق تصمیم شما هر نوبت یک نشانهٔ مالی دارد (پرداخت‌شده / پرداخت‌نشده) و این فهرست
+                از همان نشانه ساخته می‌شود؛ با یک کلیک، پرداخت همان نوبت ثبت و از این فهرست کم می‌شود.
+              </p>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══════════ یادداشت ساختار ═══════════ -->
+      <section class="notes neu" aria-labelledby="notes-title">
+        <h2 id="notes-title">چرا این ساختار؟ (برای بازبینی شما)</h2>
+        <ol>
+          <li><b>یک بازهٔ زمانی، همهٔ اعداد:</b> انتخاب «امروز / این هفته / این ماه / بازهٔ دلخواه» بالای صفحه، هم نمودار و هم جدول‌ها را عوض می‌کند.</li>
+          <li><b>درآمد از تعرفه، نه از حدس:</b> هر نوبت با تعرفهٔ خدمتِ خودش حساب می‌شود و تغییر تعرفه، درآمد گذشته را عوض نمی‌کند (شفاف برای حسابداری).</li>
+          <li><b>۸۲۶ نوبت و جمع ۲۸۰٬۲۵۰٬۰۰۰:</b> جدول خدمت‌ها و پزشکان هر دو به همین جمع می‌رسند تا سازگاری اعداد در یک نگاه بررسی شود.</li>
+          <li><b>نمودار هفتگی با جمعهٔ خالی:</b> تعطیلی جزو داده است، نه خطا؛ و میلهٔ امروز در حال تکمیل بودن، با رنگ متفاوت مشخص شده.</li>
+          <li><b>دفتر پرداخت‌ها جدا از تحلیل:</b> ثبت پرداخت کار روزمرهٔ منشی است و در تب دوم با فرم کناری همان‌جا انجام می‌شود؛ «پرداخت آنلاین» ثبت‌کنندهٔ انسانی ندارد و صریحاً همین‌طور نمایش داده می‌شود.</li>
+          <li><b>گزارش حسابدار با ستون‌های روشن:</b> یک فایل اکسل ماهانه با تاریخ، بیمار، خدمت، تعرفه، مبلغ، روش و ثبت‌کننده — فقط خواندنی.</li>
+          <li><b>نشانهٔ مالی، نه وضعیت نوبت:</b> طبق تصمیم شما روی هر نوبت یک نشانهٔ پرداخت (پرداخت‌شده / پرداخت‌نشده) اضافه شد؛ فیلتر «پرداخت‌نشده‌ها» و کارت «نوبت‌های پرداخت‌نشدهٔ امروز» از همان نشانه ساخته می‌شوند. این تنها مفهوم حالت‌دار در پنل است و کاملاً مالی است، نه وضعیت نوبت.</li>
+          <li><b>ریسپانسیو:</b> دسکتاپ دوستونه (تحلیل + کناری)، موبایل یک‌ستونه؛ جدول‌ها اسکرول افقی؛ هدف‌های لمسی ≥۴۰px و حلقهٔ فوکوس فیروزه‌ای.</li>
+        </ol>
+      </section>
+    </div>
+    </div>
+  </div>
+
+    <script>
+      // ═══ سایدبار پوسته (یکسان در همهٔ صفحه‌های پنل — پیش‌فرض جمع‌شده) ═══
+      (function () {
+        var ICONS = {
+          dashboard: '<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>',
+          appointments: '<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/>',
+          patients: '<circle cx="9" cy="8" r="3.2"/><path d="M3.5 20c0-3 2.5-5 5.5-5s5.5 2 5.5 5"/><path d="M16 5.5a3 3 0 0 1 0 5.6M17 20c0-2.2-.6-3.8-1.6-5"/>',
+          doctors: '<path d="M6 3v6a4 4 0 0 0 8 0V3"/><path d="M10 13v3a4 4 0 0 0 8 0v-2"/><circle cx="18" cy="11" r="2"/>',
+          accounting: '<rect x="3" y="6" width="18" height="13" rx="3"/><path d="M3 10h18"/><path d="M16 14.5h2"/>',
+          sms: '<path d="M4 5.5h16v10H9l-5 4z"/>',
+          settings: '<circle cx="12" cy="12" r="3.2"/><path d="M12 3.5v2M12 18.5v2M4.9 7.5l1.7 1M17.4 15.5l1.7 1M4.9 16.5l1.7-1M17.4 8.5l1.7-1"/>'
+        };
+        var ITEMS = [
+          { key: 'dashboard', href: 'dashboard.html', label: 'داشبورد' },
+          { key: 'appointments', href: 'appointments.html', label: 'نوبت‌ها', tag: '۴۸' },
+          { key: 'patients', href: 'patients.html', label: 'بیماران' },
+          { key: 'doctors', href: 'doctors-services.html', label: 'پزشکان و خدمات' },
+          { key: 'accounting', href: 'accounting.html', label: 'حسابداری' },
+          { key: 'sms', href: 'sms.html', label: 'پیامک', tag: '۱ ناموفق', warn: true },
+          { key: 'settings', href: 'settings.html', label: 'تنظیمات' }
+        ];
+        var ROLES = {
+          doctors: ['owner', 'reception'],
+          accounting: ['owner', 'reception'],
+          sms: ['owner', 'reception'],
+          settings: ['owner']
+        };
+        var app = document.querySelector('.app');
+        if (!app) { return; }
+        var active = app.dataset.active || '';
+        var role = app.dataset.role || 'owner';
+        var items = ITEMS.filter(function (it) {
+          var allowed = ROLES[it.key];
+          return !allowed || allowed.indexOf(role) !== -1;
+        });
+        var nav = items.map(function (it) {
+          var mark = active === it.key ? ' aria-current="page"' : '';
+          var tag = it.tag ? '<span class="tag' + (it.warn ? ' warn' : '') + '">' + it.tag + '</span>' : '';
+          return '<a href="' + it.href + '"' + mark + ' title="' + it.label + '"><svg viewBox="0 0 24 24" aria-hidden="true">' +
+            ICONS[it.key] + '</svg><span class="sp">' + it.label + '</span>' + tag + '</a>';
+        }).join('');
+        var aside = document.createElement('aside');
+        aside.className = 'sidebar';
+        aside.setAttribute('aria-label', 'منوی اصلی پنل');
+        aside.innerHTML =
+          '<div class="sb-brand"><span class="sb-mark" aria-hidden="true">هـ</span><div>' +
+          '<p class="sb-name">کلینیک سلامت پارس</p><p class="sb-sub">پنل کلینیک · ۴ پزشک</p></div></div>' +
+          '<nav class="sb-nav" aria-label="منوی اصلی">' + nav + '</nav>' +
+          '<div class="sb-spacer"></div>' +
+          '<div class="sb-credit neu-in" title="اعتبار پیامک: ۹۶۰"><p><span class="sb-hide">اعتبار پیامک: </span>۹۶۰</p><small class="sb-hide">۱۰۰ پیامک تا هشدار</small>' +
+          '<div class="bar" aria-hidden="true"><span></span></div><a class="sb-hide" href="sms.html">شارژ پیامک</a></div>' +
+          '<div class="sb-user"><span class="sb-av" aria-hidden="true">س</span><div><p>سارا رضایی</p><small>مدیر کلینیک</small></div></div>';
+        app.insertBefore(aside, app.firstChild);
+
+        document.documentElement.classList.add('sidebar-collapsed');
+        var bar = document.querySelector('.topbar') || document.querySelector('.controls');
+        if (bar) {
+          var toggle = document.createElement('button');
+          toggle.type = 'button';
+          toggle.className = 'icon-btn neu-sm sidebar-toggle';
+          toggle.setAttribute('aria-label', 'باز یا بستن منو');
+          toggle.setAttribute('aria-expanded', 'false');
+          toggle.textContent = '⟨';
+          toggle.addEventListener('click', function () {
+            var isCollapsed = document.documentElement.classList.toggle('sidebar-collapsed');
+            toggle.setAttribute('aria-expanded', isCollapsed ? 'false' : 'true');
+            toggle.textContent = isCollapsed ? '⟨' : '⟩';
+          });
+          bar.insertBefore(toggle, bar.firstChild);
+        }
+      })();
+      // تم
+      document.getElementById('theme').addEventListener('click', function () {
+        var root = document.documentElement;
+        root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark';
+      });
+
+      // تب‌ها
+      document.querySelectorAll('[data-tab]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          document.querySelectorAll('[data-tab]').forEach(function (b) {
+            b.setAttribute('aria-selected', b === btn ? 'true' : 'false');
+          });
+          ['revenue', 'payments'].forEach(function (name) {
+            document.getElementById('tab-' + name).hidden = name !== btn.dataset.tab;
+          });
+        });
+      });
+
+      // چیپ‌ها (نمایشی)
+      document.querySelectorAll('.chip[aria-pressed]').forEach(function (chip) {
+        chip.addEventListener('click', function () {
+          var group = chip.parentElement;
+          group.querySelectorAll('.chip').forEach(function (o) { o.setAttribute('aria-pressed', 'false'); });
+          chip.setAttribute('aria-pressed', 'true');
+        });
+      });
+    </script>
+  </body>
+</html>

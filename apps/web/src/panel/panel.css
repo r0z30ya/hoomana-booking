@@ -1,0 +1,454 @@
+/*
+ * Panel shell styles.
+ *
+ * Token names and the neumorphic surfaces (`.neu`, `.neu-sm`, `.neu-in`, `.cta`) live in
+ * `theme.css`; this file only lays out the shell itself. The rules follow the approved
+ * design (`infra/docs/design/proposals/shell-navigation.html`):
+ *   - desktop: sticky right-hand sidebar, collapsed to an 86px icon rail by default;
+ *   - mobile (≤900px): no sidebar, a four-item bottom bar plus a drawer for the rest.
+ */
+
+.pnl-app {
+  display: grid;
+  grid-template-columns: 262px minmax(0, 1fr);
+  align-items: start;
+  min-height: 100vh;
+}
+
+.pnl-app.is-collapsed {
+  grid-template-columns: 86px minmax(0, 1fr);
+}
+
+/* --- sidebar ------------------------------------------------------------- */
+
+.pnl-sidebar {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-height: 100vh;
+  padding: 18px 14px;
+  overflow-y: auto;
+  box-shadow: inset -1px 0 0 var(--bar);
+}
+
+.pnl-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 6px;
+}
+
+.pnl-mark {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  font-size: 17px;
+  font-weight: 900;
+  color: #fff;
+  background: linear-gradient(135deg, var(--accent-2), var(--accent));
+  border-radius: 14px;
+}
+
+.pnl-brand-name {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.pnl-brand-sub {
+  margin: 2px 0 0;
+  font-size: 11px;
+  color: var(--sub);
+}
+
+.pnl-nav {
+  display: grid;
+  gap: 5px;
+}
+
+.pnl-nav a {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-height: 44px;
+  padding: 11px 12px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--sub);
+  text-decoration: none;
+  border-radius: 15px;
+}
+
+.pnl-nav a:hover {
+  color: var(--accent);
+}
+
+.pnl-nav a[aria-current='page'] {
+  color: var(--accent);
+  box-shadow:
+    inset 4px 4px 10px var(--sd),
+    inset -4px -4px 10px var(--sl);
+}
+
+.pnl-nav svg {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+}
+
+.pnl-nav .pnl-nav-label {
+  flex: 1;
+}
+
+.pnl-spacer {
+  flex: 1;
+}
+
+.pnl-credit {
+  padding: 13px;
+  border-radius: 18px;
+}
+
+.pnl-credit p {
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 800;
+}
+
+.pnl-credit small {
+  font-size: 11px;
+  color: var(--sub);
+}
+
+.pnl-credit-bar {
+  height: 7px;
+  margin: 9px 0;
+  overflow: hidden;
+  background: var(--bar);
+  border-radius: 9999px;
+}
+
+.pnl-credit-bar span {
+  display: block;
+  width: 38%;
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-2), var(--accent));
+  border-radius: 9999px;
+}
+
+.pnl-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 6px;
+}
+
+.pnl-avatar {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  font-weight: 800;
+  color: #fff;
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  border-radius: 13px;
+}
+
+.pnl-user p {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.pnl-user small {
+  font-size: 11px;
+  color: var(--sub);
+}
+
+.pnl-signout {
+  margin-inline-start: auto;
+  padding: 6px 10px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--sub);
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  border-radius: 10px;
+}
+
+.pnl-signout:hover {
+  color: var(--danger);
+}
+
+/* Collapsed rail: icons only, with the title attribute as the tooltip. */
+
+.pnl-app.is-collapsed .pnl-brand-text,
+.pnl-app.is-collapsed .pnl-nav-label,
+.pnl-app.is-collapsed .pnl-user-text,
+.pnl-app.is-collapsed .pnl-credit-full,
+.pnl-app.is-collapsed .pnl-credit-bar {
+  display: none;
+}
+
+.pnl-app.is-collapsed .pnl-brand,
+.pnl-app.is-collapsed .pnl-user {
+  justify-content: center;
+  padding-inline: 0;
+}
+
+.pnl-app.is-collapsed .pnl-nav a {
+  justify-content: center;
+  padding: 12px 0;
+}
+
+.pnl-app.is-collapsed .pnl-credit {
+  padding: 11px 6px;
+  text-align: center;
+}
+
+.pnl-app.is-collapsed .pnl-credit p {
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--accent);
+}
+
+/* --- top bar and page ---------------------------------------------------- */
+
+.pnl-main {
+  min-width: 0;
+}
+
+.pnl-topbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  padding: 14px 18px;
+  box-shadow: inset 0 -1px 0 var(--bar);
+}
+
+.pnl-toggle {
+  flex-shrink: 0;
+}
+
+.pnl-search {
+  display: flex;
+  flex: 1;
+  gap: 8px;
+  align-items: center;
+  min-width: 180px;
+  max-width: 420px;
+  padding: 11px 15px;
+  border-radius: 16px;
+}
+
+.pnl-search input {
+  width: 100%;
+  font-family: inherit;
+  font-size: 13.5px;
+  color: var(--ink);
+  background: transparent;
+  border: 0;
+  outline: 0;
+}
+
+.pnl-grow {
+  flex: 1;
+}
+
+.pnl-cta {
+  padding: 12px 18px;
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 800;
+  border: 0;
+  border-radius: 15px;
+  cursor: pointer;
+}
+
+.pnl-page {
+  padding: 20px 18px 96px;
+}
+
+.pnl-notice {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 12px 15px;
+  margin-bottom: 16px;
+  font-size: 12.5px;
+  line-height: 1.95;
+  color: var(--danger);
+  background: var(--danger-bg);
+  border-radius: 18px;
+}
+
+.pnl-page-title {
+  margin: 0 0 4px;
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.pnl-page-sub {
+  margin: 0 0 16px;
+  font-size: 13px;
+  color: var(--sub);
+}
+
+.pnl-card {
+  padding: 18px;
+  border-radius: 26px;
+}
+
+.pnl-card + .pnl-card {
+  margin-top: 16px;
+}
+
+.pnl-card h2 {
+  margin: 0 0 10px;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.pnl-list {
+  margin: 0;
+  padding-inline-start: 20px;
+  font-size: 13px;
+  line-height: 2.15;
+  color: var(--sub);
+}
+
+.pnl-empty {
+  padding: 18px;
+  font-size: 12.5px;
+  line-height: 2;
+  color: var(--sub);
+  border: 1px dashed var(--bar);
+  border-radius: 18px;
+}
+
+.pnl-tiles {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 900px) {
+  .pnl-tiles {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.pnl-tile {
+  padding: 15px 17px;
+  border-radius: 22px;
+}
+
+.pnl-tile p {
+  margin: 0;
+}
+
+.pnl-tile-value {
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.pnl-tile-label {
+  margin-top: 3px !important;
+  font-size: 11.5px;
+  color: var(--sub);
+}
+
+/* --- mobile: bottom bar and drawer -------------------------------------- */
+
+.pnl-bottomnav {
+  display: none;
+}
+
+.pnl-backdrop {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .pnl-app,
+  .pnl-app.is-collapsed {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .pnl-sidebar {
+    display: none;
+  }
+
+  .pnl-page {
+    padding-bottom: 84px;
+  }
+
+  .pnl-bottomnav {
+    position: fixed;
+    inset-inline: 0;
+    bottom: 0;
+    z-index: 4;
+    display: flex;
+    background: var(--bg);
+    box-shadow: inset 0 1px 0 var(--bar);
+  }
+
+  .pnl-bottomnav a,
+  .pnl-bottomnav button {
+    display: grid;
+    flex: 1;
+    gap: 4px;
+    justify-items: center;
+    min-height: 60px;
+    padding: 9px 2px 11px;
+    font-family: inherit;
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--sub);
+    text-decoration: none;
+    cursor: pointer;
+    background: transparent;
+    border: 0;
+  }
+
+  .pnl-bottomnav a[aria-current='page'] {
+    color: var(--accent);
+  }
+
+  .pnl-bottomnav svg {
+    width: 22px;
+    height: 22px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+  }
+
+  .pnl-drawer {
+    position: fixed;
+    inset: 0;
+    z-index: 5;
+    display: flex;
+    background: rgba(40, 37, 32, 0.45);
+  }
+
+  .pnl-drawer-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 78%;
+    max-width: 320px;
+    padding: 16px 14px;
+    margin-inline-start: auto;
+    overflow-y: auto;
+  }
+}

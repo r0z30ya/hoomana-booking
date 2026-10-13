@@ -1,0 +1,665 @@
+<!doctype html>
+<html lang="fa" dir="rtl" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>هومانا | ثبت نوبت جدید</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #e9e5dd; --ink: #2e2b26; --sub: #7a756b; --sd: #c9c3b6; --sl: #ffffff;
+        --bar: rgba(46, 43, 38, 0.13); --accent: #0d9488; --accent-2: #14b8a6;
+        --ok: #059669; --ok-bg: rgba(16, 185, 129, 0.16);
+        --warn: #b45309; --warn-bg: rgba(245, 158, 11, 0.18);
+        --no: #dc2626; --no-bg: rgba(239, 68, 68, 0.14);
+      }
+      [data-theme='dark'] {
+        --bg: #262421; --ink: #ede9e1; --sub: #a09a8e; --sd: #1d1b18; --sl: #32302b;
+        --bar: rgba(237, 233, 225, 0.13); --ok: #34d399; --warn: #fbbf24; --no: #f87171;
+      }
+      * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+      body {
+        margin: 0; background: var(--bg); color: var(--ink);
+        font-family: Vazirmatn, 'Segoe UI', Tahoma, sans-serif; transition: background 0.3s, color 0.3s;
+      }
+      button, input, select, textarea { font-family: inherit; }
+      .neu { background: var(--bg); box-shadow: 9px 9px 20px var(--sd), -9px -9px 20px var(--sl); }
+      .neu-sm { background: var(--bg); box-shadow: 5px 5px 12px var(--sd), -5px -5px 12px var(--sl); }
+      .neu-in { background: var(--bg); box-shadow: inset 5px 5px 10px var(--sd), inset -5px -5px 10px var(--sl); }
+      .cta {
+        background: linear-gradient(135deg, var(--accent-2), var(--accent)); color: #fff; border: 0;
+        box-shadow: 6px 6px 14px var(--sd), -6px -6px 14px var(--sl), 0 8px 22px rgba(13, 148, 136, 0.3);
+      }
+      .mini {
+        border: 0; border-radius: 12px; padding: 10px 13px; font-size: 12.5px; font-weight: 700; color: var(--sub);
+        cursor: pointer; min-height: 40px; background: var(--bg); box-shadow: 4px 4px 9px var(--sd), -4px -4px 9px var(--sl);
+      }
+      .mini:hover { color: var(--accent); }
+      :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+      .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+      .pill { font-size: 11.5px; font-weight: 800; padding: 5px 12px; border-radius: 9999px; background: var(--bar); color: var(--sub); }
+      /* ═══ پوستهٔ پنل: سایدبار (یکسان در همهٔ صفحه‌ها — پیش‌فرض جمع‌شده) ═══ */
+      .app { display: grid; grid-template-columns: 262px minmax(0, 1fr); align-items: start; }
+      .main { min-width: 0; }
+      .sidebar {
+        padding: 18px 14px; display: flex; flex-direction: column; gap: 14px; position: sticky; top: 0;
+        max-height: 100vh; overflow-y: auto; box-shadow: inset -1px 0 0 var(--bar);
+      }
+      .sb-brand { display: flex; align-items: center; gap: 10px; padding: 4px 6px; }
+      .sb-mark {
+        width: 40px; height: 40px; border-radius: 14px; display: grid; place-items: center; color: #fff;
+        font-weight: 900; font-size: 17px; flex-shrink: 0; background: linear-gradient(135deg, var(--accent-2), var(--accent));
+      }
+      .sb-name { margin: 0; font-size: 14px; font-weight: 900; }
+      .sb-sub { margin: 2px 0 0; font-size: 11px; color: var(--sub); }
+      .sb-nav { display: grid; gap: 5px; }
+      .sb-nav a {
+        display: flex; align-items: center; gap: 11px; text-decoration: none; color: var(--sub);
+        font-size: 13.5px; font-weight: 700; padding: 11px 12px; border-radius: 15px; min-height: 44px;
+      }
+      .sb-nav a:hover { color: var(--accent); }
+      .sb-nav a[aria-current='page'] { color: var(--accent); box-shadow: inset 4px 4px 10px var(--sd), inset -4px -4px 10px var(--sl); }
+      .sb-nav svg { width: 20px; height: 20px; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 1.8; }
+      .sb-nav .sp { flex: 1; }
+      .sb-nav .tag { font-size: 10.5px; font-weight: 800; padding: 3px 8px; border-radius: 9999px; background: var(--bar); color: var(--sub); }
+      .sb-nav .tag.warn { background: var(--warn-bg); color: var(--warn); }
+      .sb-spacer { flex: 1; }
+      .sb-credit { border-radius: 18px; padding: 13px; }
+      .sb-credit p { margin: 0; font-size: 12.5px; font-weight: 800; }
+      .sb-credit small { font-size: 11px; color: var(--sub); }
+      .sb-credit .bar { height: 7px; border-radius: 9999px; background: var(--bar); margin: 9px 0; overflow: hidden; }
+      .sb-credit .bar span { display: block; height: 100%; width: 38%; border-radius: 9999px; background: linear-gradient(90deg, var(--accent-2), var(--accent)); }
+      .sb-credit a {
+        display: block; text-align: center; text-decoration: none; font-size: 12.5px; font-weight: 800; color: var(--sub);
+        border-radius: 12px; padding: 10px; margin-top: 4px; background: var(--bg); box-shadow: 4px 4px 9px var(--sd), -4px -4px 9px var(--sl);
+      }
+      .sb-user { display: flex; align-items: center; gap: 10px; padding: 4px 6px; }
+      .sb-av {
+        width: 38px; height: 38px; border-radius: 13px; display: grid; place-items: center; color: #fff;
+        font-weight: 800; flex-shrink: 0; background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+      }
+      .sb-user p { margin: 0; font-size: 13px; font-weight: 800; }
+      .sb-user small { color: var(--sub); font-size: 11px; }
+      html.sidebar-collapsed .app { grid-template-columns: 86px minmax(0, 1fr); }
+      html.sidebar-collapsed .sb-name,
+      html.sidebar-collapsed .sb-sub,
+      html.sidebar-collapsed .sb-user p,
+      html.sidebar-collapsed .sb-user small,
+      html.sidebar-collapsed .sb-nav .sp,
+      html.sidebar-collapsed .sb-nav .tag,
+      html.sidebar-collapsed .sb-credit .sb-hide,
+      html.sidebar-collapsed .sb-credit .bar { display: none; }
+      html.sidebar-collapsed .sb-brand,
+      html.sidebar-collapsed .sb-user { justify-content: center; padding-inline: 0; }
+      html.sidebar-collapsed .sb-nav a { justify-content: center; padding: 12px 0; }
+      html.sidebar-collapsed .sb-credit { padding: 11px 6px; text-align: center; }
+      html.sidebar-collapsed .sb-credit p { font-size: 13px; font-weight: 900; color: var(--accent); }
+      .sidebar-toggle { cursor: pointer; }
+      @media (max-width: 900px) {
+        .app,
+        html.sidebar-collapsed .app { grid-template-columns: minmax(0, 1fr); }
+        .sidebar { display: none; }
+      }
+
+      .shell { max-width: 1320px; margin: 0 auto; padding: 18px 18px 40px; }
+
+      /* ═══ نمای پشت: صفحهٔ نوبت‌ها (خلاصه‌شده) ═══ */
+      .behind { position: relative; }
+      .behind.is-dimmed { filter: blur(1.5px); opacity: 0.55; pointer-events: none; user-select: none; }
+      .topbar { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+      .brand { display: flex; align-items: center; gap: 11px; }
+      .brand-mark {
+        width: 44px; height: 44px; border-radius: 15px; display: grid; place-items: center; color: #fff;
+        font-weight: 900; font-size: 19px; background: linear-gradient(135deg, var(--accent-2), var(--accent));
+      }
+      .brand-name { margin: 0; font-weight: 900; font-size: 16px; }
+      .brand-sub { margin: 2px 0 0; font-size: 11.5px; color: var(--sub); }
+      .search { display: flex; align-items: center; gap: 8px; padding: 11px 15px; border-radius: 16px; flex: 1; min-width: 200px; }
+      .search input { border: 0; outline: 0; background: transparent; font: inherit; font-size: 13.5px; width: 100%; color: var(--ink); }
+      .card { border-radius: 26px; padding: 20px; }
+      .slot { display: grid; grid-template-columns: 60px minmax(0, 1fr); gap: 12px; margin-bottom: 10px; }
+      .slot-time { border-radius: 14px; padding: 10px 4px; text-align: center; font-size: 12.5px; font-weight: 800; color: var(--sub); }
+      .apt { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 18px; border: 1px solid var(--bar); font-size: 13.5px; }
+      .avatar {
+        width: 38px; height: 38px; border-radius: 9999px; display: grid; place-items: center; color: #fff;
+        font-weight: 800; flex-shrink: 0; background: linear-gradient(135deg, var(--accent-2), #0f766e);
+      }
+
+      /* ═══ پوشش و مودال ═══ */
+      .overlay {
+        position: fixed; inset: 0; background: rgba(40, 37, 32, 0.45); backdrop-filter: blur(2px);
+        display: flex; align-items: center; justify-content: center; padding: 24px; z-index: 50;
+      }
+      .modal {
+        width: min(1000px, 100%); max-height: calc(100vh - 48px); border-radius: 28px; padding: 0;
+        display: flex; flex-direction: column; overflow: hidden;
+      }
+      .modal-head { display: flex; align-items: center; gap: 12px; padding: 20px 22px 14px; }
+      .modal-head h2 { margin: 0; font-size: 18px; font-weight: 900; }
+      .modal-head .x {
+        margin-inline-start: auto; width: 40px; height: 40px; border: 0; border-radius: 13px; cursor: pointer;
+        color: var(--sub); background: var(--bg); box-shadow: 4px 4px 9px var(--sd), -4px -4px 9px var(--sl);
+      }
+      .modal-body { padding: 4px 22px 18px; overflow-y: auto; }
+      .two-col { display: grid; gap: 18px; grid-template-columns: 1fr; }
+      @media (min-width: 880px) { .two-col { grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); } }
+      .modal-foot {
+        display: flex; align-items: center; gap: 12px; padding: 16px 22px; border-top: 1px solid var(--bar); flex-wrap: wrap;
+      }
+      .modal-foot .summary { font-size: 12.5px; color: var(--sub); line-height: 1.9; }
+      .modal-foot .summary b { color: var(--ink); }
+      .modal-foot .actions { margin-inline-start: auto; display: flex; gap: 10px; }
+
+      /* فیلدها */
+      .field { margin-bottom: 14px; }
+      .field > label { display: block; font-size: 12.5px; font-weight: 800; margin-bottom: 7px; }
+      .input-wrap { display: flex; align-items: center; gap: 8px; border-radius: 15px; padding: 11px 14px; }
+      .input-wrap input, .input-wrap select, .input-wrap textarea {
+        border: 0; outline: 0; background: transparent; font: inherit; font-size: 13.5px; color: var(--ink); width: 100%;
+      }
+      .input-wrap textarea { resize: vertical; min-height: 54px; }
+      .hint { font-size: 11.5px; color: var(--sub); margin: 6px 0 0; }
+      .req { color: var(--no); }
+      .results { border-radius: 16px; overflow: hidden; margin-top: 8px; }
+      .result {
+        display: flex; align-items: center; gap: 11px; padding: 11px 13px; border-top: 1px solid var(--bar); cursor: pointer;
+      }
+      .result:first-child { border-top: 0; }
+      .result:hover { background: var(--bar); }
+      .result.is-selected { box-shadow: inset 4px 4px 9px var(--sd), inset -4px -4px 9px var(--sl); }
+      .result .who { font-size: 13px; font-weight: 700; margin: 0; }
+      .result .meta { font-size: 11.5px; color: var(--sub); margin: 2px 0 0; }
+      .new-patient-link {
+        display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 12.5px; font-weight: 800; color: var(--accent);
+        background: transparent; border: 0; cursor: pointer; padding: 6px 0;
+      }
+      .checkline { display: flex; align-items: center; gap: 10px; padding: 10px 0; font-size: 13px; }
+      .checkline input { width: 20px; height: 20px; accent-color: var(--accent); flex-shrink: 0; }
+      .checkline small { display: block; color: var(--sub); font-size: 11.5px; font-weight: 500; }
+
+      /* تقویم کوچک */
+      .cal-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+      .cal-head h3 { margin: 0; font-size: 14.5px; font-weight: 900; }
+      .cal-head .nav { display: flex; gap: 4px; margin-inline-start: auto; }
+      .cal-head .nav button {
+        width: 32px; height: 32px; border: 0; border-radius: 10px; cursor: pointer; color: var(--sub);
+        background: var(--bg); box-shadow: 4px 4px 9px var(--sd), -4px -4px 9px var(--sl);
+      }
+      .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+      .cal-weekday { text-align: center; font-size: 10.5px; font-weight: 800; color: var(--sub); padding: 3px 0; }
+      .cal-day {
+        border: 0; border-radius: 11px; padding: 7px 0; cursor: pointer; background: transparent; color: var(--ink);
+        font-size: 12.5px; font-weight: 700; min-height: 36px;
+      }
+      .cal-day:hover { box-shadow: inset 3px 3px 7px var(--sd), inset -3px -3px 7px var(--sl); }
+      .cal-day[aria-current='date'] { color: var(--accent); box-shadow: inset 4px 4px 9px var(--sd), inset -4px -4px 9px var(--sl); }
+      .cal-day[aria-selected='true'] { color: #fff; background: linear-gradient(135deg, var(--accent-2), var(--accent)); }
+      .cal-day.is-holiday, .cal-day:disabled { color: var(--sub); opacity: 0.5; cursor: not-allowed; }
+      .cal-day.is-empty { visibility: hidden; }
+
+      /* اسلات‌های ساعت */
+      .slots-head { display: flex; align-items: center; gap: 8px; margin: 16px 0 8px; flex-wrap: wrap; }
+      .slots-head h3 { margin: 0; font-size: 13.5px; font-weight: 900; }
+      .slots-head span { font-size: 11.5px; color: var(--sub); }
+      .slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 8px; }
+      .slot-chip {
+        border: 0; border-radius: 14px; padding: 12px 6px; font-size: 13px; font-weight: 800; cursor: pointer; min-height: 46px;
+        background: var(--bg); box-shadow: 4px 4px 9px var(--sd), -4px -4px 9px var(--sl); color: var(--ink);
+        display: flex; flex-direction: column; align-items: center; gap: 3px;
+      }
+      .slot-chip small { font-size: 10px; font-weight: 700; color: var(--sub); }
+      .slot-chip[disabled] { box-shadow: none; background: var(--bar); color: var(--sub); cursor: not-allowed; }
+      .slot-chip[aria-pressed='true'] {
+        color: #fff; background: linear-gradient(135deg, var(--accent-2), var(--accent));
+        box-shadow: 5px 5px 12px var(--sd), -5px -5px 12px var(--sl);
+      }
+      .legend { display: flex; gap: 14px; margin-top: 10px; font-size: 11.5px; color: var(--sub); flex-wrap: wrap; }
+      .dot { width: 9px; height: 9px; border-radius: 9999px; display: inline-block; margin-inline-end: 5px; }
+      .manual { display: flex; align-items: center; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+      .manual input { width: 84px; text-align: center; }
+      .alert {
+        display: flex; gap: 10px; align-items: flex-start; border-radius: 15px; padding: 12px 14px; font-size: 12.5px;
+        margin-top: 10px; line-height: 1.8;
+      }
+      .alert-warn { background: var(--warn-bg); color: var(--warn); }
+      .alert-no { background: var(--no-bg); color: var(--no); }
+      .alert-ok { background: var(--ok-bg); color: var(--ok); }
+
+      /* حالت‌های دیگر */
+      .states { display: grid; gap: 16px; grid-template-columns: 1fr; margin-top: 26px; }
+      @media (min-width: 900px) { .states { grid-template-columns: 1fr 1fr 1fr; } }
+      .state-card { border-radius: 24px; padding: 18px; }
+      .state-card h3 { margin: 0 0 4px; font-size: 14.5px; font-weight: 900; }
+      .state-card p.why { margin: 0 0 12px; font-size: 12px; color: var(--sub); line-height: 1.9; }
+      .mini-frame { border-radius: 18px; padding: 12px; border: 1px solid var(--bar); }
+      .mini-frame .row { display: flex; align-items: center; gap: 8px; padding: 7px 0; font-size: 12.5px; }
+      .mini-field { border-radius: 12px; padding: 9px 12px; font-size: 12.5px; color: var(--sub); }
+      .notes { margin-top: 26px; border-radius: 26px; padding: 22px; }
+      .notes h2 { margin: 0 0 10px; font-size: 16px; font-weight: 900; }
+      .notes ol { margin: 0; padding-inline-start: 20px; color: var(--sub); font-size: 13px; line-height: 2.15; }
+      .notes b { color: var(--ink); }
+
+      /* موبایل: مودال تمام‌صفحه با پاصفحهٔ چسبان */
+      @media (max-width: 700px) {
+        .overlay { padding: 0; align-items: flex-end; }
+        .modal { max-height: 100vh; height: 100vh; border-radius: 0; }
+        .modal-foot { position: sticky; bottom: 0; background: var(--bg); }
+        .modal-foot .actions { margin-inline-start: 0; width: 100%; }
+        .modal-foot .actions .cta, .modal-foot .actions .mini { flex: 1; }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- ═════ نوار بالا؛ دکمهٔ «ثبت نوبت» برای همیشه آشکار است ═════ -->
+  <div class="app" data-active="appointments" data-role="owner">
+    <div class="main">
+    <header class="topbar" style="max-width: 1320px; margin: 0 auto; padding: 18px 18px 0">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">هـ</div>
+        <div>
+          <p class="brand-name">هومانا</p>
+          <p class="brand-sub">کلینیک سلامت پارس</p>
+        </div>
+      </div>
+      <div class="search neu-in" style="max-width: 320px">
+        <span aria-hidden="true" style="color: var(--sub)">⌕</span>
+        <input type="search" placeholder="جستجو…" aria-label="جستجو" />
+      </div>
+    </header>
+
+    <!-- ═════ نمای پشت (کم‌رنگ): صفحهٔ نوبت‌ها ═════ -->
+    <div class="behind is-dimmed" aria-hidden="true">
+      <div class="shell">
+        <div class="card neu">
+          <p class="brand-name" style="margin-bottom: 12px">برنامهٔ سه‌شنبه ۲۱ مهر</p>
+          <div class="slot"><div class="slot-time neu-in">۰۹:۰۰</div><div class="apt">ندا اکبری — ویزیت پوست · دکتر کریمی</div></div>
+          <div class="slot"><div class="slot-time neu-in">۰۹:۳۰</div><div class="apt">زهرا محمدی — ویزیت عمومی · دکتر رضایی</div></div>
+          <div class="slot"><div class="slot-time neu-in">۱۰:۰۰</div><div class="apt">علی کریمی — کنترل فشار خون · دکتر احمدی</div></div>
+          <div class="slot"><div class="slot-time neu-in">۱۰:۳۰</div><div class="apt">مریم حسینی — مشاوره تغذیه · دکتر نوری</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═════ مودال ثبت نوبت جدید ═════ -->
+    <div class="overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <div class="modal neu">
+        <div class="modal-head">
+          <h2 id="modal-title">ثبت نوبت جدید</h2>
+          <span class="pill">۳۰ دقیقه</span>
+          <button class="x" aria-label="بستن" title="بستن">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="two-col">
+            <!-- ───── ستون راست: بیمار و خدمت ───── -->
+            <div>
+              <div class="field">
+                <label for="patient-q">بیمار <span class="req">*</span></label>
+                <div class="input-wrap neu-in">
+                  <span aria-hidden="true" style="color: var(--sub)">⌕</span>
+                  <input id="patient-q" type="search" value="زهرا" placeholder="نام یا شمارهٔ موبایل بیمار…" />
+                </div>
+                <p class="hint">جستجو با شمارهٔ موبایل دقیق‌ترین راه است (شناسهٔ ورود بیمار).</p>
+
+                <div class="results neu-sm">
+                  <div class="result is-selected">
+                    <span class="avatar" aria-hidden="true">ز</span>
+                    <div>
+                      <p class="who">زهرا محمدی</p>
+                      <p class="meta">۰۹۱۲۳۴۵۶۷۸۹ · پرونده ۰۸۸۷ · آخرین مراجعه: ۳ هفته پیش</p>
+                    </div>
+                    <span class="pill" style="margin-inline-start: auto">انتخاب‌شده</span>
+                  </div>
+                  <div class="result">
+                    <span class="avatar" aria-hidden="true" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed)">ز</span>
+                    <div>
+                      <p class="who">زهرا کریمی</p>
+                      <p class="meta">۰۹۳۵۱۱۱۲۲۳۳ · پرونده ۱۱۴۵ · آخرین مراجعه: ۲ ماه پیش</p>
+                    </div>
+                  </div>
+                </div>
+
+                <button class="new-patient-link">＋ بیمار جدید با این شماره ثبت کن</button>
+              </div>
+
+              <div class="field">
+                <label for="service">خدمت <span class="req">*</span></label>
+                <div class="input-wrap neu-in">
+                  <select id="service">
+                    <option>ویزیت عمومی — ۲۰ دقیقه — ۳۵۰٬۰۰۰ تومان</option>
+                    <option>کنترل فشار خون — ۱۵ دقیقه — ۲۵۰٬۰۰۰ تومان</option>
+                    <option>ویزیت پوست — ۳۰ دقیقه — ۵۰۰٬۰۰۰ تومان</option>
+                    <option>مشاوره تغذیه — ۳۰ دقیقه — ۴۵۰٬۰۰۰ تومان</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="doctor">پزشک <span class="req">*</span></label>
+                <div class="input-wrap neu-in">
+                  <select id="doctor">
+                    <option>دکتر رضایی — ساعت کاری ۰۹:۰۰ تا ۱۳:۰۰</option>
+                    <option>دکتر احمدی — ساعت کاری ۱۶:۰۰ تا ۲۰:۰۰</option>
+                    <option>دکتر نوری — ساعت کاری ۱۰:۰۰ تا ۱۴:۰۰</option>
+                  </select>
+                </div>
+                <p class="hint">اسلات‌های آزاد سمت چپ، طبق ساعت کاری همین پزشک نشان داده می‌شوند.</p>
+              </div>
+
+              <div class="field">
+                <label for="note">یادداشت (اختیاری)</label>
+                <div class="input-wrap neu-in">
+                  <textarea id="note" placeholder="مثلاً: بیمار تلفنی گفته دیر می‌رسد"></textarea>
+                </div>
+              </div>
+
+              <div class="field" style="margin-bottom: 0">
+                <label>پیامک</label>
+                <div class="checkline">
+                  <input type="checkbox" id="sms-confirm" checked />
+                  <label for="sms-confirm" style="font-weight: 500">
+                    ارسال پیامک تأیید نوبت برای بیمار
+                    <small>اعتبار فعلی پنل: ۹۶۰ پیامک — هر پیامک تأیید از همین اعتبار کم می‌شود</small>
+                  </label>
+                </div>
+                <div class="checkline">
+                  <input type="checkbox" id="sms-remind" checked />
+                  <label for="sms-remind" style="font-weight: 500">
+                    یادآوری ۲۴ ساعت قبل
+                    <small>یک روز قبل از نوبت، ساعت ۱۰ صبح ارسال می‌شود</small>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <!-- ───── ستون چپ: زمان ───── -->
+            <div>
+              <div class="field" style="margin-bottom: 6px">
+                <label>روز نوبت <span class="req">*</span></label>
+                <div class="neu-sm" style="border-radius: 20px; padding: 14px">
+                  <div class="cal-head">
+                    <h3>مهر ۱۴۰۵</h3>
+                    <div class="nav">
+                      <button aria-label="ماه بعد">‹</button>
+                      <button aria-label="ماه قبل">›</button>
+                    </div>
+                  </div>
+                  <div class="cal-grid" role="grid" aria-label="انتخاب روز">
+                    <span class="cal-weekday">ش</span><span class="cal-weekday">ی</span><span class="cal-weekday">د</span>
+                    <span class="cal-weekday">س</span><span class="cal-weekday">چ</span><span class="cal-weekday">پ</span>
+                    <span class="cal-weekday">ج</span>
+
+                    <button class="cal-day is-empty" tabindex="-1"></button>
+                    <button class="cal-day is-empty" tabindex="-1"></button>
+                    <button class="cal-day is-empty" tabindex="-1"></button>
+                    <button class="cal-day is-empty" tabindex="-1"></button>
+                    <button class="cal-day">۱</button>
+                    <button class="cal-day">۲</button>
+                    <button class="cal-day is-holiday" disabled>۳</button>
+
+                    <button class="cal-day">۴</button>
+                    <button class="cal-day">۵</button>
+                    <button class="cal-day">۶</button>
+                    <button class="cal-day">۷</button>
+                    <button class="cal-day">۸</button>
+                    <button class="cal-day">۹</button>
+                    <button class="cal-day is-holiday" disabled>۱۰</button>
+
+                    <button class="cal-day">۱۱</button>
+                    <button class="cal-day">۱۲</button>
+                    <button class="cal-day">۱۳</button>
+                    <button class="cal-day">۱۴</button>
+                    <button class="cal-day">۱۵</button>
+                    <button class="cal-day">۱۶</button>
+                    <button class="cal-day is-holiday" disabled>۱۷</button>
+
+                    <button class="cal-day">۱۸</button>
+                    <button class="cal-day">۱۹</button>
+                    <button class="cal-day">۲۰</button>
+                    <button class="cal-day" aria-current="date" aria-selected="true">۲۱</button>
+                    <button class="cal-day">۲۲</button>
+                    <button class="cal-day">۲۳</button>
+                    <button class="cal-day is-holiday" disabled>۲۴</button>
+
+                    <button class="cal-day">۲۵</button>
+                    <button class="cal-day">۲۶</button>
+                    <button class="cal-day">۲۷</button>
+                    <button class="cal-day">۲۸</button>
+                    <button class="cal-day">۲۹</button>
+                    <button class="cal-day">۳۰</button>
+                    <button class="cal-day is-empty" tabindex="-1"></button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="slots-head">
+                <h3>ساعت — سه‌شنبه ۲۱ مهر</h3>
+                <span>ظرفیت آزاد دکتر رضایی · ۱۸ اسلات</span>
+              </div>
+              <div class="slots" role="group" aria-label="انتخاب ساعت">
+                <button class="slot-chip" aria-pressed="false" disabled>۰۹:۰۰<small>مشغول</small></button>
+                <button class="slot-chip" aria-pressed="false">۰۹:۲۰</button>
+                <button class="slot-chip" aria-pressed="false">۰۹:۴۰<small>پر</small></button>
+                <button class="slot-chip" aria-pressed="false" disabled>۱۰:۰۰<small>مشغول</small></button>
+                <button class="slot-chip" aria-pressed="true">۱۰:۲۰<small>انتخاب‌شده</small></button>
+                <button class="slot-chip" aria-pressed="false">۱۰:۴۰</button>
+                <button class="slot-chip" aria-pressed="false">۱۱:۰۰</button>
+                <button class="slot-chip" aria-pressed="false" disabled>۱۱:۲۰<small>مشغول</small></button>
+                <button class="slot-chip" aria-pressed="false">۱۱:۴۰</button>
+                <button class="slot-chip" aria-pressed="false">۱۲:۰۰</button>
+                <button class="slot-chip" aria-pressed="false">۱۲:۲۰<small>پر</small></button>
+                <button class="slot-chip" aria-pressed="false">۱۲:۴۰</button>
+              </div>
+
+              <div class="legend">
+                <span><span class="dot" style="background: var(--bar)"></span>مشغول</span>
+                <span><span class="dot" style="background: var(--accent)"></span>انتخاب‌شده</span>
+                <span><span class="dot" style="background: var(--sd)"></span>آزاد</span>
+                <span>«پر» = ظرفیت این بازه رو به اتمام است</span>
+              </div>
+
+              <div class="manual">
+                <span style="font-size: 12.5px; color: var(--sub)">یا ساعت دلخواه:</span>
+                <div class="input-wrap neu-in" style="flex: 0 0 auto">
+                  <input type="text" value="۱۰:۲۰" aria-label="ساعت دلخواه" />
+                </div>
+                <button class="mini">ثبت ساعت دلخواه</button>
+              </div>
+
+              <div class="alert alert-ok">
+                <span aria-hidden="true">✔</span>
+                <span>این ساعت آزاد است و با هیچ نوبت دیگری از دکتر رضایی تداخل ندارد.</span>
+              </div>
+
+              <div class="alert alert-warn">
+                <span aria-hidden="true">!</span>
+                <span>برای «زهرا محمدی» در همین روز یادآوری نشده — روز نوبت (۲۱ مهر) اعلام می‌شود، اما اگر می‌خواهید روز دیگری هم یادآوری شود، از صفحهٔ بیماران ثبت کنید.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-foot">
+          <div class="summary">
+            <b>زهرا محمدی</b> · ویزیت عمومی (۲۰ دقیقه، ۳۵۰٬۰۰۰ تومان) · دکتر رضایی<br />
+            سه‌شنبه <b>۲۱ مهر</b> ساعت <b>۱۰:۲۰</b> · پیامک تأیید: روشن · یادآوری: روشن
+          </div>
+          <div class="actions">
+            <button class="mini">انصراف</button>
+            <button class="cta" style="border-radius: 15px; padding: 13px 22px; font-size: 14px; font-weight: 800; cursor: pointer">
+              ثبت نوبت و ارسال پیامک
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═════ حالت‌های دیگر همین فرم ═════ -->
+    <div class="shell">
+      <h2 style="font-size: 17px; font-weight: 900; margin: 26px 0 4px">حالت‌های دیگر همین فرم (برای بازبینی)</h2>
+      <p style="margin: 0; color: var(--sub); font-size: 13px">سه وضعیتی که در کار روزمره پیش می‌آید و باید طراحی‌شده باشند:</p>
+
+      <div class="states">
+        <section class="state-card neu">
+          <h3>۱. بیمار جدید</h3>
+          <p class="why">وقتی جستجو نتیجه ندارد: همان‌جا و بدون خروج از فرم، با شمارهٔ موبایل ثبت می‌شود.</p>
+          <div class="mini-frame">
+            <div class="mini-field neu-in" style="margin-bottom: 8px">۰۹۳۶۱۲۳۴۵۶۷ — نتیجه‌ای یافت نشد</div>
+            <div class="mini-field neu-in" style="margin-bottom: 8px">نام و نام خانوادگی: <span style="color: var(--ink)">سارا احمدی</span></div>
+            <div class="mini-field neu-in" style="margin-bottom: 8px">موبایل: ۰۹۳۶۱۲۳۴۵۶۷ ✔</div>
+            <div class="mini-field neu-in">شهر (اختیاری) — تهران</div>
+            <p class="hint" style="margin-top: 10px">شمارهٔ پرونده خودکار صادر می‌شود؛ چک‌باکس‌های پیامک مثل حالت قبل باقی می‌مانند.</p>
+          </div>
+        </section>
+
+        <section class="state-card neu">
+          <h3>۲. روز تعطیل یا بدون ظرفیت</h3>
+          <p class="why">به‌جای پیام خطا، راه‌حل پیشنهاد می‌شود: نزدیک‌ترین روز آزاد همان پزشک.</p>
+          <div class="mini-frame">
+            <div class="alert alert-no" style="margin-top: 0">پنجشنبه ۲۳ مهر تعطیل است (خارج از ساعت کاری دکتر رضایی).</div>
+            <div class="row" style="display: flex; gap: 8px; align-items: center; padding: 10px 0">
+              <span class="mini" style="cursor: default">چهارشنبه ۲۲ مهر</span>
+              <span class="mini" style="cursor: default">شنبه ۲۵ مهر</span>
+            </div>
+            <p class="hint">«نزدیک‌ترین روز با ظرفیت آزاد» با یک کلیک انتخاب می‌شود و اسلات‌های همان روز بارگذاری می‌شوند.</p>
+          </div>
+        </section>
+
+        <section class="state-card neu">
+          <h3>۳. تداخل زمانی</h3>
+          <p class="why">اگر بیمار همان ساعت نوبت دیگری دارد یا اسلات بین دو نوبت تنگ است، هشدار داده می‌شود؛ ثبت ممنوع نیست.</p>
+          <div class="mini-frame">
+            <div class="alert alert-warn" style="margin-top: 0">
+              زهرا محمدی در همین روز ساعت ۱۱:۴۰ هم نوبت «مشاوره تغذیه» دارد. فاصلهٔ دو نوبت ۸۰ دقیقه است.
+            </div>
+            <div class="alert alert-warn">
+              ساعت ۱۰:۴۰ بین دو نوبت تنگ است (۲۰ دقیقه) و برای خدمت ۳۰ دقیقه‌ای کافی نیست.
+            </div>
+            <p class="hint">هشدار «اطلاع‌دهنده» است نه «بازدارنده»؛ منشی می‌تواند با تأیید خودش ثبت کند.</p>
+          </div>
+        </section>
+      </div>
+
+      <!-- ═════ یادداشت ساختار ═════ -->
+      <section class="notes neu" aria-labelledby="notes-title">
+        <h2 id="notes-title">چرا این ساختار؟ (برای بازبینی شما)</h2>
+        <ol>
+          <li><b>یک‌صفحه‌ای، بدون ویزارد:</b> همهٔ اطلاعات در یک نگاه؛ منشی مجبور نیست بین «مرحلهٔ بعد» و «قبلی» برود. فقط ۳ فیلد اجباری است: بیمار، خدمت، پزشک (روز و ساعت با کلیک انتخاب می‌شوند).</li>
+          <li><b>انتخاب از ظرفیت واقعی:</b> به‌جای تایپ ساعت، اسلات‌های آزاد <b>همان پزشک در همان روز</b> نشان داده می‌شود؛ «مشغول» غیرفعال است تا انتخاب اشتباه ممکن نباشد.</li>
+          <li><b>جستجوی بیمار با موبایل:</b> چون موبایل شناسهٔ بیمار است؛ نتیجه شامل شمارهٔ پرونده و آخرین مراجعه است تا اشتباه بین همنام‌ها رخ ندهد.</li>
+          <li><b>بیمار جدید در همان‌جا:</b> بدون رفتن به صفحهٔ بیماران و از دست دادن نوبت.</li>
+          <li><b>پیامک بخشی از فرم است:</b> تأیید نوبت و یادآوری ۲۴ ساعته با پیش‌فرض روشن + نمایش اعتبار پنل، تا منشی غافلگیر نشود.</li>
+          <li><b>خلاصهٔ نهایی در پاصفحه:</b> «چه کسی، چه خدمتی، چه روزی، چه ساعتی، با چه پیامکی» — قبل از فشردن دکمهٔ ثبت، یک‌بار دیده می‌شود.</li>
+          <li><b>هشدار بدون بازدارندگی:</b> تعطیلی و تنگی فاصله به‌صورت هشدار نشان داده می‌شود و راه‌حل (نزدیک‌ترین روز آزاد) پیشنهاد می‌شود، نه خطای بن‌بست.</li>
+          <li><b>ریسپانسیو:</b> دسکتاپ: مودال دوستونه (اطلاعات + زمان). موبایل: مودال تمام‌صفحه، یک‌ستونه، با پاصفحهٔ چسبان تا دکمهٔ «ثبت نوبت» همیشه در دسترس باشد. هدف‌های لمسی ≥۴۶px و <code>aria-pressed</code>/<code>aria-selected</code> برای انتخاب‌ها.</li>
+        </ol>
+      </section>
+    </div>
+    </div>
+  </div>
+
+    <script>
+      // ═══ سایدبار پوسته (یکسان در همهٔ صفحه‌های پنل — پیش‌فرض جمع‌شده) ═══
+      (function () {
+        var ICONS = {
+          dashboard: '<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>',
+          appointments: '<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/>',
+          patients: '<circle cx="9" cy="8" r="3.2"/><path d="M3.5 20c0-3 2.5-5 5.5-5s5.5 2 5.5 5"/><path d="M16 5.5a3 3 0 0 1 0 5.6M17 20c0-2.2-.6-3.8-1.6-5"/>',
+          doctors: '<path d="M6 3v6a4 4 0 0 0 8 0V3"/><path d="M10 13v3a4 4 0 0 0 8 0v-2"/><circle cx="18" cy="11" r="2"/>',
+          accounting: '<rect x="3" y="6" width="18" height="13" rx="3"/><path d="M3 10h18"/><path d="M16 14.5h2"/>',
+          sms: '<path d="M4 5.5h16v10H9l-5 4z"/>',
+          settings: '<circle cx="12" cy="12" r="3.2"/><path d="M12 3.5v2M12 18.5v2M4.9 7.5l1.7 1M17.4 15.5l1.7 1M4.9 16.5l1.7-1M17.4 8.5l1.7-1"/>'
+        };
+        var ITEMS = [
+          { key: 'dashboard', href: 'dashboard.html', label: 'داشبورد' },
+          { key: 'appointments', href: 'appointments.html', label: 'نوبت‌ها', tag: '۴۸' },
+          { key: 'patients', href: 'patients.html', label: 'بیماران' },
+          { key: 'doctors', href: 'doctors-services.html', label: 'پزشکان و خدمات' },
+          { key: 'accounting', href: 'accounting.html', label: 'حسابداری' },
+          { key: 'sms', href: 'sms.html', label: 'پیامک', tag: '۱ ناموفق', warn: true },
+          { key: 'settings', href: 'settings.html', label: 'تنظیمات' }
+        ];
+        var ROLES = {
+          doctors: ['owner', 'reception'],
+          accounting: ['owner', 'reception'],
+          sms: ['owner', 'reception'],
+          settings: ['owner']
+        };
+        var app = document.querySelector('.app');
+        if (!app) { return; }
+        var active = app.dataset.active || '';
+        var role = app.dataset.role || 'owner';
+        var items = ITEMS.filter(function (it) {
+          var allowed = ROLES[it.key];
+          return !allowed || allowed.indexOf(role) !== -1;
+        });
+        var nav = items.map(function (it) {
+          var mark = active === it.key ? ' aria-current="page"' : '';
+          var tag = it.tag ? '<span class="tag' + (it.warn ? ' warn' : '') + '">' + it.tag + '</span>' : '';
+          return '<a href="' + it.href + '"' + mark + ' title="' + it.label + '"><svg viewBox="0 0 24 24" aria-hidden="true">' +
+            ICONS[it.key] + '</svg><span class="sp">' + it.label + '</span>' + tag + '</a>';
+        }).join('');
+        var aside = document.createElement('aside');
+        aside.className = 'sidebar';
+        aside.setAttribute('aria-label', 'منوی اصلی پنل');
+        aside.innerHTML =
+          '<div class="sb-brand"><span class="sb-mark" aria-hidden="true">هـ</span><div>' +
+          '<p class="sb-name">کلینیک سلامت پارس</p><p class="sb-sub">پنل کلینیک · ۴ پزشک</p></div></div>' +
+          '<nav class="sb-nav" aria-label="منوی اصلی">' + nav + '</nav>' +
+          '<div class="sb-spacer"></div>' +
+          '<div class="sb-credit neu-in" title="اعتبار پیامک: ۹۶۰"><p><span class="sb-hide">اعتبار پیامک: </span>۹۶۰</p><small class="sb-hide">۱۰۰ پیامک تا هشدار</small>' +
+          '<div class="bar" aria-hidden="true"><span></span></div><a class="sb-hide" href="sms.html">شارژ پیامک</a></div>' +
+          '<div class="sb-user"><span class="sb-av" aria-hidden="true">س</span><div><p>سارا رضایی</p><small>مدیر کلینیک</small></div></div>';
+        app.insertBefore(aside, app.firstChild);
+
+        document.documentElement.classList.add('sidebar-collapsed');
+        var bar = document.querySelector('.topbar') || document.querySelector('.controls');
+        if (bar) {
+          var toggle = document.createElement('button');
+          toggle.type = 'button';
+          toggle.className = 'icon-btn neu-sm sidebar-toggle';
+          toggle.setAttribute('aria-label', 'باز یا بستن منو');
+          toggle.setAttribute('aria-expanded', 'false');
+          toggle.textContent = '⟨';
+          toggle.addEventListener('click', function () {
+            var isCollapsed = document.documentElement.classList.toggle('sidebar-collapsed');
+            toggle.setAttribute('aria-expanded', isCollapsed ? 'false' : 'true');
+            toggle.textContent = isCollapsed ? '⟨' : '⟩';
+          });
+          bar.insertBefore(toggle, bar.firstChild);
+        }
+      })();
+      // انتخاب اسلات ساعت (نمایشی)
+      document.querySelectorAll('.slot-chip:not([disabled])').forEach(function (chip) {
+        chip.addEventListener('click', function () {
+          document.querySelectorAll('.slot-chip').forEach(function (o) { o.setAttribute('aria-pressed', 'false'); });
+          chip.setAttribute('aria-pressed', 'true');
+        });
+      });
+      // انتخاب روز (نمایشی)
+      document.querySelectorAll('.cal-day:not(.is-empty):not([disabled])').forEach(function (day) {
+        day.addEventListener('click', function () {
+          document.querySelectorAll('.cal-day').forEach(function (o) { o.setAttribute('aria-selected', 'false'); });
+          day.setAttribute('aria-selected', 'true');
+        });
+      });
+      // انتخاب بیمار از نتایج (نمایشی)
+      document.querySelectorAll('.result').forEach(function (r) {
+        r.addEventListener('click', function () {
+          document.querySelectorAll('.result').forEach(function (o) { o.classList.remove('is-selected'); });
+          r.classList.add('is-selected');
+        });
+      });
+      // بستن مودال (نمایشی) → نمایش صفحهٔ پشت
+      document.querySelector('.modal .x').addEventListener('click', function () {
+        document.querySelector('.overlay').hidden = true;
+        document.querySelector('.behind').classList.remove('is-dimmed');
+        document.querySelector('.behind').removeAttribute('aria-hidden');
+      });
+    </script>
+  </body>
+</html>

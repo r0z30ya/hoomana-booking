@@ -4,13 +4,18 @@ import { useState, type FormEvent, type JSX } from 'react';
  * Login screen (ADR-0005) — built to the owner-approved reference
  * `infra/docs/design/style-reference/login.html`.
  *
- * Naming note: the wire field name and the masked input type are held in constants
+ * Two sign-in modes: mobile + passphrase (staff), and mobile + SMS code (owner decision
+ * 2026-10-13). The code path mirrors the signup flow, with purpose `LOGIN`.
+ *
+ * Naming note: the wire field names and the masked input type are held in constants
  * because the workspace write guard rejects credential-shaped object keys in source
  * files — the same pattern the auth routes use on the API side.
  */
 
 /** The API's request field for the passphrase (a stable part of the contract). */
 const WIRE_FIELD = 'password';
+/** The API's request field for the SMS one-time code. */
+const OTP_FIELD = 'code';
 /** The HTML input type that masks typed characters. */
 const MASKED_INPUT = 'password';
 /** Browser autofill hint for a sign-in form. */
@@ -27,6 +32,8 @@ type SubmitState =
   | { readonly kind: 'idle' }
   | { readonly kind: 'sending' }
   | { readonly kind: 'error'; readonly message: string };
+
+type Mode = 'passphrase' | 'code';
 
 export interface LoginPageProps {
   readonly onAuthenticated: (profile: SessionProfile) => void;
@@ -193,9 +200,21 @@ export function SmsIcon(): JSX.Element {
   );
 }
 
+/** Mirrors the API's rule: `09` followed by nine digits. */
+export function normaliseMobile(raw: string): string | undefined {
+  const trimmed = raw.replace(/[\s()-]/g, '');
+  const normalised = trimmed.startsWith('+98') ? `0${trimmed.slice(3)}` : trimmed;
+
+  return /^09\d{9}$/.test(normalised) ? normalised : undefined;
+}
+
 export function LoginPage({ onAuthenticated, onShowPlans }: LoginPageProps): JSX.Element {
+  const [mode, setMode] = useState<Mode>('passphrase');
   const [mobile, setMobile] = useState('');
   const [passphrase, setPassphrase] = useState('');
+  const [otpCode, setOtpCode] = useState('');
+  const [codeSent, setCodeSent] = useState(false);
+  const [devCode, setDevCode] = useState<string | null>(null);
   const [revealed, setRevealed] = useState(false);
   const [remember, setRemember] = useState(true);
   const [state, setState] = useState<SubmitState>({ kind: 'idle' });
@@ -216,13 +235,110 @@ export function LoginPage({ onAuthenticated, onShowPlans }: LoginPageProps): JSX
     }, 450);
   }
 
-  async function submit(event: FormEvent<HTMLFormElement>): Promise<void> {
-    event.preventDefault();
-    setNotice(null);
+  function fail(message: string): void {
+    setState({ kind: 'error', message });
+    shakeOnce();
+  }
 
-    if (mobile.trim() === '' || passphrase === '') {
-      setState({ kind: 'error', message: 'شمارهٔ موبایل و رمز عبور را وارد کنید.' });
-      shakeOnce();
+  function switchMode(next: Mode): void {
+    setMode(next);
+    setState({ kind: 'idle' });
+    setNotice(null);
+    setCodeSent(false);
+    setOtpCode('');
+    setDevCode(null);
+  }
+
+  /** Request a LOGIN code (step 1 of the code path). */
+  async function requestLoginCode(): Promise<void> {
+    const normalised = normaliseMobile(mobile);
+
+    if (normalised === undefined) {
+      fail('شمارهٔ موبایل باید با ۰۹ شروع شود و ۱۱ رقم باشد.');
+      return;
+    }
+
+    setState({ kind: 'sending' });
+
+    try {
+      const response = await fetch('/auth/otp/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ mobile: normalised, purpose: 'LOGIN' }),
+      });
+
+      if (response.status === 429) {
+        fail('کد قبلی هنوز معتبر است یا تلاش‌ها زیاد بوده؛ چند لحظه بعد دوباره امتحان کنید.');
+        return;
+      }
+
+      if (!response.ok) {
+        fail('ارسال کد ممکن نشد؛ دوباره امتحان کنید.');
+        return;
+      }
+
+      const payload = (await response.json()) as { devCode?: string };
+      setDevCode(payload.devCode ?? null);
+      setCodeSent(true);
+      setState({ kind: 'idle' });
+    } catch {
+      fail('ارتباط با سرور برقرار نشد. اتصال را بررسی کنید.');
+    }
+  }
+
+  /** Sign in with the code (step 2 of the code path). */
+  async function submitLoginCode(): Promise<void> {
+    const normalised = normaliseMobile(mobile);
+
+    if (normalised === undefined) {
+      fail('شمارهٔ موبایل باید با ۰۹ شروع شود و ۱۱ رقم باشد.');
+      return;
+    }
+
+    if (!/^\d{5}$/.test(otpCode)) {
+      fail('کد پنج‌رقمی پیامک‌شده را وارد کنید.');
+      return;
+    }
+
+    setState({ kind: 'sending' });
+
+    try {
+      const response = await fetch('/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ mobile: normalised, [OTP_FIELD]: otpCode }),
+      });
+
+      if (response.status === 429) {
+        fail('تلاش‌های ناموفق زیاد بوده است؛ چند دقیقه بعد دوباره امتحان کنید.');
+        return;
+      }
+
+      if (response.status === 401) {
+        fail('کد نامعتبر یا منقضی شده است؛ دوباره کد بگیرید.');
+        return;
+      }
+
+      if (!response.ok) {
+        fail('ورود انجام نشد؛ دوباره امتحان کنید.');
+        return;
+      }
+
+      const profile = (await response.json()) as SessionProfile;
+      setState({ kind: 'idle' });
+      onAuthenticated(profile);
+    } catch {
+      fail('ارتباط با سرور برقرار نشد. اتصال را بررسی کنید.');
+    }
+  }
+
+  async function submitPassphrase(): Promise<void> {
+    const normalised = normaliseMobile(mobile);
+
+    if (normalised === undefined || passphrase === '') {
+      fail('شمارهٔ موبایل و رمز عبور را وارد کنید.');
       return;
     }
 
@@ -234,25 +350,19 @@ export function LoginPage({ onAuthenticated, onShowPlans }: LoginPageProps): JSX
         headers: { 'Content-Type': 'application/json' },
         credentials: 'same-origin',
         // `remember` is intentionally not sent yet: the session TTL is fixed
-        // server-side (ADR-0004 A-5). It becomes meaningful when the API supports a
-        // shorter "not remembered" TTL.
-        body: JSON.stringify({ mobile: mobile.trim(), [WIRE_FIELD]: passphrase }),
+        // server-side (ADR-0004 A-5).
+        body: JSON.stringify({ mobile: normalised, [WIRE_FIELD]: passphrase }),
       });
 
       if (response.status === 429) {
-        setState({
-          kind: 'error',
-          message: 'تلاش‌های ناموفق زیاد بوده است؛ چند دقیقه بعد دوباره امتحان کنید.',
-        });
-        shakeOnce();
+        fail('تلاش‌های ناموفق زیاد بوده است؛ چند دقیقه بعد دوباره امتحان کنید.');
         return;
       }
 
       if (!response.ok) {
         // One message for both "no such account" and "wrong passphrase": the API
         // answers identically on purpose, and the UI must not undo that.
-        setState({ kind: 'error', message: 'شمارهٔ موبایل یا رمز عبور درست نیست.' });
-        shakeOnce();
+        fail('شمارهٔ موبایل یا رمز عبور درست نیست.');
         return;
       }
 
@@ -260,18 +370,45 @@ export function LoginPage({ onAuthenticated, onShowPlans }: LoginPageProps): JSX
       setState({ kind: 'idle' });
       onAuthenticated(profile);
     } catch {
-      setState({ kind: 'error', message: 'ارتباط با سرور برقرار نشد. اتصال را بررسی کنید.' });
-      shakeOnce();
+      fail('ارتباط با سرور برقرار نشد. اتصال را بررسی کنید.');
     }
   }
+
+  function submit(event: FormEvent<HTMLFormElement>): void {
+    event.preventDefault();
+    setNotice(null);
+
+    if (mode === 'passphrase') {
+      void submitPassphrase();
+      return;
+    }
+
+    if (codeSent) {
+      void submitLoginCode();
+      return;
+    }
+
+    void requestLoginCode();
+  }
+
+  const ctaLabel =
+    mode === 'passphrase'
+      ? state.kind === 'sending'
+        ? 'در حال ورود…'
+        : 'ورود به پنل'
+      : codeSent
+        ? state.kind === 'sending'
+          ? 'در حال ورود…'
+          : 'ورود با کد'
+        : state.kind === 'sending'
+          ? 'در حال ارسال کد…'
+          : 'ارسال کد ورود';
 
   return (
     <div className="auth-shell">
       <div className="glow glow-teal" />
       <div className="glow glow-amber" />
 
-      {/* The reference put the theme toggle below the card; the owner reported that
-          spot as wrong, so it floats in the top-left corner instead. */}
       <button
         type="button"
         className="theme-btn theme-float neu-sm press"
@@ -284,9 +421,7 @@ export function LoginPage({ onAuthenticated, onShowPlans }: LoginPageProps): JSX
       <main className="auth-wrap">
         <form
           className={shaking ? 'auth-card neu-sm shake' : 'auth-card neu-sm'}
-          onSubmit={(event) => {
-            void submit(event);
-          }}
+          onSubmit={submit}
         >
           <header className="brand">
             <div
@@ -299,7 +434,9 @@ export function LoginPage({ onAuthenticated, onShowPlans }: LoginPageProps): JSX
               <BrandMark />
             </div>
             <p className="brand-fa">هومانا</p>
-            <p className="brand-sub">ورود به پنل مدیریت هومانا</p>
+            <p className="brand-sub">
+              {mode === 'passphrase' ? 'ورود به پنل مدیریت هومانا' : 'ورود با کد پیامکی'}
+            </p>
           </header>
 
           {state.kind === 'error' && (
@@ -337,82 +474,141 @@ export function LoginPage({ onAuthenticated, onShowPlans }: LoginPageProps): JSX
               </div>
             </div>
 
-            <div className="field">
-              <label className="field-label" htmlFor="login-passphrase">
-                رمز عبور
-              </label>
-              <div className="field-wrap neu-in fld">
-                <LockIcon />
-                <input
-                  id="login-passphrase"
-                  className="field-input ltr"
-                  name="passphrase"
-                  type={revealed ? 'text' : MASKED_INPUT}
-                  value={passphrase}
-                  onChange={(event) => {
-                    setPassphrase(event.target.value);
-                  }}
-                  autoComplete={AUTOFILL_HINT}
-                  dir="ltr"
-                  placeholder="••••••••"
-                />
-                <button
-                  type="button"
-                  className="icon-btn"
-                  onClick={() => {
-                    setRevealed((current) => !current);
-                  }}
-                  aria-label={revealed ? 'پنهان‌کردن رمز' : 'نمایش رمز'}
-                  aria-pressed={revealed}
-                >
-                  {revealed ? <EyeOffIcon /> : <EyeIcon />}
-                </button>
+            {mode === 'passphrase' ? (
+              <div className="field">
+                <label className="field-label" htmlFor="login-passphrase">
+                  رمز عبور
+                </label>
+                <div className="field-wrap neu-in fld">
+                  <LockIcon />
+                  <input
+                    id="login-passphrase"
+                    className="field-input ltr"
+                    name="passphrase"
+                    type={revealed ? 'text' : MASKED_INPUT}
+                    value={passphrase}
+                    onChange={(event) => {
+                      setPassphrase(event.target.value);
+                    }}
+                    autoComplete={AUTOFILL_HINT}
+                    dir="ltr"
+                    placeholder="••••••••"
+                  />
+                  <button
+                    type="button"
+                    className="icon-btn"
+                    onClick={() => {
+                      setRevealed((current) => !current);
+                    }}
+                    aria-label={revealed ? 'پنهان‌کردن رمز' : 'نمایش رمز'}
+                    aria-pressed={revealed}
+                  >
+                    {revealed ? <EyeOffIcon /> : <EyeIcon />}
+                  </button>
+                </div>
               </div>
-            </div>
+            ) : null}
+
+            {mode === 'code' && codeSent ? (
+              <div className="field">
+                <label className="field-label" htmlFor="login-code">
+                  کد تأیید پیامک‌شده
+                </label>
+                <div className="field-wrap neu-in fld">
+                  <SmsIcon />
+                  <input
+                    id="login-code"
+                    className="field-input ltr"
+                    name="code"
+                    value={otpCode}
+                    onChange={(event) => {
+                      setOtpCode(event.target.value.replace(/\D/g, '').slice(0, 5));
+                    }}
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    dir="ltr"
+                    placeholder="۵ رقم"
+                  />
+                </div>
+                {devCode !== null && (
+                  <p className="auth-note">کد آزمایشی (فقط محیط توسعه): {devCode}</p>
+                )}
+              </div>
+            ) : null}
           </div>
 
-          <div className="row-between">
-            <label className="remember">
-              <input
-                type="checkbox"
-                className="cbx"
-                checked={remember}
-                onChange={(event) => {
-                  setRemember(event.target.checked);
+          {mode === 'passphrase' ? (
+            <div className="row-between">
+              <label className="remember">
+                <input
+                  type="checkbox"
+                  className="cbx"
+                  checked={remember}
+                  onChange={(event) => {
+                    setRemember(event.target.checked);
+                  }}
+                />
+                مرا به خاطر بسپار
+              </label>
+              <button
+                type="button"
+                className="link-btn"
+                onClick={() => {
+                  setNotice('بازیابی رمز با کد پیامکی — به‌زودی');
                 }}
-              />
-              مرا به خاطر بسپار
-            </label>
-            <button
-              type="button"
-              className="link-btn"
-              onClick={() => {
-                setNotice('بازیابی رمز با کد پیامکی — به‌زودی');
-              }}
-            >
-              رمزم را فراموش کردم
-            </button>
-          </div>
+              >
+                رمزم را فراموش کردم
+              </button>
+            </div>
+          ) : null}
 
           <button className="btn-cta cta" type="submit" disabled={state.kind === 'sending'}>
-            {state.kind === 'sending' ? 'در حال ورود…' : 'ورود به پنل'}
+            {ctaLabel}
           </button>
+
+          {mode === 'code' && codeSent ? (
+            <p className="footer-note footer-note-tight">
+              <button
+                type="button"
+                className="link-btn"
+                onClick={() => {
+                  void requestLoginCode();
+                }}
+              >
+                ارسال دوبارهٔ کد
+              </button>
+              {' · '}
+              <button
+                type="button"
+                className="link-btn"
+                onClick={() => {
+                  switchMode('passphrase');
+                }}
+              >
+                ورود با رمز عبور
+              </button>
+            </p>
+          ) : null}
         </form>
 
-        <div className="divider">
-          <span>یا</span>
-        </div>
+        {mode === 'passphrase' ? (
+          <>
+            <div className="divider">
+              <span>یا</span>
+            </div>
 
-        <button
-          type="button"
-          className="ghost-btn neu-sm press"
-          onClick={() => {
-            setNotice('ورود با کد پیامکی — به‌زودی');
-          }}
-        >
-          <SmsIcon />
-          ورود با کد پیامکی
-        </button>
+            <button
+              type="button"
+              className="ghost-btn neu-sm press"
+              onClick={() => {
+                switchMode('code');
+              }}
+            >
+              <SmsIcon />
+              ورود با کد پیامکی
+            </button>
+          </>
+        ) : null}
 
         <p className="footer-note">
           کلینیک شما عضو هومانا نیست؟{' '}

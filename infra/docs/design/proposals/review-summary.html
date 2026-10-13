@@ -1,0 +1,446 @@
+<!doctype html>
+<html lang="fa" dir="rtl" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>هومانا | جمع‌بندی طراحی پنل کلینیک</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #e9e5dd; --ink: #2e2b26; --sub: #7a756b; --sd: #c9c3b6; --sl: #ffffff;
+        --bar: rgba(46, 43, 38, 0.13); --accent: #0d9488; --accent-2: #14b8a6;
+        --ok: #059669; --ok-bg: rgba(16, 185, 129, 0.16);
+        --warn: #b45309; --warn-bg: rgba(245, 158, 11, 0.18);
+        --no: #dc2626; --no-bg: rgba(239, 68, 68, 0.14);
+      }
+      [data-theme='dark'] {
+        --bg: #262421; --ink: #ede9e1; --sub: #a09a8e; --sd: #1d1b18; --sl: #32302b;
+        --bar: rgba(237, 233, 225, 0.13); --ok: #34d399; --warn: #fbbf24; --no: #f87171;
+      }
+      * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+      body {
+        margin: 0; background: var(--bg); color: var(--ink);
+        font-family: Vazirmatn, 'Segoe UI', Tahoma, sans-serif; transition: background 0.3s, color 0.3s;
+      }
+      button { font-family: inherit; }
+      .neu { background: var(--bg); box-shadow: 9px 9px 20px var(--sd), -9px -9px 20px var(--sl); }
+      .neu-sm { background: var(--bg); box-shadow: 5px 5px 12px var(--sd), -5px -5px 12px var(--sl); }
+      .neu-in { background: var(--bg); box-shadow: inset 5px 5px 10px var(--sd), inset -5px -5px 10px var(--sl); }
+      .icon-btn {
+        width: 44px; height: 44px; border: 0; border-radius: 15px; cursor: pointer; color: var(--sub);
+        display: grid; place-items: center; flex-shrink: 0; background: var(--bg);
+      }
+      :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+      .pill { font-size: 11.5px; font-weight: 800; padding: 5px 12px; border-radius: 9999px; background: var(--bar); color: var(--sub); white-space: nowrap; }
+      .pill-ok { background: var(--ok-bg); color: var(--ok); }
+      .pill-warn { background: var(--warn-bg); color: var(--warn); }
+      .pill-no { background: var(--no-bg); color: var(--no); }
+      .shell { max-width: 1180px; margin: 0 auto; padding: 18px 18px 48px; }
+
+      .topbar { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; flex-wrap: wrap; }
+      .brand { display: flex; align-items: center; gap: 11px; }
+      .brand-mark {
+        width: 44px; height: 44px; border-radius: 15px; display: grid; place-items: center; color: #fff;
+        font-weight: 900; font-size: 19px; background: linear-gradient(135deg, var(--accent-2), var(--accent));
+      }
+      .brand-name { margin: 0; font-weight: 900; font-size: 16px; }
+      .brand-sub { margin: 2px 0 0; font-size: 11.5px; color: var(--sub); }
+      .spacer { flex: 1; }
+
+      .hero { border-radius: 30px; padding: 26px; margin-bottom: 22px; }
+      .hero h1 { margin: 0 0 8px; font-size: 26px; font-weight: 900; }
+      .hero p { margin: 0; color: var(--sub); font-size: 13.5px; line-height: 2.1; }
+      .hero .stats { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+
+      h2.sec { margin: 26px 0 12px; font-size: 18px; font-weight: 900; }
+      p.sec-sub { margin: 0 0 14px; color: var(--sub); font-size: 13px; line-height: 2; }
+
+      .grid-screens { display: grid; gap: 14px; grid-template-columns: 1fr; }
+      @media (min-width: 820px) { .grid-screens { grid-template-columns: 1fr 1fr; } }
+      .screen { border-radius: 24px; padding: 18px; display: flex; flex-direction: column; }
+      .screen-head { display: flex; align-items: center; gap: 11px; margin-bottom: 10px; }
+      .num {
+        width: 38px; height: 38px; border-radius: 13px; display: grid; place-items: center; font-weight: 900;
+        font-size: 15px; color: var(--accent); flex-shrink: 0; background: var(--bg);
+        box-shadow: inset 4px 4px 9px var(--sd), inset -4px -4px 9px var(--sl);
+      }
+      .screen h3 { margin: 0; font-size: 15.5px; font-weight: 900; }
+      .screen p { margin: 0 0 10px; font-size: 12.5px; color: var(--sub); line-height: 2; }
+      .screen ul { margin: 0 0 14px; padding-inline-start: 18px; font-size: 12.5px; color: var(--sub); line-height: 2; }
+      .screen ul b { color: var(--ink); }
+      .open {
+        margin-top: auto; display: inline-flex; align-items: center; gap: 8px; text-decoration: none;
+        font-size: 13px; font-weight: 800; color: #fff; border-radius: 14px; padding: 12px 16px;
+        background: linear-gradient(135deg, var(--accent-2), var(--accent));
+        box-shadow: 5px 5px 12px var(--sd), -5px -5px 12px var(--sl);
+        justify-content: center;
+      }
+      .open:hover { opacity: 0.92; }
+
+      table { border-collapse: collapse; width: 100%; }
+      .table-wrap { overflow-x: auto; border-radius: 24px; }
+      table th, table td { padding: 13px 14px; text-align: right; font-size: 13px; vertical-align: top; }
+      table thead th { font-size: 11.5px; color: var(--sub); font-weight: 800; white-space: nowrap; }
+      table tbody tr { border-top: 1px solid var(--bar); }
+      td.dec { font-weight: 800; }
+      td.res { color: var(--sub); font-size: 12.5px; line-height: 2; }
+      .card { border-radius: 26px; padding: 20px; }
+      ol.open-items { margin: 0; padding-inline-start: 20px; color: var(--sub); font-size: 13px; line-height: 2.2; }
+      ol.open-items b { color: var(--ink); }
+
+      .steps { display: grid; gap: 12px; }
+      .step { display: flex; align-items: flex-start; gap: 12px; border-radius: 20px; padding: 15px 17px; }
+      .step .idx {
+        width: 34px; height: 34px; border-radius: 12px; display: grid; place-items: center; font-weight: 900;
+        color: #fff; flex-shrink: 0; background: linear-gradient(135deg, var(--accent-2), var(--accent));
+      }
+      .step p { margin: 0; font-size: 13.5px; font-weight: 800; }
+      .step small { display: block; color: var(--sub); font-size: 12px; margin-top: 4px; line-height: 1.95; }
+
+      .note { border-radius: 22px; padding: 18px; font-size: 12.5px; line-height: 2.05; color: var(--sub); }
+      .note b { color: var(--ink); }
+      .note-warn { background: var(--warn-bg); color: var(--warn); }
+      .note-warn b { color: var(--warn); }
+
+      .final { border-radius: 28px; padding: 24px; margin-top: 26px; }
+      .final h2 { margin: 0 0 10px; font-size: 18px; font-weight: 900; }
+      .final p { margin: 0; font-size: 13.5px; color: var(--sub); line-height: 2.1; }
+      .final b { color: var(--ink); }
+      .checklist { margin: 14px 0 0; padding: 0; list-style: none; display: grid; gap: 9px; }
+      .checklist li { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--sub); }
+      .checklist li::before {
+        content: '✓'; width: 22px; height: 22px; border-radius: 8px; display: grid; place-items: center;
+        font-size: 12px; font-weight: 900; color: var(--ok); flex-shrink: 0; background: var(--ok-bg);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <header class="topbar">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">هـ</div>
+          <div>
+            <p class="brand-name">هومانا — پنل کلینیک</p>
+            <p class="brand-sub">جمع‌بندی طراحی · سه‌شنبه ۲۱ مهر ۱۴۰۵</p>
+          </div>
+        </div>
+        <div class="spacer"></div>
+        <button class="icon-btn neu-sm" id="theme" aria-label="تعویض تم">◐</button>
+      </header>
+
+      <!-- سرصفحه -->
+      <section class="hero neu">
+        <h1>جمع‌بندی طراحی پنل کلینیک</h1>
+        <p>
+          نُه صفحهٔ پنل کلینیک طراحی شد — همه با یک زبان بصری (نئومورفیک تأییدشدهٔ شما)، دسکتاپ‌اول و موبایل‌هم‌راستا.
+          هیچ کدی از برنامه نوشته نشده است؛ این صفحه فقط برای بازبینی نهایی شماست. هر کارت یک طرح قابل باز کردن دارد.
+        </p>
+        <div class="stats">
+          <span class="pill pill-ok">۹ صفحه · کامل</span>
+          <span class="pill">۱۱ تصمیم ثبت‌شده</span>
+          <span class="pill">۵ مورد باز</span>
+          <span class="pill pill-warn">هنوز کدی نوشته نشده</span>
+        </div>
+      </section>
+
+      <!-- فهرست طرح‌ها -->
+      <h2 class="sec">۱. فهرست طرح‌ها</h2>
+      <p class="sec-sub">روی «باز کردن طرح» بزنید تا همان فایل در مرورگر باز شود.</p>
+
+      <div class="grid-screens">
+        <article class="screen neu">
+          <div class="screen-head"><span class="num">۱</span><h3>پوسته و منوی پنل</h3></div>
+          <p>چارچوبی که همهٔ صفحه‌ها در آن می‌نشینند: منوی راست، نوار کار، حالت جمع‌شده و نسخهٔ موبایل.</p>
+          <ul>
+            <li>دکمهٔ همیشه‌حاضر <b>«ثبت نوبت جدید»</b> و جستجوی سراسری در نوار کار</li>
+            <li>اعتبار پیامک همیشه در پایین منو</li>
+            <li>نوار پایین موبایل + کشوی منو + دکمهٔ شناور «＋»</li>
+            <li>جدول «هر نقش چه منویی می‌بیند»</li>
+          </ul>
+          <a class="open" href="shell-navigation.html">باز کردن طرح</a>
+        </article>
+
+        <article class="screen neu">
+          <div class="screen-head"><span class="num">۲</span><h3>داشبورد</h3></div>
+          <p>قلب صفحه برنامهٔ امروز است، نه آمار: تایم‌لاین ساعتی + کارهای امروز.</p>
+          <ul>
+            <li>نوار خلاصهٔ روز (۴ عدد فشرده) بالای صفحه</li>
+            <li>ستون کناری: <b>اقدام لازم</b>، پیامک امروز، دسترسی سریع</li>
+            <li>ردیف پایین (ثانویه): روند هفته و آخرین بیماران</li>
+          </ul>
+          <a class="open" href="dashboard.html">باز کردن طرح</a>
+        </article>
+
+        <article class="screen neu">
+          <div class="screen-head"><span class="num">۳</span><h3>نوبت‌ها</h3></div>
+          <p>سه نما برای سه کار: روز (کار جاری)، هفته (ظرفیت)، فهرست (جدول کامل).</p>
+          <ul>
+            <li><b>تقویم شمسی</b> کنار صفحه با تعداد نوبت هر روز</li>
+            <li>نمایش اسلات‌های آزاد و «＋ نوبت در این ساعت»</li>
+            <li><b>نشانهٔ پرداخت</b> (پرداخت‌شده/نشده) و فیلتر آن</li>
+          </ul>
+          <a class="open" href="appointments.html">باز کردن طرح</a>
+        </article>
+
+        <article class="screen neu">
+          <div class="screen-head"><span class="num">۴</span><h3>ثبت نوبت جدید</h3></div>
+          <p>فرم تک‌صفحه‌ای بدون ویزارد: بیمار، خدمت، پزشک، روز و ساعت — در یک نگاه.</p>
+          <ul>
+            <li>ساعت از <b>اسلات‌های آزاد واقعی همان پزشک</b> انتخاب می‌شود</li>
+            <li>بیمار جدید همان‌جا با موبایل ثبت می‌شود</li>
+            <li>سه حالت طراحی‌شده: بیمار جدید · روز تعطیل/بدون ظرفیت · تداخل زمانی</li>
+          </ul>
+          <a class="open" href="new-appointment.html">باز کردن طرح</a>
+        </article>
+
+        <article class="screen neu">
+          <div class="screen-head"><span class="num">۵</span><h3>بیماران</h3></div>
+          <p>دو تب: فهرست بیماران و پروندهٔ بیمار (نمونه).</p>
+          <ul>
+            <li>جستجو با موبایل/نام/شمارهٔ پرونده + ایمپورت اکسل</li>
+            <li>«نام‌های نزدیک به تکراری» با تصمیم ادغام</li>
+            <li>پروندهٔ صادق: تاریخچهٔ نوبت، پیامک‌ها، یادداشت <b>غیربالینی</b></li>
+          </ul>
+          <a class="open" href="patients.html">باز کردن طرح</a>
+        </article>
+
+        <article class="screen neu">
+          <div class="screen-head"><span class="num">۶</span><h3>پزشکان و خدمات</h3></div>
+          <p>پیش‌نیاز اسلات‌های نوبت: ساعت کاری، ظرفیت، مدت خدمت و تعرفه.</p>
+          <ul>
+            <li>جدول ساعت کاری هفتگی + <b>پیش‌نمایش اسلات‌های ساخته‌شده</b></li>
+            <li>شمارهٔ پیامک لیست روزانه روی کارت هر پزشک</li>
+            <li>خدمات با مدت و <b>تعرفه</b> (و پزشکان ارائه‌دهنده)</li>
+          </ul>
+          <a class="open" href="doctors-services.html">باز کردن طرح</a>
+        </article>
+
+        <article class="screen neu">
+          <div class="screen-head"><span class="num">۷</span><h3>پیامک</h3></div>
+          <p>لاگ ارسال، الگوها، تنظیمات ارسال خودکار و اعتبار/شارژ.</p>
+          <ul>
+            <li>پنج الگو با پیش‌نمایش (تأیید، یادآوری، لغو، <b>لیست روزانهٔ پزشکان</b>، خوش‌آمد)</li>
+            <li>یادآوری ۲۴ ساعت قبل + قاعدهٔ «اگر گذشت ارسال نکن»</li>
+            <li>شارژ با مبلغ دلخواه</li>
+          </ul>
+          <a class="open" href="sms.html">باز کردن طرح</a>
+        </article>
+
+        <article class="screen neu">
+          <div class="screen-head"><span class="num">۸</span><h3>حسابداری</h3></div>
+          <p>درآمد از «نوبت‌های ثبت‌شده × تعرفهٔ خدمات» — شفاف و قابل پیگیری.</p>
+          <ul>
+            <li>درآمد به تفکیک خدمت و پزشک (جمع‌های یکسان برای بازبینی)</li>
+            <li>دفتر پرداخت‌ها + فرم ثبت پرداخت</li>
+            <li><b>نوبت‌های پرداخت‌نشده</b> با ثبت پرداخت یک‌کلیکی</li>
+          </ul>
+          <a class="open" href="accounting.html">باز کردن طرح</a>
+        </article>
+
+        <article class="screen neu">
+          <div class="screen-head"><span class="num">۹</span><h3>تنظیمات</h3></div>
+          <p>چهار تب: کلینیک و اشتراک، کاربران و نقش‌ها، دامنه و پنل پیامکی، امنیت.</p>
+          <ul>
+            <li>دعوت کاربر با <b>پیامک</b> (بدون سرویس ایمیل) و پیوند کاربر به پزشک</li>
+            <li>دامنهٔ اختصاصی + رکوردهای DNS + SSL خودکار</li>
+            <li>ورود دومرحله‌ای، نشست‌های فعال، رویدادهای امنیتی</li>
+          </ul>
+          <a class="open" href="settings.html">باز کردن طرح</a>
+        </article>
+      </div>
+
+      <p class="sec-sub" style="margin-top: 12px">
+        دو فایل قدیمی‌تر هم در همین پوشه هست که <b>کنار گذاشته شده‌اند</b> و لازم نیست ببینید:
+        <code>panel-ui.html</code> (طرح اول پنل که ساختارش را نپسندیدید) و <code>plans-page.html</code> (صفحهٔ پلن‌ها، پیش از بازنویسی).
+      </p>
+
+      <!-- تصمیم‌های ثبت‌شده -->
+      <h2 class="sec">۲. تصمیم‌های ثبت‌شده (طبق نظر شما)</h2>
+      <p class="sec-sub">هر تصمیم و جایی که در طرح‌ها اعمال شده است.</p>
+      <div class="table-wrap card neu" style="padding: 6px 0">
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 46px">#</th>
+              <th style="width: 260px">تصمیم شما</th>
+              <th>اثر در طرح‌ها</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>۱</td>
+              <td class="dec">«وضعیت نوبت» وجود ندارد</td>
+              <td class="res">هیچ ستون، چیپ، رنگ یا شمارش وضعیتی برای نوبت طراحی نشد.</td>
+            </tr>
+            <tr>
+              <td>۲</td>
+              <td class="dec">پنل یا مطب است یا کلینیک؛ قابل تغییر نیست</td>
+              <td class="res">کلید تغییر حالت از همهٔ طرح‌ها حذف شد. طرح‌ها فعلاً <b>کلینیک</b> هستند.</td>
+            </tr>
+            <tr>
+              <td>۳</td>
+              <td class="dec">تقویم شمسی در نوبت‌ها</td>
+              <td class="res">تقویم ماهانه با تعداد نوبت هر روز، امروز/روز انتخابی مشخص (دسکتاپ کنار صفحه، موبایل با دکمهٔ تاریخ).</td>
+            </tr>
+            <tr>
+              <td>۴</td>
+              <td class="dec">پیامک تأیید نوبت پیش‌فرض روشن</td>
+              <td class="res">در فرم ثبت نوبت و در تنظیمات ارسال، تیک روشن است (منشی می‌تواند برای یک نوبت بردارد).</td>
+            </tr>
+            <tr>
+              <td>۵</td>
+              <td class="dec">هشدار تداخل: اطلاع‌دهنده</td>
+              <td class="res">هشدار نشان داده می‌شود ولی ثبت ممنوع نیست؛ منشی با تأیید خودش ثبت می‌کند.</td>
+            </tr>
+            <tr>
+              <td>۶</td>
+              <td class="dec">تعرفه در خدمات باشد</td>
+              <td class="res">ستون تعرفه + فیلد هنگام افزودن خدمت؛ در انتخاب خدمت و خلاصهٔ نوبت هم دیده می‌شود و مبنای حسابداری است.</td>
+            </tr>
+            <tr>
+              <td>۷</td>
+              <td class="dec">حذف بیمار: فقط مشخصات پاک شود</td>
+              <td class="res">«آرشیو» + «حذف مشخصات (بی‌نام‌سازی)»؛ سابقهٔ نوبت‌ها و پیامک‌ها می‌ماند.</td>
+            </tr>
+            <tr>
+              <td>۸</td>
+              <td class="dec">شارژ پیامک: مبلغ دلخواه</td>
+              <td class="res">ورودی مبلغ تومان + معادل پیامک و حداقل شارژ (نرخ هر پیامک در پنل پلتفرم تعیین می‌شود).</td>
+            </tr>
+            <tr>
+              <td>۹</td>
+              <td class="dec">نشانهٔ پرداخت روی نوبت اضافه شود</td>
+              <td class="res">پرداخت‌شده/پرداخت‌نشده روی ردیف نوبت + فیلتر «پرداخت‌نشده‌ها» + کارت «نوبت‌های پرداخت‌نشدهٔ امروز» در حسابداری.</td>
+            </tr>
+            <tr>
+              <td>۱۰</td>
+              <td class="dec">دسکتاپ اول، موبایل هم‌راستا</td>
+              <td class="res">همهٔ طرح‌ها دسکتاپ‌اول‌اند و در موبایل یک‌ستونه با دکمه‌های تمام‌عرض؛ هدف‌های لمسی ≥۴۰px.</td>
+            </tr>
+            <tr>
+              <td>۱۱</td>
+              <td class="dec">بدون ایمیل؛ شناسهٔ ورود موبایل</td>
+              <td class="res">جستجوی بیمار با موبایل، دعوت کاربر با پیامک، ورود دومرحله‌ای با پیامک، بدون هیچ فیلد ایمیلی.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- موارد باز -->
+      <h2 class="sec">۳. موارد باز (نیاز به تصمیم شما)</h2>
+      <section class="card neu">
+        <ol class="open-items">
+          <li><b>نمای پیش‌فرض نوبت‌ها:</b> من «روز» (تایم‌لاین) گذاشتم؛ اگر «فهرست» را ترجیح می‌دهید بگویید تا عوض کنم.</li>
+          <li><b>قیمت‌گذاری پلن‌ها و طول دورهٔ آزمایشی:</b> مربوط به پنل پلتفرم است و هنوز طراحی نشده.</li>
+          <li><b>نرخ هر پیامک</b> برای محاسبهٔ شارژ (مبلغ دلخواه ← تعداد پیامک): در پنل پلتفرم تعیین می‌شود.</li>
+          <li><b>تخفیف و خدمات افزودنی</b> در نوبت (مثلاً نوار قلب در مطب): فعلاً طراحی نشده؛ اگر لازم است فیلد «تخفیف/افزودنی» را به فرم ثبت نوبت اضافه می‌کنم.</li>
+          <li><b>پرداخت آنلاین بیمار</b> (پرداخت هنگام رزرو در سایت): در دفتر پرداخت‌ها به‌عنوان یک روش دیده شده، ولی فرایند پرداخت طراحی نشده.</li>
+        </ol>
+      </section>
+
+      <!-- چه چیزی هنوز طراحی نشده -->
+      <h2 class="sec">۴. بیرون از محدودهٔ این مرحله</h2>
+      <section class="card neu">
+        <ol class="open-items">
+          <li><b>طرح مطب (تک‌پزشک):</b> طبق تصمیم شما بعد از تأیید طرح کلینیک ساخته می‌شود.</li>
+          <li><b>پنل مالک پلتفرم:</b> تعیین دورهٔ آزمایشی، قیمت‌گذاری پلن‌ها، فهرست کلینیک‌ها و تخفیف‌ها.</li>
+          <li><b>صفحهٔ رزرو بیمار (پورتال بیمار):</b> آن‌چه بیمار می‌بیند — فقط پیش‌نمایشش در «تنظیمات» آمده است.</li>
+        </ol>
+      </section>
+
+      <!-- ترتیب پیشنهادی پیاده‌سازی -->
+      <h2 class="sec">۵. اگر تأیید کنید، ترتیب کار من این است</h2>
+      <p class="sec-sub">ترتیب طوری چیده شده که هر قدم، پیش‌نیاز قدم بعدی باشد.</p>
+      <div class="steps">
+        <div class="step neu">
+          <span class="idx">۱</span>
+          <div>
+            <p>پوسته و منوی پنل</p>
+            <small>چون همهٔ صفحه‌ها داخل آن می‌نشینند؛ شامل جستجوی سراسری، دکمهٔ «ثبت نوبت جدید» و منوی نقش‌محور.</small>
+          </div>
+        </div>
+        <div class="step neu">
+          <span class="idx">۲</span>
+          <div>
+            <p>داشبورد</p>
+            <small>اولین صفحهٔ واقعی روی داده‌های موجود (نوبت‌ها و پیامک‌ها همان‌جا تعریف می‌شوند).</small>
+          </div>
+        </div>
+        <div class="step neu">
+          <span class="idx">۳</span>
+          <div>
+            <p>پزشکان و خدمات</p>
+            <small>پیش‌نیاز ساعت کاری و ظرفیت؛ بدون آن، اسلات آزاد در فرم نوبت وجود ندارد.</small>
+          </div>
+        </div>
+        <div class="step neu">
+          <span class="idx">۴</span>
+          <div>
+            <p>نوبت‌ها + ثبت نوبت جدید</p>
+            <small>قلب کار کلینیک؛ شامل تقویم شمسی، اسلات‌های آزاد و نشانهٔ پرداخت.</small>
+          </div>
+        </div>
+        <div class="step neu">
+          <span class="idx">۵</span>
+          <div>
+            <p>بیماران</p>
+            <small>فهرست، پرونده، ایمپورت اکسل و ادغام نام‌های تکراری.</small>
+          </div>
+        </div>
+        <div class="step neu">
+          <span class="idx">۶</span>
+          <div>
+            <p>پیامک (اتصال به پنل ملی‌پیامک)</p>
+            <small>لاگ، الگوها، تنظیمات ارسال، اعتبار و شارژ — بر پایهٔ ادپتر آمادهٔ ملی‌پیامک.</small>
+          </div>
+        </div>
+        <div class="step neu">
+          <span class="idx">۷</span>
+          <div>
+            <p>حسابداری</p>
+            <small>تعرفه‌ها، درآمد، دفتر پرداخت‌ها و پرداخت‌نشده‌ها.</small>
+          </div>
+        </div>
+        <div class="step neu">
+          <span class="idx">۸</span>
+          <div>
+            <p>تنظیمات و اشتراک</p>
+            <small>کاربران و نقش‌ها، دامنه، امنیت و پلن.</small>
+          </div>
+        </div>
+      </div>
+
+      <div class="note note-warn" style="margin-top: 16px">
+        <b>یک نکتهٔ صریح:</b> این‌ها همه فقط «طراحی» هستند. برای پیاده‌سازی، بخشی از کار در سمت داده و سرور هم لازم است
+        (جدول‌های نوبت، خدمت، پرداخت و تنظیمات — غیر از بخش هویت که قبلاً ساخته شده). آن مرحله فقط بعد از تأیید صریح شما
+        شروع می‌شود و با همان قاعدهٔ همیشگی: تست‌ها سبز، بدون تضعیف تست‌های موجود.
+      </div>
+
+      <!-- تأیید نهایی -->
+      <section class="final neu">
+        <h2>تأیید نهایی</h2>
+        <p>
+          اگر این مجموعه را تأیید کنید، قدم بعدی <b>پیاده‌سازی پوسته و داشبورد</b> است (بند ۱ و ۲ بالا).
+          اگر جایی ایراد دارد، همان را بگویید تا اصلاح کنم — تا تأیید شما، هیچ کدی نوشته نمی‌شود.
+        </p>
+        <ul class="checklist">
+          <li>همهٔ صفحه‌ها با زبان بصری تأییدشدهٔ شما (نئومورفیک فیـروزه‌ای) طراحی شده‌اند.</li>
+          <li>هر سه بازخورد شما (حذف وضعیت، حذف کلید حالت، افزودن تقویم شمسی) اعمال شده است.</li>
+          <li>هر تصمیم شما در جای مرتبط با خودش در طرح دیده می‌شود.</li>
+          <li>هیچ تغییری در کد برنامه انجام نشده است.</li>
+        </ul>
+      </section>
+    </div>
+
+    <script>
+      document.getElementById('theme').addEventListener('click', function () {
+        var root = document.documentElement;
+        root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark';
+      });
+    </script>
+  </body>
+</html>

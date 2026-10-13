@@ -1,0 +1,693 @@
+<!doctype html>
+<html lang="fa" dir="rtl" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>هومانا | پزشکان و خدمات</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #e9e5dd; --ink: #2e2b26; --sub: #7a756b; --sd: #c9c3b6; --sl: #ffffff;
+        --bar: rgba(46, 43, 38, 0.13); --accent: #0d9488; --accent-2: #14b8a6;
+        --ok: #059669; --ok-bg: rgba(16, 185, 129, 0.16);
+        --warn: #b45309; --warn-bg: rgba(245, 158, 11, 0.18);
+        --no: #dc2626; --no-bg: rgba(239, 68, 68, 0.14);
+      }
+      [data-theme='dark'] {
+        --bg: #262421; --ink: #ede9e1; --sub: #a09a8e; --sd: #1d1b18; --sl: #32302b;
+        --bar: rgba(237, 233, 225, 0.13); --ok: #34d399; --warn: #fbbf24; --no: #f87171;
+      }
+      * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+      body {
+        margin: 0; background: var(--bg); color: var(--ink);
+        font-family: Vazirmatn, 'Segoe UI', Tahoma, sans-serif; transition: background 0.3s, color 0.3s;
+      }
+      button, input, select { font-family: inherit; }
+      .neu { background: var(--bg); box-shadow: 9px 9px 20px var(--sd), -9px -9px 20px var(--sl); }
+      .neu-sm { background: var(--bg); box-shadow: 5px 5px 12px var(--sd), -5px -5px 12px var(--sl); }
+      .neu-in { background: var(--bg); box-shadow: inset 5px 5px 10px var(--sd), inset -5px -5px 10px var(--sl); }
+      .cta {
+        background: linear-gradient(135deg, var(--accent-2), var(--accent)); color: #fff; border: 0;
+        box-shadow: 6px 6px 14px var(--sd), -6px -6px 14px var(--sl), 0 8px 22px rgba(13, 148, 136, 0.3);
+      }
+      .mini {
+        border: 0; border-radius: 12px; padding: 10px 13px; font-size: 12.5px; font-weight: 700; color: var(--sub);
+        cursor: pointer; min-height: 40px; background: var(--bg); box-shadow: 4px 4px 9px var(--sd), -4px -4px 9px var(--sl);
+      }
+      .mini:hover { color: var(--accent); }
+      .icon-btn {
+        width: 44px; height: 44px; border: 0; border-radius: 15px; cursor: pointer; color: var(--sub);
+        display: grid; place-items: center; flex-shrink: 0; background: var(--bg);
+      }
+      :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+      .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+      .pill { font-size: 11.5px; font-weight: 800; padding: 5px 12px; border-radius: 9999px; background: var(--bar); color: var(--sub); white-space: nowrap; }
+      .pill-ok { background: var(--ok-bg); color: var(--ok); }
+      .pill-warn { background: var(--warn-bg); color: var(--warn); }
+      /* ═══ پوستهٔ پنل: سایدبار (یکسان در همهٔ صفحه‌ها — پیش‌فرض جمع‌شده) ═══ */
+      .app { display: grid; grid-template-columns: 262px minmax(0, 1fr); align-items: start; }
+      .main { min-width: 0; }
+      .sidebar {
+        padding: 18px 14px; display: flex; flex-direction: column; gap: 14px; position: sticky; top: 0;
+        max-height: 100vh; overflow-y: auto; box-shadow: inset -1px 0 0 var(--bar);
+      }
+      .sb-brand { display: flex; align-items: center; gap: 10px; padding: 4px 6px; }
+      .sb-mark {
+        width: 40px; height: 40px; border-radius: 14px; display: grid; place-items: center; color: #fff;
+        font-weight: 900; font-size: 17px; flex-shrink: 0; background: linear-gradient(135deg, var(--accent-2), var(--accent));
+      }
+      .sb-name { margin: 0; font-size: 14px; font-weight: 900; }
+      .sb-sub { margin: 2px 0 0; font-size: 11px; color: var(--sub); }
+      .sb-nav { display: grid; gap: 5px; }
+      .sb-nav a {
+        display: flex; align-items: center; gap: 11px; text-decoration: none; color: var(--sub);
+        font-size: 13.5px; font-weight: 700; padding: 11px 12px; border-radius: 15px; min-height: 44px;
+      }
+      .sb-nav a:hover { color: var(--accent); }
+      .sb-nav a[aria-current='page'] { color: var(--accent); box-shadow: inset 4px 4px 10px var(--sd), inset -4px -4px 10px var(--sl); }
+      .sb-nav svg { width: 20px; height: 20px; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 1.8; }
+      .sb-nav .sp { flex: 1; }
+      .sb-nav .tag { font-size: 10.5px; font-weight: 800; padding: 3px 8px; border-radius: 9999px; background: var(--bar); color: var(--sub); }
+      .sb-nav .tag.warn { background: var(--warn-bg); color: var(--warn); }
+      .sb-spacer { flex: 1; }
+      .sb-credit { border-radius: 18px; padding: 13px; }
+      .sb-credit p { margin: 0; font-size: 12.5px; font-weight: 800; }
+      .sb-credit small { font-size: 11px; color: var(--sub); }
+      .sb-credit .bar { height: 7px; border-radius: 9999px; background: var(--bar); margin: 9px 0; overflow: hidden; }
+      .sb-credit .bar span { display: block; height: 100%; width: 38%; border-radius: 9999px; background: linear-gradient(90deg, var(--accent-2), var(--accent)); }
+      .sb-credit a {
+        display: block; text-align: center; text-decoration: none; font-size: 12.5px; font-weight: 800; color: var(--sub);
+        border-radius: 12px; padding: 10px; margin-top: 4px; background: var(--bg); box-shadow: 4px 4px 9px var(--sd), -4px -4px 9px var(--sl);
+      }
+      .sb-user { display: flex; align-items: center; gap: 10px; padding: 4px 6px; }
+      .sb-av {
+        width: 38px; height: 38px; border-radius: 13px; display: grid; place-items: center; color: #fff;
+        font-weight: 800; flex-shrink: 0; background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+      }
+      .sb-user p { margin: 0; font-size: 13px; font-weight: 800; }
+      .sb-user small { color: var(--sub); font-size: 11px; }
+      html.sidebar-collapsed .app { grid-template-columns: 86px minmax(0, 1fr); }
+      html.sidebar-collapsed .sb-name,
+      html.sidebar-collapsed .sb-sub,
+      html.sidebar-collapsed .sb-user p,
+      html.sidebar-collapsed .sb-user small,
+      html.sidebar-collapsed .sb-nav .sp,
+      html.sidebar-collapsed .sb-nav .tag,
+      html.sidebar-collapsed .sb-credit .sb-hide,
+      html.sidebar-collapsed .sb-credit .bar { display: none; }
+      html.sidebar-collapsed .sb-brand,
+      html.sidebar-collapsed .sb-user { justify-content: center; padding-inline: 0; }
+      html.sidebar-collapsed .sb-nav a { justify-content: center; padding: 12px 0; }
+      html.sidebar-collapsed .sb-credit { padding: 11px 6px; text-align: center; }
+      html.sidebar-collapsed .sb-credit p { font-size: 13px; font-weight: 900; color: var(--accent); }
+      .sidebar-toggle { cursor: pointer; }
+      .readonly-note {
+        display: none; border-radius: 18px; padding: 12px 15px; font-size: 12.5px; line-height: 1.95;
+        background: var(--warn-bg); color: var(--warn); margin-bottom: 14px;
+      }
+      html[data-view-role='reception'] .readonly-note { display: block; }
+      html[data-view-role='reception'] [data-owner-only] { display: none; }
+      @media (max-width: 900px) {
+        .app,
+        html.sidebar-collapsed .app { grid-template-columns: minmax(0, 1fr); }
+        .sidebar { display: none; }
+      }
+
+      .shell { max-width: 1320px; margin: 0 auto; padding: 18px 18px 40px; }
+
+      .topbar { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+      .brand { display: flex; align-items: center; gap: 11px; }
+      .brand-mark {
+        width: 44px; height: 44px; border-radius: 15px; display: grid; place-items: center; color: #fff;
+        font-weight: 900; font-size: 19px; background: linear-gradient(135deg, var(--accent-2), var(--accent));
+      }
+      .brand-name { margin: 0; font-weight: 900; font-size: 16px; }
+      .brand-sub { margin: 2px 0 0; font-size: 11.5px; color: var(--sub); }
+      .search { display: flex; align-items: center; gap: 8px; padding: 11px 15px; border-radius: 16px; flex: 1; min-width: 180px; }
+      .search input { border: 0; outline: 0; background: transparent; font: inherit; font-size: 13.5px; width: 100%; color: var(--ink); }
+
+      /* تب‌ها */
+      .tabs { display: inline-flex; gap: 5px; padding: 5px; border-radius: 18px; margin-bottom: 16px; }
+      .tabs button {
+        border: 0; background: transparent; color: var(--sub); font-size: 13.5px; font-weight: 800;
+        padding: 11px 20px; border-radius: 14px; cursor: pointer; min-height: 44px;
+      }
+      .tabs button[aria-selected='true'] { color: var(--accent); box-shadow: inset 4px 4px 9px var(--sd), inset -4px -4px 9px var(--sl); }
+      .tabs .count { font-size: 11px; font-weight: 800; color: var(--sub); margin-inline-start: 5px; }
+
+      .grid { display: grid; gap: 16px; grid-template-columns: 1fr; }
+      @media (min-width: 1000px) { .grid.doctors { grid-template-columns: 1fr 1fr; } }
+      .card { border-radius: 26px; padding: 20px; }
+      .card-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+      .card-head h2 { margin: 0; font-size: 16px; font-weight: 900; }
+      .card-head h3 { margin: 0; font-size: 14.5px; font-weight: 900; }
+      .spacer { flex: 1; }
+      .avatar {
+        width: 44px; height: 44px; border-radius: 15px; display: grid; place-items: center; color: #fff;
+        font-weight: 800; flex-shrink: 0; background: linear-gradient(135deg, var(--accent-2), #0f766e);
+      }
+      .doc-top { display: flex; align-items: center; gap: 12px; }
+      .doc-lines { display: grid; gap: 9px; margin-top: 14px; font-size: 12.5px; color: var(--sub); }
+      .doc-line { display: flex; align-items: center; gap: 8px; }
+      .doc-line b { color: var(--ink); font-weight: 800; }
+      .chips { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 2px; }
+      .tag {
+        font-size: 11.5px; font-weight: 700; padding: 6px 11px; border-radius: 9999px; color: var(--sub);
+        background: var(--bg); box-shadow: inset 3px 3px 7px var(--sd), inset -3px -3px 7px var(--sl);
+      }
+      .card-actions { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+      .card-actions .mini { flex: 1; }
+      .is-selected-doc { box-shadow: 9px 9px 20px var(--sd), -9px -9px 20px var(--sl), inset 0 0 0 2px var(--accent); }
+
+      /* جدول ساعت کاری */
+      .hours-table { width: 100%; border-collapse: collapse; min-width: 620px; }
+      .hours-table th, .hours-table td { padding: 11px 8px; font-size: 12.5px; text-align: right; }
+      .hours-table thead th { font-size: 11.5px; color: var(--sub); font-weight: 800; }
+      .hours-table tbody tr { border-top: 1px solid var(--bar); }
+      .hours-table tbody tr.is-off { color: var(--sub); }
+      .hours-table .day { font-weight: 800; }
+      .cell-input { display: flex; align-items: center; gap: 6px; border-radius: 12px; padding: 7px 10px; max-width: 128px; }
+      .cell-input input, .cell-input select { border: 0; outline: 0; background: transparent; font: inherit; font-size: 12.5px; color: var(--ink); width: 100%; }
+      .switch { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+      .switch input { width: 20px; height: 20px; accent-color: var(--accent); }
+      .preview { margin-top: 14px; border-radius: 18px; padding: 14px; border: 1px dashed var(--bar); }
+      .preview h4 { margin: 0 0 8px; font-size: 13px; font-weight: 900; }
+      .preview .slot-row { display: flex; gap: 7px; flex-wrap: wrap; }
+      .slot-badge {
+        font-size: 11.5px; font-weight: 700; padding: 7px 10px; border-radius: 11px; color: var(--sub);
+        background: var(--bg); box-shadow: inset 3px 3px 7px var(--sd), inset -3px -3px 7px var(--sl);
+      }
+      .note-line { margin: 10px 0 0; font-size: 11.5px; color: var(--sub); line-height: 1.9; }
+
+      /* جدول خدمات */
+      .table-wrap { overflow-x: auto; }
+      table.services { border-collapse: collapse; width: 100%; min-width: 700px; }
+      table.services th, table.services td { padding: 14px; text-align: right; font-size: 13px; }
+      table.services thead th { font-size: 11.5px; color: var(--sub); font-weight: 800; }
+      table.services tbody tr { border-top: 1px solid var(--bar); }
+      table.services tbody tr:hover { background: var(--bar); }
+      table.services td.actions { display: flex; gap: 8px; }
+
+      .notes { margin-top: 26px; border-radius: 26px; padding: 22px; }
+      .notes h2 { margin: 0 0 10px; font-size: 16px; font-weight: 900; }
+      .notes ol { margin: 0; padding-inline-start: 20px; color: var(--sub); font-size: 13px; line-height: 2.15; }
+      .notes b { color: var(--ink); }
+
+      @media (max-width: 600px) {
+        .card-actions .mini { flex: 1 1 45%; }
+        .hours-table { min-width: 560px; }
+      }
+    </style>
+  </head>
+  <body>
+  <div class="app" data-active="doctors" data-role="owner">
+    <div class="main">
+    <div class="shell">
+      <p class="readonly-note">
+        شما این صفحه را <b>فقط خواندنی</b> می‌بینید: ساعت کاری، ظرفیت و تعرفه را می‌توانید ببینید تا نوبت درست ثبت کنید،
+        ولی تغییر آنها فقط از مدیر کلینیک ساخته است.
+      </p>
+      <header class="topbar">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">هـ</div>
+          <div>
+            <p class="brand-name">هومانا</p>
+            <p class="brand-sub">کلینیک سلامت پارس</p>
+          </div>
+        </div>
+        <div class="search neu-in" style="max-width: 340px">
+          <span aria-hidden="true" style="color: var(--sub)">⌕</span>
+          <input type="search" placeholder="جستجوی پزشک یا خدمت…" aria-label="جستجو" />
+        </div>
+        <button class="icon-btn neu-sm" aria-label="اعلان‌ها">🔔</button>
+        <button class="icon-btn neu-sm" id="theme" aria-label="تعویض تم">◐</button>
+      </header>
+
+      <h1 style="margin: 0 0 4px; font-size: 22px; font-weight: 900">پزشکان و خدمات</h1>
+      <p style="margin: 0 0 16px; color: var(--sub); font-size: 13px">
+        ساعت کاری و ظرفیت هر پزشک، از همین صفحه ساختهٔ اسلات‌های آزاد در فرم «ثبت نوبت جدید» است.
+      </p>
+
+      <div class="tabs neu" role="tablist" aria-label="بخش‌ها">
+        <button role="tab" aria-selected="true" data-tab="doctors">پزشکان<span class="count">۴</span></button>
+        <button role="tab" aria-selected="false" data-tab="services">خدمات<span class="count">۵</span></button>
+      </div>
+
+      <!-- ═══════════ تب پزشکان ═══════════ -->
+      <section id="tab-doctors" role="tabpanel" aria-label="پزشکان">
+        <div class="grid doctors">
+          <!-- کارت پزشک ۱ -->
+          <article class="card neu is-selected-doc">
+            <div class="doc-top">
+              <span class="avatar" aria-hidden="true">ر</span>
+              <div>
+                <p class="brand-name">دکتر سعید رضایی</p>
+                <p class="brand-sub">پزشک عمومی · عضو کلینیک</p>
+              </div>
+              <div class="spacer"></div>
+              <span class="pill pill-ok">فعال</span>
+            </div>
+            <div class="doc-lines">
+              <div class="doc-line">🕘 ساعت کاری: <b>شنبه تا سه‌شنبه ۰۹:۰۰–۱۳:۰۰</b> · چهارشنبه ۰۹:۰۰–۱۲:۰۰</div>
+              <div class="doc-line">⏱️ مدت هر نوبت: <b>۲۰ دقیقه</b> · ظرفیت روزانه: <b>۱۲ نوبت</b></div>
+              <div class="doc-line">✉️ شمارهٔ پیامک لیست روزانه: <b dir="ltr">۰۹۱۲۱۱۱۲۲۳۳</b> <span class="pill pill-ok">ثبت‌شده</span></div>
+              <div class="doc-line">🩺 خدمات:
+                <div class="chips">
+                  <span class="tag">ویزیت عمومی</span>
+                  <span class="tag">کنترل فشار خون</span>
+                </div>
+              </div>
+            </div>
+            <div class="card-actions">
+              <button class="mini">ویرایش مشخصات</button>
+              <button class="mini" style="color: var(--accent)">ساعت کاری و ظرفیت</button>
+              <button class="mini">ثبت مرخصی</button>
+            </div>
+          </article>
+
+          <!-- کارت پزشک ۲ -->
+          <article class="card neu">
+            <div class="doc-top">
+              <span class="avatar" aria-hidden="true" style="background: linear-gradient(135deg, #f59e0b, #d97706)">ا</span>
+              <div>
+                <p class="brand-name">دکتر مریم احمدی</p>
+                <p class="brand-sub">متخصص قلب · عضو کلینیک</p>
+              </div>
+              <div class="spacer"></div>
+              <span class="pill pill-ok">فعال</span>
+            </div>
+            <div class="doc-lines">
+              <div class="doc-line">🕘 ساعت کاری: <b>شنبه، دوشنبه، چهارشنبه ۱۶:۰۰–۲۰:۰۰</b></div>
+              <div class="doc-line">⏱️ مدت هر نوبت: <b>۳۰ دقیقه</b> · ظرفیت روزانه: <b>۸ نوبت</b></div>
+              <div class="doc-line">✉️ شمارهٔ پیامک لیست روزانه: <span class="pill pill-warn">ثبت نشده</span></div>
+              <div class="doc-line">🩺 خدمات:
+                <div class="chips">
+                  <span class="tag">کنترل فشار خون</span>
+                  <span class="tag">ویزیت عمومی</span>
+                </div>
+              </div>
+            </div>
+            <div class="card-actions">
+              <button class="mini">ویرایش مشخصات</button>
+              <button class="mini" style="color: var(--accent)">ساعت کاری و ظرفیت</button>
+              <button class="mini">ثبت مرخصی</button>
+            </div>
+          </article>
+
+          <!-- کارت پزشک ۳ -->
+          <article class="card neu">
+            <div class="doc-top">
+              <span class="avatar" aria-hidden="true" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed)">ن</span>
+              <div>
+                <p class="brand-name">دکتر لیلا نوری</p>
+                <p class="brand-sub">متخصص تغذیه · عضو کلینیک</p>
+              </div>
+              <div class="spacer"></div>
+              <span class="pill pill-ok">فعال</span>
+            </div>
+            <div class="doc-lines">
+              <div class="doc-line">🕘 ساعت کاری: <b>یک‌شنبه و سه‌شنبه ۱۰:۰۰–۱۴:۰۰</b></div>
+              <div class="doc-line">⏱️ مدت هر نوبت: <b>۳۰ دقیقه</b> · ظرفیت روزانه: <b>۸ نوبت</b></div>
+              <div class="doc-line">✉️ شمارهٔ پیامک لیست روزانه: <b dir="ltr">۰۹۳۵۵۵۵۴۴۳۳</b> <span class="pill pill-ok">ثبت‌شده</span></div>
+              <div class="doc-line">🩺 خدمات:
+                <div class="chips">
+                  <span class="tag">مشاوره تغذیه</span>
+                  <span class="tag">کنترل فشار خون</span>
+                </div>
+              </div>
+            </div>
+            <div class="card-actions">
+              <button class="mini">ویرایش مشخصات</button>
+              <button class="mini" style="color: var(--accent)">ساعت کاری و ظرفیت</button>
+              <button class="mini">ثبت مرخصی</button>
+            </div>
+          </article>
+
+          <!-- کارت پزشک ۴ (مرخصی) -->
+          <article class="card neu">
+            <div class="doc-top">
+              <span class="avatar" aria-hidden="true" style="background: linear-gradient(135deg, #0ea5e9, #0284c7)">ک</span>
+              <div>
+                <p class="brand-name">دکتر حمید کریمی</p>
+                <p class="brand-sub">متخصص پوست · عضو کلینیک</p>
+              </div>
+              <div class="spacer"></div>
+              <span class="pill pill-warn">در مرخصی تا ۳۰ مهر</span>
+            </div>
+            <div class="doc-lines">
+              <div class="doc-line">🕘 ساعت کاری: <b>دوشنبه و چهارشنبه ۰۹:۰۰–۱۲:۰۰</b></div>
+              <div class="doc-line">⏱️ مدت هر نوبت: <b>۳۰ دقیقه</b> · ظرفیت روزانه: <b>۶ نوبت</b></div>
+              <div class="doc-line">✉️ شمارهٔ پیامک لیست روزانه: <b dir="ltr">۰۹۱۹۹۹۸۸۷۷۶</b> <span class="pill pill-ok">ثبت‌شده</span></div>
+              <div class="doc-line">🩺 خدمات:
+                <div class="chips"><span class="tag">ویزیت پوست</span></div>
+              </div>
+              <div class="note-line">در بازهٔ مرخصی، اسلات‌های او در فرم ثبت نوبت پیشنهاد نمی‌شود؛ نوبت‌های موجود سر جای خود می‌مانند.</div>
+            </div>
+            <div class="card-actions">
+              <button class="mini">ویرایش مشخصات</button>
+              <button class="mini" style="color: var(--accent)">ساعت کاری و ظرفیت</button>
+              <button class="mini" style="color: var(--warn)">پایان مرخصی</button>
+            </div>
+          </article>
+        </div>
+
+        <!-- ═══ ساعت کاری و ظرفیت پزشک انتخاب‌شده ═══ -->
+        <section class="card neu" style="margin-top: 16px" data-owner-only>
+          <div class="card-head">
+            <h2>ساعت کاری و ظرفیت — دکتر سعید رضایی</h2>
+            <div class="spacer"></div>
+            <button class="mini">◀ روزهای دیگر را اعمال نکن</button>
+          </div>
+          <div class="table-wrap">
+            <table class="hours-table">
+              <thead>
+                <tr>
+                  <th scope="col">روز</th>
+                  <th scope="col">فعال</th>
+                  <th scope="col">از ساعت</th>
+                  <th scope="col">تا ساعت</th>
+                  <th scope="col">مدت هر نوبت</th>
+                  <th scope="col">حداکثر نوبت روز</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="day">شنبه</td>
+                  <td><label class="switch"><input type="checkbox" checked aria-label="فعال — شنبه" /></label></td>
+                  <td><span class="cell-input neu-in"><input value="۰۹:۰۰" aria-label="از ساعت — شنبه" /></span></td>
+                  <td><span class="cell-input neu-in"><input value="۱۳:۰۰" aria-label="تا ساعت — شنبه" /></span></td>
+                  <td><span class="cell-input neu-in"><select aria-label="مدت نوبت — شنبه"><option>۱۵ دقیقه</option><option selected>۲۰ دقیقه</option><option>۳۰ دقیقه</option><option>۴۵ دقیقه</option></select></span></td>
+                  <td><span class="cell-input neu-in"><input value="۱۲" aria-label="حداکثر نوبت — شنبه" /></span></td>
+                </tr>
+                <tr>
+                  <td class="day">یک‌شنبه</td>
+                  <td><label class="switch"><input type="checkbox" checked aria-label="فعال — یک‌شنبه" /></label></td>
+                  <td><span class="cell-input neu-in"><input value="۰۹:۰۰" aria-label="از ساعت — یک‌شنبه" /></span></td>
+                  <td><span class="cell-input neu-in"><input value="۱۳:۰۰" aria-label="تا ساعت — یک‌شنبه" /></span></td>
+                  <td><span class="cell-input neu-in"><select aria-label="مدت نوبت — یک‌شنبه"><option>۱۵ دقیقه</option><option selected>۲۰ دقیقه</option><option>۳۰ دقیقه</option><option>۴۵ دقیقه</option></select></span></td>
+                  <td><span class="cell-input neu-in"><input value="۱۲" aria-label="حداکثر نوبت — یک‌شنبه" /></span></td>
+                </tr>
+                <tr>
+                  <td class="day">دوشنبه</td>
+                  <td><label class="switch"><input type="checkbox" checked aria-label="فعال — دوشنبه" /></label></td>
+                  <td><span class="cell-input neu-in"><input value="۰۹:۰۰" aria-label="از ساعت — دوشنبه" /></span></td>
+                  <td><span class="cell-input neu-in"><input value="۱۳:۰۰" aria-label="تا ساعت — دوشنبه" /></span></td>
+                  <td><span class="cell-input neu-in"><select aria-label="مدت نوبت — دوشنبه"><option>۱۵ دقیقه</option><option selected>۲۰ دقیقه</option><option>۳۰ دقیقه</option><option>۴۵ دقیقه</option></select></span></td>
+                  <td><span class="cell-input neu-in"><input value="۱۲" aria-label="حداکثر نوبت — دوشنبه" /></span></td>
+                </tr>
+                <tr>
+                  <td class="day">سه‌شنبه</td>
+                  <td><label class="switch"><input type="checkbox" checked aria-label="فعال — سه‌شنبه" /></label></td>
+                  <td><span class="cell-input neu-in"><input value="۰۹:۰۰" aria-label="از ساعت — سه‌شنبه" /></span></td>
+                  <td><span class="cell-input neu-in"><input value="۱۳:۰۰" aria-label="تا ساعت — سه‌شنبه" /></span></td>
+                  <td><span class="cell-input neu-in"><select aria-label="مدت نوبت — سه‌شنبه"><option>۱۵ دقیقه</option><option selected>۲۰ دقیقه</option><option>۳۰ دقیقه</option><option>۴۵ دقیقه</option></select></span></td>
+                  <td><span class="cell-input neu-in"><input value="۱۲" aria-label="حداکثر نوبت — سه‌شنبه" /></span></td>
+                </tr>
+                <tr>
+                  <td class="day">چهارشنبه</td>
+                  <td><label class="switch"><input type="checkbox" checked aria-label="فعال — چهارشنبه" /></label></td>
+                  <td><span class="cell-input neu-in"><input value="۰۹:۰۰" aria-label="از ساعت — چهارشنبه" /></span></td>
+                  <td><span class="cell-input neu-in"><input value="۱۲:۰۰" aria-label="تا ساعت — چهارشنبه" /></span></td>
+                  <td><span class="cell-input neu-in"><select aria-label="مدت نوبت — چهارشنبه"><option>۱۵ دقیقه</option><option selected>۲۰ دقیقه</option><option>۳۰ دقیقه</option><option>۴۵ دقیقه</option></select></span></td>
+                  <td><span class="cell-input neu-in"><input value="۹" aria-label="حداکثر نوبت — چهارشنبه" /></span></td>
+                </tr>
+                <tr class="is-off">
+                  <td class="day">پنجشنبه</td>
+                  <td><label class="switch"><input type="checkbox" aria-label="فعال — پنجشنبه" /></label></td>
+                  <td colspan="4" style="color: var(--sub)">تعطیل — اسلاتی ساخته نمی‌شود</td>
+                </tr>
+                <tr class="is-off">
+                  <td class="day">جمعه</td>
+                  <td><label class="switch"><input type="checkbox" aria-label="فعال — جمعه" /></label></td>
+                  <td colspan="4" style="color: var(--sub)">تعطیل — اسلاتی ساخته نمی‌شود</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="preview">
+            <h4>پیش‌نمایش آن‌چه در فرم «ثبت نوبت» ساخته می‌شود — سه‌شنبه</h4>
+            <div class="slot-row">
+              <span class="slot-badge">۰۹:۰۰</span><span class="slot-badge">۰۹:۲۰</span><span class="slot-badge">۰۹:۴۰</span>
+              <span class="slot-badge">۱۰:۰۰</span><span class="slot-badge">۱۰:۲۰</span><span class="slot-badge">۱۰:۴۰</span>
+              <span class="slot-badge">۱۱:۰۰</span><span class="slot-badge">۱۱:۲۰</span><span class="slot-badge">۱۱:۴۰</span>
+              <span class="slot-badge">۱۲:۰۰</span><span class="slot-badge">۱۲:۲۰</span><span class="slot-badge">۱۲:۴۰</span>
+            </div>
+            <p class="note-line">
+              ۱۲ اسلات در نوبت صبح (۴ ساعت ÷ ۲۰ دقیقه) · هفته: ۴۸ اسلات. اگر «مدت هر نوبت» را ۳۰ دقیقه کنید، اسلات‌ها ۰۹:۰۰، ۰۹:۳۰، ۱۰:۰۰… می‌شوند.
+            </p>
+          </div>
+
+          <p class="note-line">
+            «حداکثر نوبت روز» سقف علاقهٔ شما به شلوغی روز است: اگر پر شد، اسلات‌های بعدی در فرم ثبت نوبت غیرفعال نشان داده می‌شوند.
+          </p>
+
+          <div class="card-actions" style="margin-top: 16px">
+            <button class="mini">انصراف</button>
+            <button class="cta" style="border-radius: 13px; padding: 12px 20px; font-size: 13.5px; font-weight: 800; cursor: pointer; flex: 1">
+              ذخیرهٔ ساعت کاری و ظرفیت
+            </button>
+          </div>
+        </section>
+      </section>
+
+      <!-- ═══════════ تب خدمات ═══════════ -->
+      <section id="tab-services" role="tabpanel" aria-label="خدمات" hidden>
+        <section class="card neu">
+          <div class="card-head">
+            <h2>خدمات کلینیک</h2>
+            <span class="pill">۵ خدمت</span>
+            <div class="spacer"></div>
+            <button class="cta" style="border-radius: 14px; padding: 12px 18px; font-size: 13.5px; font-weight: 800; cursor: pointer">
+              ＋ افزودن خدمت
+            </button>
+          </div>
+          <div class="table-wrap">
+            <table class="services">
+              <thead>
+                <tr>
+                  <th scope="col">نام خدمت</th>
+                  <th scope="col">مدت</th>
+                  <th scope="col">تعرفه</th>
+                  <th scope="col">پزشکان ارائه‌دهنده</th>
+                  <th scope="col">در فرم ثبت نوبت</th>
+                  <th scope="col"><span class="visually-hidden">اقدام‌ها</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>ویزیت عمومی</td>
+                  <td>۲۰ دقیقه</td>
+                  <td>۳۵۰٬۰۰۰ تومان</td>
+                  <td><div class="chips"><span class="tag">دکتر رضایی</span><span class="tag">دکتر احمدی</span></div></td>
+                  <td><span class="pill pill-ok">فعال</span></td>
+                  <td class="actions"><button class="mini">ویرایش</button><button class="mini">غیرفعال</button></td>
+                </tr>
+                <tr>
+                  <td>کنترل فشار خون</td>
+                  <td>۱۵ دقیقه</td>
+                  <td>۲۵۰٬۰۰۰ تومان</td>
+                  <td><div class="chips"><span class="tag">دکتر احمدی</span><span class="tag">دکتر نوری</span></div></td>
+                  <td><span class="pill pill-ok">فعال</span></td>
+                  <td class="actions"><button class="mini">ویرایش</button><button class="mini">غیرفعال</button></td>
+                </tr>
+                <tr>
+                  <td>ویزیت پوست</td>
+                  <td>۳۰ دقیقه</td>
+                  <td>۵۰۰٬۰۰۰ تومان</td>
+                  <td><div class="chips"><span class="tag">دکتر کریمی</span></div></td>
+                  <td><span class="pill pill-ok">فعال</span></td>
+                  <td class="actions"><button class="mini">ویرایش</button><button class="mini">غیرفعال</button></td>
+                </tr>
+                <tr>
+                  <td>مشاوره تغذیه</td>
+                  <td>۳۰ دقیقه</td>
+                  <td>۴۵۰٬۰۰۰ تومان</td>
+                  <td><div class="chips"><span class="tag">دکتر نوری</span></div></td>
+                  <td><span class="pill pill-ok">فعال</span></td>
+                  <td class="actions"><button class="mini">ویرایش</button><button class="mini">غیرفعال</button></td>
+                </tr>
+                <tr>
+                  <td>واکسیناسیون</td>
+                  <td>۱۰ دقیقه</td>
+                  <td>۲۰۰٬۰۰۰ تومان</td>
+                  <td><div class="chips"><span class="tag">—</span></div></td>
+                  <td><span class="pill">غیرفعال</span></td>
+                  <td class="actions"><button class="mini">ویرایش</button><button class="mini" style="color: var(--accent)">فعال‌کردن</button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p class="note-line">
+            خدمتِ غیرفعال در فرم ثبت نوبت دیده نمی‌شود ولی در نوبت‌های ثبت‌شدهٔ قبلی دست‌نخورده می‌ماند.
+            در فرم ثبت نوبت، با انتخاب پزشک، فقط خدمات همان پزشک پیشنهاد می‌شود.
+          </p>
+        </section>
+
+        <section class="card neu" style="margin-top: 16px" data-owner-only>
+          <div class="card-head"><h3>خدمت جدید</h3></div>
+          <div class="grid" style="grid-template-columns: 1fr; gap: 12px">
+            <div>
+              <label class="brand-sub" for="svc-name" style="display: block; margin-bottom: 6px; font-weight: 800">نام خدمت</label>
+              <div class="neu-in" style="border-radius: 14px; padding: 11px 14px">
+                <input id="svc-name" value="نوار قلب" style="border: 0; outline: 0; background: transparent; width: 100%; font-size: 13.5px; color: var(--ink)" />
+              </div>
+            </div>
+            <div>
+              <label class="brand-sub" for="svc-dur" style="display: block; margin-bottom: 6px; font-weight: 800">مدت</label>
+              <div class="neu-in" style="border-radius: 14px; padding: 11px 14px">
+                <select id="svc-dur" style="border: 0; outline: 0; background: transparent; width: 100%; font-size: 13.5px; color: var(--ink)">
+                  <option>۱۵ دقیقه</option><option selected>۲۰ دقیقه</option><option>۳۰ دقیقه</option><option>۴۵ دقیقه</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label class="brand-sub" for="svc-price" style="display: block; margin-bottom: 6px; font-weight: 800">تعرفه (تومان)</label>
+              <div class="neu-in" style="border-radius: 14px; padding: 11px 14px">
+                <input id="svc-price" value="۴۰۰٬۰۰۰" style="border: 0; outline: 0; background: transparent; width: 100%; font-size: 13.5px; color: var(--ink)" />
+              </div>
+            </div>
+            <div>
+              <span class="brand-sub" style="display: block; margin-bottom: 8px; font-weight: 800">پزشکان ارائه‌دهنده</span>
+              <div class="chips">
+                <span class="tag" style="color: var(--accent)">دکتر احمدی ✕</span>
+                <span class="tag" style="color: var(--accent)">دکتر نوری ✕</span>
+                <span class="tag">＋ افزودن پزشک</span>
+              </div>
+            </div>
+            <div class="card-actions" style="margin-top: 4px">
+              <button class="mini">انصراف</button>
+              <button class="cta" style="border-radius: 13px; padding: 12px 20px; font-size: 13.5px; font-weight: 800; cursor: pointer; flex: 1">ذخیرهٔ خدمت</button>
+            </div>
+          </div>
+          <p class="note-line">
+            اعداد تعرفه در این طرح <b>نمونه</b> هستند و شما در پنل خودتان تعیین می‌کنید. تعرفهٔ هر خدمت در فرم «ثبت نوبت جدید» هم در کنار نام خدمت دیده می‌شود و بعداً مبنای بخش حسابداری است.
+          </p>
+        </section>
+      </section>
+
+      <!-- ═══════════ یادداشت ساختار ═══════════ -->
+      <section class="notes neu" aria-labelledby="notes-title">
+        <h2 id="notes-title">چرا این ساختار؟ (برای بازبینی شما)</h2>
+        <ol>
+          <li><b>پزشک و خدمت در یک صفحه، دو تب:</b> هر دو به هم وصل‌اند (خدمت بدون پزشک بی‌معنی است و پزشک هم خدماتش را دارد) ولی جدا نگه‌داشتنشان باعث می‌شود هر تب ساده و کوتاه باشد.</li>
+          <li><b>هر پزشک = یک کارت:</b> در یک نگاه: ساعت کاری خلاصه، مدت هر نوبت، ظرفیت روزانه، شمارهٔ پیامک لیست روزانه، و خدمات. اگر می‌خواهید فقط «چه کسی امروز کار می‌کند» را ببینید، همین کارت‌ها کافی است.</li>
+          <li><b>مرکز صفحه: جدول ساعت کاری هفتگی</b> با روز، از/تا، <b>مدت هر نوبت</b> و <b>حداکثر نوبت روز</b> — دقیقاً همان چیزی که اسلات‌های آزاد فرم ثبت نوبت از آن ساخته می‌شود.</li>
+          <li><b>پیش‌نمایش زنده:</b> پایین جدول، اسلات‌هایی که ساخته می‌شوند (۰۹:۰۰، ۰۹:۲۰، …) نشان داده می‌شود تا تنظیم عددی حدس‌وگمان نباشد.</li>
+          <li><b>شمارهٔ پیامک لیست روزانه روی کارت هر پزشک:</b> همان «اقدام لازم» داشبورد اینجا حل می‌شود (دکتر احمدی با برچسب «ثبت نشده»).</li>
+          <li><b>مرخصی، حذف نیست:</b> پزشک در مرخصی با برچسب کمرنگ نمایش داده می‌شود؛ اسلات‌هایش پیشنهاد نمی‌شود ولی نوبت‌های موجود دست‌نخورده می‌مانند.</li>
+          <li><b>فعال/غیرفعال فقط برای مدیریت:</b> این «وضعیت نوبت» نیست؛ صرفاً یعنی خدمت در فرم ثبت نوبت دیده شود یا نه.</li>
+          <li><b>تعرفه ستون خدمات است:</b> هر خدمت تعرفهٔ خودش را دارد و در فرم ثبت نوبت کنار نام خدمت نشان داده می‌شود؛ اعداد فعلی نمونه‌اند و در پنل واقعی تعیین می‌شوند.</li>
+          <li><b>ریسپانسیو:</b> دسکتاپ کارت‌ها دوستونه، جدول‌ها اسکرول افقی؛ موبایل یک‌ستونه با دکمه‌های تمام‌عرض (حداقل ۴۰px) و تب‌های ۴۴px.</li>
+        </ol>
+      </section>
+    </div>
+    </div>
+  </div>
+
+    <script>
+      // ═══ سایدبار پوسته (یکسان در همهٔ صفحه‌های پنل — پیش‌فرض جمع‌شده) ═══
+      (function () {
+        var ICONS = {
+          dashboard: '<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>',
+          appointments: '<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/>',
+          patients: '<circle cx="9" cy="8" r="3.2"/><path d="M3.5 20c0-3 2.5-5 5.5-5s5.5 2 5.5 5"/><path d="M16 5.5a3 3 0 0 1 0 5.6M17 20c0-2.2-.6-3.8-1.6-5"/>',
+          doctors: '<path d="M6 3v6a4 4 0 0 0 8 0V3"/><path d="M10 13v3a4 4 0 0 0 8 0v-2"/><circle cx="18" cy="11" r="2"/>',
+          accounting: '<rect x="3" y="6" width="18" height="13" rx="3"/><path d="M3 10h18"/><path d="M16 14.5h2"/>',
+          sms: '<path d="M4 5.5h16v10H9l-5 4z"/>',
+          settings: '<circle cx="12" cy="12" r="3.2"/><path d="M12 3.5v2M12 18.5v2M4.9 7.5l1.7 1M17.4 15.5l1.7 1M4.9 16.5l1.7-1M17.4 8.5l1.7-1"/>'
+        };
+        var ITEMS = [
+          { key: 'dashboard', href: 'dashboard.html', label: 'داشبورد' },
+          { key: 'appointments', href: 'appointments.html', label: 'نوبت‌ها', tag: '۴۸' },
+          { key: 'patients', href: 'patients.html', label: 'بیماران' },
+          { key: 'doctors', href: 'doctors-services.html', label: 'پزشکان و خدمات' },
+          { key: 'accounting', href: 'accounting.html', label: 'حسابداری' },
+          { key: 'sms', href: 'sms.html', label: 'پیامک', tag: '۱ ناموفق', warn: true },
+          { key: 'settings', href: 'settings.html', label: 'تنظیمات' }
+        ];
+        var ROLES = {
+          doctors: ['owner', 'reception'],
+          accounting: ['owner', 'reception'],
+          sms: ['owner', 'reception'],
+          settings: ['owner']
+        };
+        var app = document.querySelector('.app');
+        if (!app) { return; }
+        var active = app.dataset.active || '';
+        var role = app.dataset.role || 'owner';
+        document.documentElement.setAttribute('data-view-role', role);
+        var items = ITEMS.filter(function (it) {
+          var allowed = ROLES[it.key];
+          return !allowed || allowed.indexOf(role) !== -1;
+        });
+        var nav = items.map(function (it) {
+          var mark = active === it.key ? ' aria-current="page"' : '';
+          var tag = it.tag ? '<span class="tag' + (it.warn ? ' warn' : '') + '">' + it.tag + '</span>' : '';
+          return '<a href="' + it.href + '"' + mark + ' title="' + it.label + '"><svg viewBox="0 0 24 24" aria-hidden="true">' +
+            ICONS[it.key] + '</svg><span class="sp">' + it.label + '</span>' + tag + '</a>';
+        }).join('');
+        var aside = document.createElement('aside');
+        aside.className = 'sidebar';
+        aside.setAttribute('aria-label', 'منوی اصلی پنل');
+        aside.innerHTML =
+          '<div class="sb-brand"><span class="sb-mark" aria-hidden="true">هـ</span><div>' +
+          '<p class="sb-name">کلینیک سلامت پارس</p><p class="sb-sub">پنل کلینیک · ۴ پزشک</p></div></div>' +
+          '<nav class="sb-nav" aria-label="منوی اصلی">' + nav + '</nav>' +
+          '<div class="sb-spacer"></div>' +
+          '<div class="sb-credit neu-in" title="اعتبار پیامک: ۹۶۰"><p><span class="sb-hide">اعتبار پیامک: </span>۹۶۰</p><small class="sb-hide">۱۰۰ پیامک تا هشدار</small>' +
+          '<div class="bar" aria-hidden="true"><span></span></div><a class="sb-hide" href="sms.html">شارژ پیامک</a></div>' +
+          '<div class="sb-user"><span class="sb-av" aria-hidden="true">س</span><div><p>سارا رضایی</p><small>مدیر کلینیک</small></div></div>';
+        app.insertBefore(aside, app.firstChild);
+
+        document.documentElement.classList.add('sidebar-collapsed');
+        var bar = document.querySelector('.topbar') || document.querySelector('.controls');
+        if (bar) {
+          var toggle = document.createElement('button');
+          toggle.type = 'button';
+          toggle.className = 'icon-btn neu-sm sidebar-toggle';
+          toggle.setAttribute('aria-label', 'باز یا بستن منو');
+          toggle.setAttribute('aria-expanded', 'false');
+          toggle.textContent = '⟨';
+          toggle.addEventListener('click', function () {
+            var isCollapsed = document.documentElement.classList.toggle('sidebar-collapsed');
+            toggle.setAttribute('aria-expanded', isCollapsed ? 'false' : 'true');
+            toggle.textContent = isCollapsed ? '⟨' : '⟩';
+          });
+          bar.insertBefore(toggle, bar.firstChild);
+        }
+      })();
+      // تم
+      document.getElementById('theme').addEventListener('click', function () {
+        var root = document.documentElement;
+        root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark';
+      });
+
+      // تب‌ها
+      document.querySelectorAll('[data-tab]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          document.querySelectorAll('[data-tab]').forEach(function (b) {
+            b.setAttribute('aria-selected', b === btn ? 'true' : 'false');
+          });
+          document.getElementById('tab-doctors').hidden = btn.dataset.tab !== 'doctors';
+          document.getElementById('tab-services').hidden = btn.dataset.tab !== 'services';
+        });
+      });
+
+      // انتخاب روزهای تعطیل: اگر تیک «فعال» خورد، سلول‌ها رنگ می‌گیرند (نمایشی)
+      document.querySelectorAll('.hours-table .switch input').forEach(function (box) {
+        box.addEventListener('change', function () {
+          var row = box.closest('tr');
+          if (row.classList.contains('is-off') && box.checked) {
+            row.classList.remove('is-off');
+          }
+        });
+      });
+    </script>
+  </body>
+</html>

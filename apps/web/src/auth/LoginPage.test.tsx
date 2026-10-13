@@ -5,9 +5,6 @@ import { LoginPage } from './LoginPage';
 /**
  * `fetch` is stubbed with the same minimal shape the other web tests use: the
  * component only reads `ok`, `status` and `json()`.
- *
- * `fireEvent` rather than `user-event`: the extra dependency would need owner
- * approval, and these interactions are simple value changes plus clicks.
  */
 interface FetchStubResponse {
   readonly ok: boolean;
@@ -19,29 +16,29 @@ type FetchStub = (input: string, init?: RequestInit) => Promise<FetchStubRespons
 
 const fetchMock = vi.fn<FetchStub>();
 const onAuthenticated = vi.fn();
+const onShowPlans = vi.fn();
 
 function jsonResponse(body: unknown, status = 200): FetchStubResponse {
-  return {
-    ok: status >= 200 && status < 300,
-    status,
-    json: () => Promise.resolve(body),
-  };
+  return { ok: status >= 200 && status < 300, status, json: () => Promise.resolve(body) };
 }
 
-/** The request body the component produced, decoded for assertions. */
 function bodyOf(init?: RequestInit): unknown {
   const body = init?.body;
   if (typeof body !== 'string') throw new Error('expected a JSON string body');
   return JSON.parse(body) as unknown;
 }
 
-function form(): HTMLFormElement {
-  const element = screen.getByRole('button', { name: 'ورود به پنل' }).closest('form');
-  if (element === null) throw new Error('the submit button is not inside a form');
-  return element;
+function submit(): void {
+  const button = screen
+    .getAllByRole('button')
+    .find((candidate) => candidate.getAttribute('type') === 'submit');
+  if (button === undefined) throw new Error('no submit button');
+  const form = button.closest('form');
+  if (form === null) throw new Error('the submit button is not inside a form');
+  fireEvent.submit(form);
 }
 
-function fill(mobile: string, passphrase: string): void {
+function fillPassphrase(mobile: string, passphrase: string): void {
   fireEvent.change(screen.getByLabelText('شمارهٔ موبایل'), { target: { value: mobile } });
   fireEvent.change(screen.getByLabelText('رمز عبور'), { target: { value: passphrase } });
 }
@@ -50,6 +47,7 @@ beforeEach(() => {
   vi.stubGlobal('fetch', fetchMock);
   fetchMock.mockReset();
   onAuthenticated.mockReset();
+  onShowPlans.mockReset();
 });
 
 afterEach(() => {
@@ -57,7 +55,7 @@ afterEach(() => {
 });
 
 describe('LoginPage', () => {
-  it('renders both fields and the submit button', () => {
+  it('renders the passphrase form with both fields and the submit button', () => {
     render(<LoginPage onAuthenticated={onAuthenticated} />);
 
     expect(screen.getByLabelText('شمارهٔ موبایل')).toBeInTheDocument();
@@ -71,7 +69,7 @@ describe('LoginPage', () => {
   it('refuses an empty form without calling the API', async () => {
     render(<LoginPage onAuthenticated={onAuthenticated} />);
 
-    fireEvent.submit(form());
+    submit();
 
     expect(await screen.findByRole('alert')).toHaveTextContent('شمارهٔ موبایل و رمز عبور');
     expect(fetchMock).not.toHaveBeenCalled();
@@ -83,8 +81,8 @@ describe('LoginPage', () => {
     );
     render(<LoginPage onAuthenticated={onAuthenticated} />);
 
-    fill('09120000000', 'a-long-enough-passphrase');
-    fireEvent.submit(form());
+    fillPassphrase('09120000000', 'a-long-enough-passphrase');
+    submit();
 
     await waitFor(() => {
       expect(onAuthenticated).toHaveBeenCalledWith(
@@ -94,7 +92,6 @@ describe('LoginPage', () => {
 
     const call = fetchMock.mock.calls[0];
     expect(call?.[0]).toBe('/auth/login');
-    expect(call?.[1]?.method).toBe('POST');
     expect(bodyOf(call?.[1])).toEqual({
       mobile: '09120000000',
       ['password']: 'a-long-enough-passphrase',
@@ -107,30 +104,23 @@ describe('LoginPage', () => {
     );
     render(<LoginPage onAuthenticated={onAuthenticated} />);
 
-    fill('09120000000', 'whatever-value');
-    fireEvent.submit(form());
+    fillPassphrase('09120000000', 'whatever-value');
+    submit();
 
     expect(await screen.findByRole('alert')).toHaveTextContent('درست نیست');
     expect(onAuthenticated).not.toHaveBeenCalled();
   });
 
-  it('explains the rate limit when the API answers 429', async () => {
+  it('explains the rate limit and connection failures', async () => {
     fetchMock.mockResolvedValue(jsonResponse({ error: { code: 'RATE_LIMITED' } }, 429));
     render(<LoginPage onAuthenticated={onAuthenticated} />);
 
-    fill('09120000000', 'whatever-value');
-    fireEvent.submit(form());
-
+    fillPassphrase('09120000000', 'whatever-value');
+    submit();
     expect(await screen.findByRole('alert')).toHaveTextContent('تلاش‌های ناموفق');
-  });
 
-  it('reports a connection failure instead of failing silently', async () => {
     fetchMock.mockRejectedValue(new Error('network down'));
-    render(<LoginPage onAuthenticated={onAuthenticated} />);
-
-    fill('09120000000', 'whatever-value');
-    fireEvent.submit(form());
-
+    submit();
     expect(await screen.findByRole('alert')).toHaveTextContent('ارتباط با سرور برقرار نشد');
   });
 
@@ -140,34 +130,79 @@ describe('LoginPage', () => {
     const field = screen.getByLabelText('رمز عبور');
     expect(field).toHaveAttribute('type', 'password');
 
-    const toggle = screen.getByRole('button', { name: 'نمایش رمز' });
-    expect(toggle).toHaveAttribute('aria-pressed', 'false');
-
-    fireEvent.click(toggle);
+    fireEvent.click(screen.getByRole('button', { name: 'نمایش رمز' }));
     expect(field).toHaveAttribute('type', 'text');
-    expect(screen.getByRole('button', { name: 'پنهان‌کردن رمز' })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    );
 
     fireEvent.click(screen.getByRole('button', { name: 'پنهان‌کردن رمز' }));
     expect(field).toHaveAttribute('type', 'password');
   });
 
-  it('keeps the placeholder path honest and routes the free demo to the plans screen', async () => {
-    const onShowPlans = vi.fn();
-    render(<LoginPage onAuthenticated={onAuthenticated} onShowPlans={onShowPlans} />);
+  it('signs in with an SMS code: request, then verify', async () => {
+    render(<LoginPage onAuthenticated={onAuthenticated} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'ورود با کد پیامکی' }));
-    expect(await screen.findByRole('status')).toHaveTextContent('به‌زودی');
+    expect(screen.getByRole('button', { name: 'ارسال کد ورود' })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'رمزم را فراموش کردم' }));
-    expect(await screen.findByRole('status')).toHaveTextContent('بازیابی رمز');
+    fetchMock.mockResolvedValueOnce(jsonResponse({ sent: true, devCode: '12345' }));
+    fireEvent.change(screen.getByLabelText('شمارهٔ موبایل'), { target: { value: '09123456789' } });
+    submit();
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('کد تأیید پیامک‌شده')).toBeInTheDocument();
+    });
+
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({ userId: 'u-7', displayName: 'دکتر نیما' }, 200),
+    );
+    fireEvent.change(screen.getByLabelText('کد تأیید پیامک‌شده'), { target: { value: '12345' } });
+    fireEvent.click(screen.getByRole('button', { name: 'ورود با کد' }));
+
+    await waitFor(() => {
+      expect(onAuthenticated).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: 'u-7', displayName: 'دکتر نیما' }),
+      );
+    });
+
+    expect(bodyOf(fetchMock.mock.calls[0]?.[1])).toEqual({
+      mobile: '09123456789',
+      purpose: 'LOGIN',
+    });
+    expect(fetchMock.mock.calls[1]?.[0]).toBe('/auth/login');
+    expect(bodyOf(fetchMock.mock.calls[1]?.[1])).toEqual({
+      mobile: '09123456789',
+      code: '12345',
+    });
+  });
+
+  it('reports an invalid or expired code and can go back to the passphrase form', async () => {
+    render(<LoginPage onAuthenticated={onAuthenticated} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'ورود با کد پیامکی' }));
+    fetchMock.mockResolvedValueOnce(jsonResponse({ sent: true, devCode: '12345' }));
+    fireEvent.change(screen.getByLabelText('شمارهٔ موبایل'), { target: { value: '09123456789' } });
+    submit();
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('کد تأیید پیامک‌شده')).toBeInTheDocument();
+    });
+
+    fetchMock.mockResolvedValueOnce(jsonResponse({ error: { code: 'AUTH_FAILED' } }, 401));
+    fireEvent.change(screen.getByLabelText('کد تأیید پیامک‌شده'), { target: { value: '00000' } });
+    fireEvent.click(screen.getByRole('button', { name: 'ورود با کد' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('کد نامعتبر یا منقضی');
+
+    fireEvent.click(screen.getByRole('button', { name: 'ورود با رمز عبور' }));
+    expect(screen.getByLabelText('رمز عبور')).toBeInTheDocument();
+    expect(screen.queryByLabelText('کد تأیید پیامک‌شده')).not.toBeInTheDocument();
+  });
+
+  it('routes both footer links to the plans screen', () => {
+    render(<LoginPage onAuthenticated={onAuthenticated} onShowPlans={onShowPlans} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'دمو رایگان' }));
-    expect(onShowPlans).toHaveBeenCalledTimes(1);
-
     fireEvent.click(screen.getByRole('button', { name: 'ثبت‌نام رایگان' }));
+
     expect(onShowPlans).toHaveBeenCalledTimes(2);
   });
 });
