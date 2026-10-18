@@ -39,6 +39,14 @@ export const environmentSchema = z.object({
   API_HOST: z.string().min(1).default('127.0.0.1'),
   API_PORT: z.coerce.number().int().min(1).max(65_535).default(3001),
 
+  /**
+   * Root domain of the multi-origin surface (ADR-0006): tenant panels live on
+   * `<slug>.<APP_ROOT_DOMAIN>`; the platform admin panel on `admin.<APP_ROOT_DOMAIN>`.
+   * Local development uses the special-use `localhost` zone (`admin.localhost`).
+   * Production changes ONLY this value once the real domain is purchased.
+   */
+  APP_ROOT_DOMAIN: z.string().trim().min(1).default('localhost'),
+
   /** Migration credentials: Prisma CLI ONLY. Runtime processes reject them (ADR-0003 D7). */
   DATABASE_URL: z.url(),
   /** API/worker runtime connection as the RLS-bound hmn_app role. */
@@ -61,6 +69,15 @@ export const environmentSchema = z.object({
   AUTH_SCRYPT_MAXMEM: z.coerce.number().int().min(33_554_432).optional(),
 
   /**
+   * Platform-admin MFA (ADR-0004 D-A, ADR-0007). Optional at boot on purpose: the
+   * key is only used by the platform panel, which fails closed without it, and the
+   * tenant stack must keep booting without MFA configuration.
+   */
+  AUTH_MFA_ENCRYPTION_KEY: z.string().optional(),
+  /** Rotation companion: stored rows keep the key version they were written with. */
+  AUTH_MFA_KEY_VERSION: z.coerce.number().int().min(1).default(1),
+
+  /**
    * Platform SMS panel (§2.10). Optional at boot on purpose: tenants may bring their
    * own panel credentials (stored per tenant, never here), and the platform panel is
    * only needed by the features that send on our own line. A missing key therefore
@@ -70,7 +87,10 @@ export const environmentSchema = z.object({
   /** Panel credential. Never logged, never in an error message, never in a repo file. */
   SMS_MELIPAYAMAK_PANEL_REF: z.string().min(16).optional(),
   /** The panel's sender line, e.g. a 14-digit service number. */
-  SMS_MELIPAYAMAK_SENDER: z.string().regex(/^\d{5,20}$/).optional(),
+  SMS_MELIPAYAMAK_SENDER: z
+    .string()
+    .regex(/^\d{5,20}$/)
+    .optional(),
 });
 
 export type Environment = z.infer<typeof environmentSchema>;

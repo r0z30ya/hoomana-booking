@@ -97,6 +97,9 @@ model Tenant {
   /// Collected right after OTP signup (owner decision 2026-10-13).
   address   String?  @db.VarChar(500)
   city      String?  @db.VarChar(120)
+  /// Platform-owner lever: a suspended clinic cannot use the product. Written only
+  /// through the SECURITY DEFINER gate (hmn_app has no UPDATE on tenants).
+  isSuspended Boolean @default(false)
   createdAt DateTime @default(now()) @db.Timestamptz(6)
   updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(6)
 

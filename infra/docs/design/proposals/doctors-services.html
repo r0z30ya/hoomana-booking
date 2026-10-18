@@ -234,7 +234,7 @@
 
       <div class="tabs neu" role="tablist" aria-label="بخش‌ها">
         <button role="tab" aria-selected="true" data-tab="doctors">پزشکان<span class="count">۴</span></button>
-        <button role="tab" aria-selected="false" data-tab="services">خدمات<span class="count">۵</span></button>
+        <button role="tab" aria-selected="false" data-tab="services">خدمات<span class="count">۶</span></button>
       </div>
 
       <!-- ═══════════ تب پزشکان ═══════════ -->
@@ -259,6 +259,7 @@
                 <div class="chips">
                   <span class="tag">ویزیت عمومی</span>
                   <span class="tag">کنترل فشار خون</span>
+                  <span class="tag" style="color: var(--accent)">＋ ویرایش خدمات</span>
                 </div>
               </div>
             </div>
@@ -288,6 +289,7 @@
                 <div class="chips">
                   <span class="tag">کنترل فشار خون</span>
                   <span class="tag">ویزیت عمومی</span>
+                  <span class="tag" style="color: var(--accent)">＋ ویرایش خدمات</span>
                 </div>
               </div>
             </div>
@@ -317,6 +319,7 @@
                 <div class="chips">
                   <span class="tag">مشاوره تغذیه</span>
                   <span class="tag">کنترل فشار خون</span>
+                  <span class="tag" style="color: var(--accent)">＋ ویرایش خدمات</span>
                 </div>
               </div>
             </div>
@@ -343,7 +346,7 @@
               <div class="doc-line">⏱️ مدت هر نوبت: <b>۳۰ دقیقه</b> · ظرفیت روزانه: <b>۶ نوبت</b></div>
               <div class="doc-line">✉️ شمارهٔ پیامک لیست روزانه: <b dir="ltr">۰۹۱۹۹۹۸۸۷۷۶</b> <span class="pill pill-ok">ثبت‌شده</span></div>
               <div class="doc-line">🩺 خدمات:
-                <div class="chips"><span class="tag">ویزیت پوست</span></div>
+                <div class="chips"><span class="tag">ویزیت پوست</span><span class="tag" style="color: var(--accent)">＋ ویرایش خدمات</span></div>
               </div>
               <div class="note-line">در بازهٔ مرخصی، اسلات‌های او در فرم ثبت نوبت پیشنهاد نمی‌شود؛ نوبت‌های موجود سر جای خود می‌مانند.</div>
             </div>
@@ -460,7 +463,7 @@
         <section class="card neu">
           <div class="card-head">
             <h2>خدمات کلینیک</h2>
-            <span class="pill">۵ خدمت</span>
+            <span class="pill">۶ خدمت</span>
             <div class="spacer"></div>
             <button class="cta" style="border-radius: 14px; padding: 12px 18px; font-size: 13.5px; font-weight: 800; cursor: pointer">
               ＋ افزودن خدمت
@@ -472,7 +475,7 @@
                 <tr>
                   <th scope="col">نام خدمت</th>
                   <th scope="col">مدت</th>
-                  <th scope="col">تعرفه</th>
+                  <th scope="col">تعرفه (اختیاری)</th>
                   <th scope="col">پزشکان ارائه‌دهنده</th>
                   <th scope="col">در فرم ثبت نوبت</th>
                   <th scope="col"><span class="visually-hidden">اقدام‌ها</span></th>
@@ -512,6 +515,14 @@
                   <td class="actions"><button class="mini">ویرایش</button><button class="mini">غیرفعال</button></td>
                 </tr>
                 <tr>
+                  <td>تزریقات</td>
+                  <td>۱۰ دقیقه</td>
+                  <td style="color: var(--sub)">بدون تعرفه</td>
+                  <td><div class="chips"><span class="tag">دکتر رضایی</span><span class="tag">دکتر احمدی</span></div></td>
+                  <td><span class="pill pill-ok">فعال</span></td>
+                  <td class="actions"><button class="mini">ویرایش</button><button class="mini">غیرفعال</button></td>
+                </tr>
+                <tr>
                   <td>واکسیناسیون</td>
                   <td>۱۰ دقیقه</td>
                   <td>۲۰۰٬۰۰۰ تومان</td>
@@ -525,7 +536,8 @@
 
           <p class="note-line">
             خدمتِ غیرفعال در فرم ثبت نوبت دیده نمی‌شود ولی در نوبت‌های ثبت‌شدهٔ قبلی دست‌نخورده می‌ماند.
-            در فرم ثبت نوبت، با انتخاب پزشک، فقط خدمات همان پزشک پیشنهاد می‌شود.
+            پیوند پزشک و خدمت دوطرفه و چندبه‌چند است: با انتخاب پزشک فقط خدمات او و با انتخاب خدمت فقط پزشکان ارائه‌دهندهٔ همان خدمت پیشنهاد می‌شود.
+            تعرفه اختیاری است؛ خدمتِ «بدون تعرفه» مبلغی پیشنهاد نمی‌کند و ثبت مالی‌اش از دفتر تراکنش‌ها می‌آید.
           </p>
         </section>
 
@@ -547,10 +559,13 @@
               </div>
             </div>
             <div>
-              <label class="brand-sub" for="svc-price" style="display: block; margin-bottom: 6px; font-weight: 800">تعرفه (تومان)</label>
+              <label class="brand-sub" for="svc-price" style="display: block; margin-bottom: 6px; font-weight: 800">تعرفه (اختیاری، تومان)</label>
               <div class="neu-in" style="border-radius: 14px; padding: 11px 14px">
                 <input id="svc-price" value="۴۰۰٬۰۰۰" style="border: 0; outline: 0; background: transparent; width: 100%; font-size: 13.5px; color: var(--ink)" />
               </div>
+              <p class="note-line" style="margin-top: 6px">
+                خالی بگذارید = «بدون تعرفه»؛ در ثبت نوبت مبلغی پیشنهاد نمی‌شود و ثبت مالی از دفتر تراکنش‌ها انجام می‌گیرد.
+              </p>
             </div>
             <div>
               <span class="brand-sub" style="display: block; margin-bottom: 8px; font-weight: 800">پزشکان ارائه‌دهنده</span>
@@ -566,7 +581,7 @@
             </div>
           </div>
           <p class="note-line">
-            اعداد تعرفه در این طرح <b>نمونه</b> هستند و شما در پنل خودتان تعیین می‌کنید. تعرفهٔ هر خدمت در فرم «ثبت نوبت جدید» هم در کنار نام خدمت دیده می‌شود و بعداً مبنای بخش حسابداری است.
+            اعداد تعرفه در این طرح <b>نمونه</b> هستند و شما در پنل خودتان تعیین می‌کنید؛ <b>تعرفه اختیاری است</b> و خدمت می‌تواند بدون مبلغ ثبت شود. تعرفهٔ هر خدمت در فرم «ثبت نوبت جدید» کنار نام خدمت دیده می‌شود و مبنای پیشنهاد مبلغ است؛ اعداد مالی نهایی از «دفتر تراکنش‌ها» می‌آید.
           </p>
         </section>
       </section>
@@ -575,14 +590,14 @@
       <section class="notes neu" aria-labelledby="notes-title">
         <h2 id="notes-title">چرا این ساختار؟ (برای بازبینی شما)</h2>
         <ol>
-          <li><b>پزشک و خدمت در یک صفحه، دو تب:</b> هر دو به هم وصل‌اند (خدمت بدون پزشک بی‌معنی است و پزشک هم خدماتش را دارد) ولی جدا نگه‌داشتنشان باعث می‌شود هر تب ساده و کوتاه باشد.</li>
+          <li><b>پزشک و خدمت در یک صفحه، دو تب:</b> هر دو به هم وصل‌اند (خدمت بدون پزشک بی‌معنی است و پزشک هم خدماتش را دارد) ولی جدا نگه‌داشتنشان باعث می‌شود هر تب ساده و کوتاه باشد. پیوندشان <b>چندبه‌چند</b> است: یک پزشک چند خدمت و یک خدمت چند پزشک؛ از فرم خدمت «پزشکان ارائه‌دهنده» انتخاب می‌شوند و روی کارت هر پزشک هم خدماتش با «＋ ویرایش خدمات» مدیریت می‌شود.</li>
           <li><b>هر پزشک = یک کارت:</b> در یک نگاه: ساعت کاری خلاصه، مدت هر نوبت، ظرفیت روزانه، شمارهٔ پیامک لیست روزانه، و خدمات. اگر می‌خواهید فقط «چه کسی امروز کار می‌کند» را ببینید، همین کارت‌ها کافی است.</li>
           <li><b>مرکز صفحه: جدول ساعت کاری هفتگی</b> با روز، از/تا، <b>مدت هر نوبت</b> و <b>حداکثر نوبت روز</b> — دقیقاً همان چیزی که اسلات‌های آزاد فرم ثبت نوبت از آن ساخته می‌شود.</li>
           <li><b>پیش‌نمایش زنده:</b> پایین جدول، اسلات‌هایی که ساخته می‌شوند (۰۹:۰۰، ۰۹:۲۰، …) نشان داده می‌شود تا تنظیم عددی حدس‌وگمان نباشد.</li>
           <li><b>شمارهٔ پیامک لیست روزانه روی کارت هر پزشک:</b> همان «اقدام لازم» داشبورد اینجا حل می‌شود (دکتر احمدی با برچسب «ثبت نشده»).</li>
           <li><b>مرخصی، حذف نیست:</b> پزشک در مرخصی با برچسب کمرنگ نمایش داده می‌شود؛ اسلات‌هایش پیشنهاد نمی‌شود ولی نوبت‌های موجود دست‌نخورده می‌مانند.</li>
           <li><b>فعال/غیرفعال فقط برای مدیریت:</b> این «وضعیت نوبت» نیست؛ صرفاً یعنی خدمت در فرم ثبت نوبت دیده شود یا نه.</li>
-          <li><b>تعرفه ستون خدمات است:</b> هر خدمت تعرفهٔ خودش را دارد و در فرم ثبت نوبت کنار نام خدمت نشان داده می‌شود؛ اعداد فعلی نمونه‌اند و در پنل واقعی تعیین می‌شوند.</li>
+          <li><b>تعرفه ستون خدمات است (اختیاری):</b> هر خدمت تعرفهٔ خودش را دارد و در فرم ثبت نوبت کنار نام خدمت نشان داده می‌شود؛ خدمت می‌تواند <b>بدون تعرفه</b> باشد (مثل «تزریقات») — در آن صورت مبلغی پیشنهاد نمی‌شود و ثبت مالی از دفتر تراکنش‌ها می‌آید. اعداد فعلی نمونه‌اند و در پنل واقعی تعیین می‌شوند.</li>
           <li><b>ریسپانسیو:</b> دسکتاپ کارت‌ها دوستونه، جدول‌ها اسکرول افقی؛ موبایل یک‌ستونه با دکمه‌های تمام‌عرض (حداقل ۴۰px) و تب‌های ۴۴px.</li>
         </ol>
       </section>
