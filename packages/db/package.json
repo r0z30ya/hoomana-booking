@@ -1,0 +1,33 @@
+{
+  "name": "@hmn/db",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Database access layer: Prisma client, adapter and connectivity probes.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "tsc -b --clean",
+    "prisma:generate": "prisma generate",
+    "prisma:validate": "prisma validate"
+  },
+  "dependencies": {
+    "@hmn/shared": "*",
+    "@prisma/adapter-pg": "7.10.0",
+    "@prisma/client": "7.10.0",
+    "pg": "^8.23.1"
+  },
+  "devDependencies": {
+    "prisma": "7.10.0"
+  }
+}

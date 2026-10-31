@@ -1,0 +1,565 @@
+<!doctype html>
+<html lang="fa" dir="rtl" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>هومانا | پوسته و منوی پنل</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #e9e5dd; --ink: #2e2b26; --sub: #7a756b; --sd: #c9c3b6; --sl: #ffffff;
+        --bar: rgba(46, 43, 38, 0.13); --accent: #0d9488; --accent-2: #14b8a6;
+        --ok: #059669; --ok-bg: rgba(16, 185, 129, 0.16);
+        --warn: #b45309; --warn-bg: rgba(245, 158, 11, 0.18);
+        --no: #dc2626; --no-bg: rgba(239, 68, 68, 0.14);
+      }
+      [data-theme='dark'] {
+        --bg: #262421; --ink: #ede9e1; --sub: #a09a8e; --sd: #1d1b18; --sl: #32302b;
+        --bar: rgba(237, 233, 225, 0.13); --ok: #34d399; --warn: #fbbf24; --no: #f87171;
+      }
+      * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+      body {
+        margin: 0; background: var(--bg); color: var(--ink);
+        font-family: Vazirmatn, 'Segoe UI', Tahoma, sans-serif; transition: background 0.3s, color 0.3s;
+      }
+      button, input { font-family: inherit; }
+      .neu { background: var(--bg); box-shadow: 9px 9px 20px var(--sd), -9px -9px 20px var(--sl); }
+      .neu-sm { background: var(--bg); box-shadow: 5px 5px 12px var(--sd), -5px -5px 12px var(--sl); }
+      .neu-in { background: var(--bg); box-shadow: inset 5px 5px 10px var(--sd), inset -5px -5px 10px var(--sl); }
+      .cta {
+        background: linear-gradient(135deg, var(--accent-2), var(--accent)); color: #fff; border: 0;
+        box-shadow: 6px 6px 14px var(--sd), -6px -6px 14px var(--sl), 0 8px 22px rgba(13, 148, 136, 0.3);
+      }
+      .mini {
+        border: 0; border-radius: 12px; padding: 10px 13px; font-size: 12.5px; font-weight: 700; color: var(--sub);
+        cursor: pointer; min-height: 40px; background: var(--bg); box-shadow: 4px 4px 9px var(--sd), -4px -4px 9px var(--sl);
+      }
+      .mini:hover { color: var(--accent); }
+      .icon-btn {
+        width: 42px; height: 42px; border: 0; border-radius: 14px; cursor: pointer; color: var(--sub);
+        display: grid; place-items: center; flex-shrink: 0; background: var(--bg);
+      }
+      :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+      .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); }
+      .pill { font-size: 11.5px; font-weight: 800; padding: 5px 11px; border-radius: 9999px; background: var(--bar); color: var(--sub); white-space: nowrap; }
+      .pill-ok { background: var(--ok-bg); color: var(--ok); }
+      .pill-warn { background: var(--warn-bg); color: var(--warn); }
+      .wrap { max-width: 1360px; margin: 0 auto; padding: 20px 18px 44px; }
+      h1.page-t { margin: 0 0 4px; font-size: 22px; font-weight: 900; }
+      .page-s { margin: 0 0 16px; color: var(--sub); font-size: 13px; }
+
+      /* ══════ پوستهٔ اصلی ══════ */
+      .app {
+        display: grid; grid-template-columns: var(--sb, 264px) minmax(0, 1fr); gap: 0;
+        border-radius: 30px; overflow: hidden; box-shadow: 9px 9px 22px var(--sd), -9px -9px 22px var(--sl);
+        min-height: 620px;
+      }
+      .app.is-collapsed { --sb: 86px; }
+      .app.is-collapsed .sb-label, .app.is-collapsed .sb-brandtext, .app.is-collapsed .sb-credit, .app.is-collapsed .sb-usertext { display: none; }
+      .app.is-collapsed .sb-nav button { justify-content: center; }
+
+      /* سایدبار */
+      .sidebar { padding: 18px 14px; display: flex; flex-direction: column; gap: 14px; box-shadow: inset -1px 0 0 var(--bar); }
+      .sb-brand { display: flex; align-items: center; gap: 10px; padding: 6px 8px; }
+      .sb-mark {
+        width: 40px; height: 40px; border-radius: 14px; display: grid; place-items: center; color: #fff;
+        font-weight: 900; font-size: 17px; flex-shrink: 0; background: linear-gradient(135deg, var(--accent-2), var(--accent));
+      }
+      .sb-brandname { margin: 0; font-size: 14.5px; font-weight: 900; }
+      .sb-brandsub { margin: 2px 0 0; font-size: 11px; color: var(--sub); }
+      .sb-nav { display: grid; gap: 6px; }
+      .sb-nav button {
+        display: flex; align-items: center; gap: 11px; border: 0; background: transparent; cursor: pointer;
+        color: var(--sub); font-size: 13.5px; font-weight: 700; padding: 12px 12px; border-radius: 15px;
+        min-height: 46px; width: 100%; text-align: right;
+      }
+      .sb-nav button:hover { color: var(--accent); }
+      .sb-nav button[aria-current='page'] {
+        color: var(--accent); box-shadow: inset 4px 4px 10px var(--sd), inset -4px -4px 10px var(--sl);
+      }
+      .sb-nav svg { width: 21px; height: 21px; flex-shrink: 0; }
+      .sb-nav .sb-label { flex: 1; }
+      .sb-badge { font-size: 10.5px; font-weight: 800; padding: 3px 8px; border-radius: 9999px; background: var(--warn-bg); color: var(--warn); }
+      .sb-dot { width: 8px; height: 8px; border-radius: 9999px; background: var(--accent); }
+      .sb-spacer { flex: 1; }
+      .sb-credit { border-radius: 18px; padding: 13px; }
+      .sb-credit p { margin: 0; font-size: 12.5px; font-weight: 800; }
+      .sb-credit small { font-size: 11px; color: var(--sub); }
+      .sb-credit .bar { height: 7px; border-radius: 9999px; background: var(--bar); margin: 9px 0; overflow: hidden; }
+      .sb-credit .bar span { display: block; height: 100%; width: 38%; border-radius: 9999px; background: linear-gradient(90deg, var(--accent-2), var(--accent)); }
+      .sb-credit button { width: 100%; margin-top: 4px; }
+      .sb-user { display: flex; align-items: center; gap: 10px; padding: 8px; }
+      .sb-avatar {
+        width: 38px; height: 38px; border-radius: 13px; display: grid; place-items: center; color: #fff;
+        font-weight: 800; flex-shrink: 0; background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+      }
+      .sb-usertext p { margin: 0; font-size: 13px; font-weight: 800; }
+      .sb-usertext small { color: var(--sub); font-size: 11px; }
+      .sb-user button { margin-inline-start: auto; }
+
+      /* هدر و محتوا */
+      .main { display: flex; flex-direction: column; min-width: 0; }
+      .appbar { display: flex; align-items: center; gap: 10px; padding: 14px 18px; box-shadow: inset 0 -1px 0 var(--bar); flex-wrap: wrap; }
+      .hamburger { display: none; }
+      .gsearch { display: flex; align-items: center; gap: 8px; padding: 11px 15px; border-radius: 16px; flex: 1; min-width: 180px; max-width: 420px; }
+      .gsearch input { border: 0; outline: 0; background: transparent; font: inherit; font-size: 13.5px; width: 100%; color: var(--ink); }
+      .appbar .gap { flex: 1; }
+      .bell-wrap { position: relative; }
+      .bell-dot { position: absolute; top: 6px; inset-inline-end: 6px; width: 10px; height: 10px; border-radius: 9999px; background: var(--no); border: 2px solid var(--bg); }
+      .pop {
+        position: absolute; inset-inline-end: 0; top: 54px; width: 320px; border-radius: 22px; padding: 16px; z-index: 20;
+        display: none;
+      }
+      .pop.is-open { display: block; }
+      .pop h4 { margin: 0 0 10px; font-size: 13.5px; font-weight: 900; }
+      .pop .item { display: flex; gap: 10px; padding: 10px 0; border-top: 1px solid var(--bar); font-size: 12.5px; line-height: 1.8; }
+      .pop .item:first-of-type { border-top: 0; }
+      .pop .item b { color: var(--ink); }
+      .content { padding: 20px 18px 26px; }
+      .toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+      .card { border-radius: 24px; padding: 18px; }
+      .apt { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 18px; border: 1px solid var(--bar); margin-bottom: 9px; font-size: 13.5px; }
+      .apt .t { font-size: 12.5px; font-weight: 800; color: var(--sub); min-width: 54px; }
+      .avatar { width: 36px; height: 36px; border-radius: 9999px; display: grid; place-items: center; color: #fff; font-weight: 800; flex-shrink: 0; background: linear-gradient(135deg, var(--accent-2), #0f766e); }
+
+      /* ══════ حالت جمع‌شده ══════ */
+      .variants { display: grid; gap: 16px; grid-template-columns: 1fr; margin-top: 16px; align-items: start; }
+      @media (min-width: 900px) { .variants { grid-template-columns: 380px 1fr; } }
+      .railwrap { display: flex; border-radius: 26px; overflow: hidden; box-shadow: 9px 9px 22px var(--sd), -9px -9px 22px var(--sl); height: 460px; }
+      .railwrap .sidebar { width: 86px; padding: 16px 10px; }
+      .railwrap .slice { flex: 1; padding: 16px; min-width: 0; }
+      .railwrap .slice .apt { font-size: 12px; }
+
+      /* ══════ موبایل ══════ */
+      .phones { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 16px; }
+      .phone {
+        width: 330px; height: 620px; border-radius: 36px; overflow: hidden; position: relative;
+        box-shadow: 9px 9px 22px var(--sd), -9px -9px 22px var(--sl); display: flex; flex-direction: column;
+      }
+      .phone-head { display: flex; align-items: center; gap: 8px; padding: 12px 14px; box-shadow: inset 0 -1px 0 var(--bar); }
+      .phone-head .title { font-size: 14.5px; font-weight: 900; flex: 1; }
+      .phone-body { flex: 1; overflow-y: auto; padding: 14px; }
+      .phone-body .card { padding: 14px; margin-bottom: 12px; }
+      .bottomnav { display: flex; box-shadow: inset 0 1px 0 var(--bar); }
+      .bottomnav button {
+        flex: 1; border: 0; background: transparent; color: var(--sub); cursor: pointer; font-size: 10.5px; font-weight: 700;
+        padding: 9px 2px 11px; display: grid; gap: 4px; justify-items: center; min-height: 60px;
+      }
+      .bottomnav button[aria-current='page'] { color: var(--accent); }
+      .bottomnav svg { width: 22px; height: 22px; }
+      .drawer { position: absolute; inset: 0; background: rgba(40, 37, 32, 0.45); display: flex; }
+      .drawer-panel { width: 78%; margin-inline-start: auto; padding: 16px 14px; display: flex; flex-direction: column; gap: 12px; }
+      .fab {
+        position: absolute; inset-inline-start: 14px; bottom: 82px; width: 54px; height: 54px; border-radius: 20px;
+        border: 0; cursor: pointer; color: #fff; font-size: 24px; display: grid; place-items: center;
+      }
+
+      /* ══════ یادداشت‌ها ══════ */
+      .notes { margin-top: 26px; border-radius: 26px; padding: 22px; }
+      .notes h2 { margin: 0 0 10px; font-size: 16px; font-weight: 900; }
+      .notes ol { margin: 0; padding-inline-start: 20px; color: var(--sub); font-size: 13px; line-height: 2.15; }
+      .notes b { color: var(--ink); }
+      .roles { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 12.5px; }
+      .roles th, .roles td { padding: 10px 8px; text-align: right; border-top: 1px solid var(--bar); }
+      .roles thead th { color: var(--sub); font-size: 11.5px; font-weight: 800; }
+      .roles td.yes { color: var(--ok); font-weight: 800; }
+      .roles td.no { color: var(--sub); }
+      .frame-title { font-size: 15px; font-weight: 900; margin: 22px 0 4px; }
+      .frame-sub { margin: 0 0 12px; font-size: 12.5px; color: var(--sub); }
+
+      @media (max-width: 800px) {
+        .app { grid-template-columns: minmax(0, 1fr); }
+        .app > .sidebar { display: none; }
+        .hamburger { display: grid; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1 class="page-t">پوسته و منوی پنل</h1>
+      <p class="page-s">
+        منو سمت راست، نوار کار بالا، و محتوای صفحه در میان؛ «ثبت نوبت جدید» و جستجو همیشه در دسترس‌اند.
+      </p>
+
+      <!-- ══════════════════════ فریم ۱: منوی باز (دسکتاپ) ══════════════════════ -->
+      <div class="app">
+        <!-- سایدبار -->
+        <aside class="sidebar">
+          <div class="sb-brand">
+            <span class="sb-mark" aria-hidden="true">هـ</span>
+            <div class="sb-brandtext">
+              <p class="sb-brandname">کلینیک سلامت پارس</p>
+              <p class="sb-brandsub">پنل کلینیک · ۴ پزشک</p>
+            </div>
+          </div>
+
+          <nav class="sb-nav" aria-label="منوی اصلی">
+            <button>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <rect x="3" y="3" width="7" height="7" rx="2" /><rect x="14" y="3" width="7" height="7" rx="2" />
+                <rect x="3" y="14" width="7" height="7" rx="2" /><rect x="14" y="14" width="7" height="7" rx="2" />
+              </svg>
+              <span class="sb-label">داشبورد</span>
+            </button>
+            <button aria-current="page">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <rect x="3" y="5" width="18" height="16" rx="3" /><path d="M8 3v4M16 3v4M3 10h18" />
+              </svg>
+              <span class="sb-label">نوبت‌ها</span>
+              <span class="pill">۴۸</span>
+            </button>
+            <button>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <circle cx="9" cy="8" r="3.2" /><path d="M3.5 20c0-3 2.5-5 5.5-5s5.5 2 5.5 5" />
+                <path d="M16 5.5a3 3 0 0 1 0 5.6M17 20c0-2.2-.6-3.8-1.6-5" />
+              </svg>
+              <span class="sb-label">بیماران</span>
+              <span class="sb-dot" title="۲ بیمار بدون شمارهٔ پرونده"></span>
+            </button>
+            <button>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <path d="M6 3v6a4 4 0 0 0 8 0V3" /><path d="M10 13v3a4 4 0 0 0 8 0v-2" /><circle cx="18" cy="11" r="2" />
+              </svg>
+              <span class="sb-label">پزشکان و خدمات</span>
+            </button>
+            <button>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <rect x="3" y="6" width="18" height="13" rx="3" /><path d="M3 10h18" /><path d="M16 14.5h2" />
+              </svg>
+              <span class="sb-label">حسابداری</span>
+            </button>
+            <button>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <path d="M4 5.5h16v10H9l-5 4z" />
+              </svg>
+              <span class="sb-label">پیامک</span>
+              <span class="sb-badge">۱ ناموفق</span>
+            </button>
+            <button>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <circle cx="12" cy="12" r="3.2" /><path d="M12 3.5v2M12 18.5v2M4.9 7.5l1.7 1M17.4 15.5l1.7 1M4.9 16.5l1.7-1M17.4 8.5l1.7-1" />
+              </svg>
+              <span class="sb-label">تنظیمات</span>
+            </button>
+          </nav>
+
+          <div class="sb-spacer"></div>
+
+          <div class="sb-credit neu-in">
+            <p>اعتبار پیامک: ۹۶۰</p>
+            <small>۱۰۰ پیامک تا اتمام</small>
+            <div class="bar" aria-hidden="true"><span></span></div>
+            <button class="mini">شارژ پیامک</button>
+          </div>
+
+          <div class="sb-user">
+            <span class="sb-avatar" aria-hidden="true">س</span>
+            <div class="sb-usertext">
+              <p>سارا رضایی</p>
+              <small>مدیر کلینیک</small>
+            </div>
+            <button class="icon-btn neu-sm" aria-label="خروج از حساب" title="خروج">⎋</button>
+          </div>
+        </aside>
+
+        <!-- بخش اصلی -->
+        <div class="main">
+          <header class="appbar">
+            <button class="icon-btn neu-sm hamburger" aria-label="باز کردن منو">☰</button>
+            <div class="gsearch neu-in">
+              <span aria-hidden="true" style="color: var(--sub)">⌕</span>
+              <input type="search" placeholder="جستجوی بیمار، نوبت یا شمارهٔ تماس…" aria-label="جستجوی سراسری" />
+            </div>
+            <div class="gap"></div>
+            <button class="cta" style="border-radius: 15px; padding: 12px 18px; font-size: 13.5px; font-weight: 800; cursor: pointer">
+              ＋ ثبت نوبت جدید
+            </button>
+            <div class="bell-wrap">
+              <button class="icon-btn neu-sm" id="bell" aria-label="اعلان‌ها" aria-expanded="false">🔔<span class="bell-dot" aria-hidden="true"></span></button>
+              <div class="pop neu" id="pop" role="dialog" aria-label="اعلان‌ها">
+                <h4>اعلان‌ها</h4>
+                <div class="item"><span aria-hidden="true">✉️</span><span><b>۱ پیامک ناموفق</b> برای زهرا محمدی — <span style="color: var(--accent)">ارسال مجدد</span></span></div>
+                <div class="item"><span aria-hidden="true">🗂️</span><span><b>۲ بیمار بدون شمارهٔ پرونده</b></span></div>
+                <div class="item"><span aria-hidden="true">🩺</span><span>شمارهٔ پیامک <b>دکتر احمدی</b> ثبت نشده؛ لیست روزانه برای او ارسال نمی‌شود</span></div>
+                <div class="item"><span aria-hidden="true">💳</span><span>اشتراک کلینیک فعال است تا <b>۱ آبان ۱۴۰۶</b></span></div>
+              </div>
+            </div>
+            <button class="icon-btn neu-sm" id="theme" aria-label="تعویض تم">◐</button>
+            <button class="icon-btn neu-sm" id="collapse" aria-label="جمع کردن منو" title="جمع کردن منو">⟨</button>
+          </header>
+
+          <div class="content">
+            <div class="toolbar">
+              <h2 style="margin: 0; font-size: 19px; font-weight: 900">نوبت‌ها — سه‌شنبه ۲۱ مهر</h2>
+              <span class="pill">۴۸ نوبت · ۴ پزشک · ۱۲ ظرفیت آزاد</span>
+              <div class="gap" style="flex: 1"></div>
+              <button class="mini">روز</button>
+              <button class="mini">هفته</button>
+              <button class="mini">فهرست</button>
+              <button class="mini">⬇ اکسل</button>
+            </div>
+
+            <div class="card neu">
+              <div class="apt" style="margin-top: 4px">
+                <span class="t">۰۹:۰۰</span>
+                <span class="avatar" aria-hidden="true" style="background: linear-gradient(135deg, #0ea5e9, #0284c7)">ن</span>
+                <span style="flex: 1">ندا اکبری — ویزیت پوست · دکتر کریمی</span>
+                <button class="mini">پرونده</button>
+              </div>
+              <div class="apt">
+                <span class="t">۰۹:۳۰</span>
+                <span class="avatar" aria-hidden="true">ز</span>
+                <span style="flex: 1">زهرا محمدی — ویزیت عمومی · دکتر رضایی · رزرو آنلاین</span>
+                <button class="mini">پرونده</button>
+              </div>
+              <div class="apt">
+                <span class="t">۱۰:۰۰</span>
+                <span class="avatar" aria-hidden="true" style="background: linear-gradient(135deg, #f59e0b, #d97706)">ع</span>
+                <span style="flex: 1">علی کریمی — کنترل فشار خون · دکتر احمدی</span>
+                <button class="mini">پرونده</button>
+              </div>
+              <div class="apt" style="margin-bottom: 0">
+                <span class="t">۱۰:۳۰</span>
+                <span class="avatar" aria-hidden="true" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed)">م</span>
+                <span style="flex: 1">مریم حسینی — مشاوره تغذیه · دکتر نوری</span>
+                <button class="mini">پرونده</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════ فریم ۲: منوی جمع‌شده ══════════════════════ -->
+      <p class="frame-title">حالت منوی جمع‌شده (صفحه‌های عریض مانند تقویم هفته)</p>
+      <p class="frame-sub">با دکمهٔ ⟨ در نوار کار، منو به ریل باریک با آیکون‌ها جمع می‌شود و محتوا پهن‌تر می‌شود؛ روی آیکون‌ها، در حالت هوفر، نام بخش به‌صورت tooltip دیده می‌شود.</p>
+
+      <div class="railwrap">
+        <aside class="sidebar">
+          <div class="sb-brand" style="justify-content: center">
+            <span class="sb-mark" aria-hidden="true">هـ</span>
+          </div>
+          <nav class="sb-nav" aria-label="منوی جمع‌شده">
+            <button aria-label="داشبورد" title="داشبورد">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <rect x="3" y="3" width="7" height="7" rx="2" /><rect x="14" y="3" width="7" height="7" rx="2" />
+                <rect x="3" y="14" width="7" height="7" rx="2" /><rect x="14" y="14" width="7" height="7" rx="2" />
+              </svg>
+            </button>
+            <button aria-current="page" aria-label="نوبت‌ها" title="نوبت‌ها">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <rect x="3" y="5" width="18" height="16" rx="3" /><path d="M8 3v4M16 3v4M3 10h18" />
+              </svg>
+            </button>
+            <button aria-label="بیماران" title="بیماران">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <circle cx="9" cy="8" r="3.2" /><path d="M3.5 20c0-3 2.5-5 5.5-5s5.5 2 5.5 5" />
+                <path d="M16 5.5a3 3 0 0 1 0 5.6M17 20c0-2.2-.6-3.8-1.6-5" />
+              </svg>
+            </button>
+            <button aria-label="پزشکان و خدمات" title="پزشکان و خدمات">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <path d="M6 3v6a4 4 0 0 0 8 0V3" /><path d="M10 13v3a4 4 0 0 0 8 0v-2" /><circle cx="18" cy="11" r="2" />
+              </svg>
+            </button>
+            <button aria-label="حسابداری" title="حسابداری">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <rect x="3" y="6" width="18" height="13" rx="3" /><path d="M3 10h18" /><path d="M16 14.5h2" />
+              </svg>
+            </button>
+            <button aria-label="پیامک" title="پیامک">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <path d="M4 5.5h16v10H9l-5 4z" />
+              </svg>
+            </button>
+            <button aria-label="تنظیمات" title="تنظیمات">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <circle cx="12" cy="12" r="3.2" /><path d="M12 3.5v2M12 18.5v2M4.9 7.5l1.7 1M17.4 15.5l1.7 1M4.9 16.5l1.7-1M17.4 8.5l1.7-1" />
+              </svg>
+            </button>
+          </nav>
+          <div class="sb-spacer"></div>
+          <div class="sb-user" style="justify-content: center">
+            <span class="sb-avatar" aria-hidden="true">س</span>
+          </div>
+        </aside>
+        <div class="slice">
+          <p style="margin: 0 0 10px; font-size: 13px; font-weight: 800">محتوا پهن‌تر می‌شود (نمای هفته)</p>
+          <div class="card neu" style="padding: 12px">
+            <div class="apt" style="font-size: 12px; margin-bottom: 7px"><span class="t">۰۹:۰۰</span><span style="flex: 1">شنبه · ۴ نوبت</span></div>
+            <div class="apt" style="font-size: 12px; margin-bottom: 7px"><span class="t">۰۹:۰۰</span><span style="flex: 1">یک‌شنبه · ۶ نوبت</span></div>
+            <div class="apt" style="font-size: 12px; margin-bottom: 0"><span class="t">۰۹:۰۰</span><span style="flex: 1">سه‌شنبه · ۸ نوبت (پر)</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════ فریم ۳ و ۴: موبایل ══════════════════════ -->
+      <p class="frame-title">موبایل: نوار پایین + کشوی منو</p>
+      <p class="frame-sub">منشی و پزشک بیشتر با موبایل کار می‌کنند: چهار بخش پرکاربرد در نوار پایین و بقیه در کشوی منو (☰). دکمهٔ شناور «＋» همیشه برای ثبت نوبت در دسترس است.</p>
+
+      <div class="phones">
+        <!-- فریم ۳: نوار پایین -->
+        <div class="phone neu">
+          <div class="phone-head">
+            <button class="icon-btn neu-sm" aria-label="باز کردن منو">☰</button>
+            <span class="title">نوبت‌ها</span>
+            <button class="icon-btn neu-sm" aria-label="اعلان‌ها">🔔</button>
+          </div>
+          <div class="phone-body">
+            <div class="card neu">
+              <p style="margin: 0 0 10px; font-size: 12.5px; font-weight: 800">سه‌شنبه ۲۱ مهر · ۴۸ نوبت</p>
+              <div class="apt" style="font-size: 12px; margin-bottom: 7px"><span class="t">۰۹:۰۰</span><span style="flex: 1">ندا اکبری — ویزیت پوست</span></div>
+              <div class="apt" style="font-size: 12px; margin-bottom: 7px"><span class="t">۰۹:۳۰</span><span style="flex: 1">زهرا محمدی — ویزیت عمومی</span></div>
+              <div class="apt" style="font-size: 12px; margin-bottom: 0"><span class="t">۱۰:۰۰</span><span style="flex: 1">علی کریمی — کنترل فشار</span></div>
+            </div>
+            <div class="card neu">
+              <p style="margin: 0 0 8px; font-size: 12.5px; font-weight: 800">اعتبار پیامک: ۹۶۰</p>
+              <button class="mini" style="width: 100%">شارژ پیامک</button>
+            </div>
+          </div>
+          <button class="cta fab" aria-label="ثبت نوبت جدید">＋</button>
+          <nav class="bottomnav" aria-label="منوی پایین">
+            <button aria-label="داشبورد">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <rect x="3" y="3" width="7" height="7" rx="2" /><rect x="14" y="3" width="7" height="7" rx="2" />
+                <rect x="3" y="14" width="7" height="7" rx="2" /><rect x="14" y="14" width="7" height="7" rx="2" />
+              </svg>
+              داشبورد
+            </button>
+            <button aria-current="page" aria-label="نوبت‌ها">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <rect x="3" y="5" width="18" height="16" rx="3" /><path d="M8 3v4M16 3v4M3 10h18" />
+              </svg>
+              نوبت‌ها
+            </button>
+            <button aria-label="بیماران">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <circle cx="9" cy="8" r="3.2" /><path d="M3.5 20c0-3 2.5-5 5.5-5s5.5 2 5.5 5" />
+              </svg>
+              بیماران
+            </button>
+            <button aria-label="پیامک">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <path d="M4 5.5h16v10H9l-5 4z" />
+              </svg>
+              پیامک
+            </button>
+            <button aria-label="بیشتر">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <circle cx="5" cy="12" r="1.6" /><circle cx="12" cy="12" r="1.6" /><circle cx="19" cy="12" r="1.6" />
+              </svg>
+              بیشتر
+            </button>
+          </nav>
+        </div>
+
+        <!-- فریم ۴: کشوی منو -->
+        <div class="phone neu">
+          <div class="phone-head">
+            <button class="icon-btn neu-sm" aria-label="بستن منو">☰</button>
+            <span class="title">منوی کامل</span>
+          </div>
+          <div class="phone-body" style="filter: blur(1.5px); opacity: 0.5">
+            <div class="card neu"><p style="margin: 0; font-size: 12.5px">محتوای صفحهٔ زیرین</p></div>
+          </div>
+          <div class="drawer">
+            <div class="drawer-panel neu">
+              <div class="sb-brand" style="padding: 0">
+                <span class="sb-mark" aria-hidden="true">هـ</span>
+                <div class="sb-brandtext">
+                  <p class="sb-brandname">کلینیک سلامت پارس</p>
+                  <p class="sb-brandsub">پنل کلینیک</p>
+                </div>
+              </div>
+              <nav class="sb-nav" aria-label="منوی کشو">
+                <button aria-current="page"><span class="sb-label">نوبت‌ها</span><span class="pill">۴۸</span></button>
+                <button><span class="sb-label">داشبورد</span></button>
+                <button><span class="sb-label">بیماران</span><span class="sb-dot"></span></button>
+                <button><span class="sb-label">پزشکان و خدمات</span></button>
+                <button><span class="sb-label">حسابداری</span></button>
+                <button><span class="sb-label">پیامک</span><span class="sb-badge">۱ ناموفق</span></button>
+                <button><span class="sb-label">تنظیمات</span></button>
+              </nav>
+              <div class="sb-spacer"></div>
+              <div class="sb-user" style="padding: 0">
+                <span class="sb-avatar" aria-hidden="true">س</span>
+                <div class="sb-usertext"><p>سارا رضایی</p><small>مدیر کلینیک · خروج</small></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════ یادداشت ساختار ══════════════════════ -->
+      <section class="notes neu">
+        <h2>چرا این ساختار؟ (برای بازبینی شما)</h2>
+        <ol>
+          <li><b>منو سمت راست (RTL):</b> چون چشم فارسی‌خوان از راست شروع می‌کند؛ برند و هویت کلینیک بالای منو، و «چه کسی وارد شده» پایین آن.</li>
+          <li><b>«ثبت نوبت جدید» در نوار کار می‌ماند:</b> پرکاربردترین عمل پنل از هر صفحه‌ای در دسترس است؛ منشی لازم نیست اول به صفحهٔ نوبت‌ها برود.</li>
+          <li><b>جستجوی سراسری در نوار کار:</b> بیمار، شمارهٔ تماس یا نوبت — مستقل از اینکه در کدام صفحه هستید.</li>
+          <li><b>اعتبار پیامک در پایین منو:</b> همیشه دیده می‌شود (۹۶۰ · نوار مصرف) با دکمهٔ «شارژ پیامک» — چون پیامک زیرساخت یادآوری‌هاست و اتمام آن کار کلینیک را می‌خواباند.</li>
+          <li><b>نشانه‌های واقعی روی منو:</b> «۴۸ نوبت» امروز، نقطهٔ «۲ بیمار بدون پرونده» روی بیماران، و برچسب «۱ ناموفق» روی پیامک — همان مواردی که در اعلان‌ها هم فهرست شده‌اند.</li>
+          <li><b>اعلان‌ها با عمل:</b> هر اعلان یک اقدام دارد («ارسال مجدد»، «ثبت شمارهٔ پیامک») و یک اعلان اشتراکی («فعال تا ۱ آبان ۱۴۰۶») برای آگاهی از پایان پلن.</li>
+          <li><b>حالت جمع‌شده:</b> دکمهٔ ⟨ منو را به ریل ۸۶ پیکسلی تبدیل می‌کند تا صفحه‌های عریض (نمای هفته) جا باز کنند.</li>
+          <li><b>موبایل = نوار پایین + کشو:</b> چهار بخش پرکاربرد (داشبورد، نوبت‌ها، بیماران، پیامک) همیشه در دسترس و بقیه در کشوی منو؛ دکمهٔ شناور «＋» برای ثبت نوبت.</li>
+        </ol>
+
+        <h3 style="margin: 18px 0 0; font-size: 14.5px; font-weight: 900">هر نقش چه منویی می‌بیند؟</h3>
+        <div style="overflow-x: auto">
+          <table class="roles">
+            <thead>
+              <tr>
+                <th>بخش</th>
+                <th>مدیر کلینیک</th>
+                <th>منشی</th>
+                <th>پزشک</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>داشبورد</td><td class="yes">✔</td><td class="yes">✔</td><td class="yes">✔ (برنامهٔ خودم)</td></tr>
+              <tr><td>نوبت‌ها</td><td class="yes">✔</td><td class="yes">✔</td><td class="yes">✔ (فقط نوبت‌های خودم)</td></tr>
+              <tr><td>بیماران</td><td class="yes">✔</td><td class="yes">✔</td><td class="yes">✔ (بیماران خودم)</td></tr>
+              <tr><td>پزشکان و خدمات</td><td class="yes">✔</td><td class="no">—</td><td class="no">— (فقط ساعت کاری خودم)</td></tr>
+              <tr><td>حسابداری</td><td class="yes">✔</td><td class="no">ثبت پرداخت، بدون گزارش مالی</td><td class="no">—</td></tr>
+              <tr><td>پیامک</td><td class="yes">✔</td><td class="yes">✔</td><td class="no">—</td></tr>
+              <tr><td>تنظیمات (کاربران، دامنه، اشتراک)</td><td class="yes">✔</td><td class="no">—</td><td class="no">— (فقط مشخصات خودم)</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p style="margin: 10px 0 0; font-size: 12.5px; color: var(--sub); line-height: 1.9">
+          این جدول را با نقش‌های ثبت‌شدهٔ سیستم (مالک، پزشک، منشی) هم‌راستا نوشتم؛ اگر جایی نظرتان متفاوت است بگویید تا در پوسته اعمال کنم.
+        </p>
+      </section>
+    </div>
+
+    <script>
+      // تم
+      document.getElementById('theme').addEventListener('click', function () {
+        var root = document.documentElement;
+        root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark';
+      });
+
+      // جمع کردن منو
+      document.getElementById('collapse').addEventListener('click', function () {
+        document.querySelector('.app').classList.toggle('is-collapsed');
+      });
+
+      // اعلان‌ها
+      var bell = document.getElementById('bell');
+      var pop = document.getElementById('pop');
+      bell.addEventListener('click', function () {
+        var open = pop.classList.toggle('is-open');
+        bell.setAttribute('aria-expanded', open ? 'true' : 'false');
+      });
+      document.addEventListener('click', function (e) {
+        if (!pop.contains(e.target) && !bell.contains(e.target)) {
+          pop.classList.remove('is-open');
+          bell.setAttribute('aria-expanded', 'false');
+        }
+      });
+    </script>
+  </body>
+</html>

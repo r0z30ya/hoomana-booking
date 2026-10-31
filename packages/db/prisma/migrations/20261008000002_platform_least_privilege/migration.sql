@@ -1,0 +1,118 @@
+-- Least-privilege narrowing for the platform role (ADR-0003 D5, amended).
+--
+-- ---------------------------------------------------------------------------
+-- WHAT WAS WRONG
+-- ---------------------------------------------------------------------------
+-- The initial Phase 3 migration (20261008000000_init_phase3_foundation) granted
+-- hmn_platform the blanket statement
+--
+--   GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO hmn_platform;
+--
+-- That grant is broader than ADR-0003 D5 authorises in two distinct ways:
+--
+-- 1. It covered `_prisma_migrations`, Prisma's migration bookkeeping table. That
+--    table is not part of the application model at all, holds no tenant and no
+--    patient data, and is the operational record of how the schema reached its
+--    current shape. No platform business operation reads it, and hmn_app is
+--    deliberately denied it (security test S6). Verified before this migration:
+--      * has_table_privilege('hmn_platform','public._prisma_migrations','SELECT') = true
+--      * as hmn_platform, `SELECT count(*) FROM "_prisma_migrations"` returned 3 rows
+--      * as hmn_app,      the same query failed with `permission denied for table
+--                         _prisma_migrations` (the S6 contract)
+--    So an operator using the platform connection could read migration history
+--    while the runtime role could not — an access path D5 never granted.
+--
+-- 2. The ALL TABLES form is *latent over-privilege*: because it is a
+--    schema-wide grant evaluated when it ran, any table added later had to be
+--    assessed against it, and a future migration that merely forgot to scope its
+--    grants would silently widen hmn_platform again.
+--
+-- ---------------------------------------------------------------------------
+-- LEAST-PRIVILEGE DECISION (evidence-based, no speculation)
+-- ---------------------------------------------------------------------------
+-- Concrete, verifiable use cases for hmn_platform in the current codebase:
+--
+--   (a) Security test S7 (packages/db/src/tenant-roles.integration.test.ts):
+--       proves the platform role cannot silently bypass RLS. It needs
+--       - SELECT on `domains` under an explicit tenant context (via
+--         withTenantTx) to show the audited path works, and
+--       - SELECT on `tenants` to show it still reads global tables, proving the
+--         zero tenant rows come from RLS filtering rather than broken access.
+--   (b) D5's stated platform operations (support, billing disputes, aggregate
+--       reporting) enter tenant data exclusively through the audited
+--       `withTenantTx` path. Reads are the operation; the D5 text is explicit
+--       that platform *aggregates* prefer SECURITY DEFINER views/functions owned
+--       by hmn_migrator rather than broad table DML.
+--
+-- Therefore the **minimum** privilege set for hmn_platform today is:
+--   * global tables: SELECT only (read-only, matching hmn_app on those tables);
+--     D5 states writes to global tables from tenant code paths are forbidden, and
+--     subscription_plans is a catalogue owned by the migrator.
+--   * tenant-owned tables: SELECT only (RLS still filters every row; reads are
+--     what the audited reporting/support path performs).
+--   * `_prisma_migrations`: **no** privileges at all.
+--
+-- What was deliberately NOT built: a SECURITY DEFINER aggregate function or view
+-- for platform reporting. No platform code exists yet (grep for `hmn_platform`
+-- finds it only in the ADR, env examples, the role-provisioning script and the
+-- security tests — never in application code), so any such object would be
+-- speculative surface area added without a caller. D5 already records the
+-- preference and it can be introduced, with its own tests, when a platform
+-- aggregate feature first needs it.
+--
+-- Resulting guarantee: after this migration hmn_platform holds **zero write
+-- privileges on any table in schema public** and cannot read the migration
+-- bookkeeping table. This is enforced by security test S9, which audits every
+-- table in the schema rather than a hard-coded list, so the blanket state cannot
+-- silently return.
+--
+-- ---------------------------------------------------------------------------
+-- WHY REVOKE-ONLY IS SAFE HERE (explicitly answered, not assumed)
+-- ---------------------------------------------------------------------------
+-- The blanket grant was executed *before* the tables existed, so PostgreSQL
+-- recorded **direct** (non-inherited) per-table grants on all eight application
+-- tables. Direct grants are unaffected by REVOKE ... ON ALL TABLES IN SCHEMA and
+-- must be revoked per table. Conversely, revoking the schema-wide grant itself
+-- (`REVOKE SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public`) would
+-- remove nothing for the existing tables while saving the typo-prone per-table
+-- work — so this migration names the narrow set to keep and then revokes the
+-- exact privileges that remain, table by table.
+--
+-- Post-migration enforcement against recurrence:
+--   * Direct grants are the only mechanism by which hmn_platform receives
+--     privileges, and the security test pins them to SELECT-only on exactly the
+--     eight application tables.
+--   * No ALTER DEFAULT PRIVILEGES exists for any role (verified: pg_default_acl
+--     is empty), so **future tables will NOT be visible to hmn_platform by
+--     default**; every future grant must be explicit and reviewed. The schema-wide
+--     ALL TABLES form did **not** create a default privilege, so removing it
+--     removes no protection that was actually active and closes the latent path
+--     (2) above.
+--
+-- ---------------------------------------------------------------------------
+-- SAFETY OF THE OPERATION ITSELF
+-- ---------------------------------------------------------------------------
+-- * Forward-only: no already-applied migration is edited or rewritten, and this
+--   migration only REVOKEs. It creates, drops and alters nothing, touches no
+--   table, column or row, and never disables RLS.
+-- * hmn_platform is a non-owner and holds no BYPASSRLS (both re-asserted and
+--   asserted by the test), so no ownership or bypass path is created or widened.
+-- * hmn_app and hmn_migrator privileges are not touched at all.
+-- * Prisma applies each migration file inside its own transaction, so the REVOKEs
+--   are atomic.
+
+-- Tenant-owned tables: keep reads for the audited platform path, revoke writes.
+-- RLS (fail-closed tenant_isolation) remains enabled and is unaffected by grants.
+REVOKE INSERT, UPDATE, DELETE ON "tenant_memberships" FROM hmn_platform;
+REVOKE INSERT, UPDATE, DELETE ON "tenant_subscriptions" FROM hmn_platform;
+REVOKE INSERT, UPDATE, DELETE ON "domains" FROM hmn_platform;
+REVOKE INSERT, UPDATE, DELETE ON "audit_logs" FROM hmn_platform;
+
+-- Global tables: reads only, matching hmn_app on the same tables (ADR-0003 D5).
+REVOKE INSERT, UPDATE, DELETE ON "users" FROM hmn_platform;
+REVOKE INSERT, UPDATE, DELETE ON "tenants" FROM hmn_platform;
+REVOKE INSERT, UPDATE, DELETE ON "subscription_plans" FROM hmn_platform;
+
+-- Migration bookkeeping is migrator-only (ADR-0003 D7); a platform operator has
+-- no business reading how the schema was built.
+REVOKE SELECT, INSERT, UPDATE, DELETE ON "_prisma_migrations" FROM hmn_platform;

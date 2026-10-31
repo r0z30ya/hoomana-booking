@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="fa" dir="rtl" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>هومانا | پکیج‌ها و مقایسه</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #e9e5dd; --ink: #2e2b26; --sub: #7a756b; --sd: #c9c3b6; --sl: #ffffff;
+        --bar: rgba(46, 43, 38, 0.13); --accent: #0d9488; --accent-2: #14b8a6;
+        --ok: #059669; --ok-bg: rgba(16, 185, 129, 0.16);
+      }
+      [data-theme='dark'] {
+        --bg: #262421; --ink: #ede9e1; --sub: #a09a8e; --sd: #1d1b18; --sl: #32302b;
+        --bar: rgba(237, 233, 225, 0.13); --ok: #34d399; --ok-bg: rgba(16, 185, 129, 0.22);
+      }
+      * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+      body {
+        margin: 0; background: var(--bg); color: var(--ink);
+        font-family: Vazirmatn, 'Segoe UI', Tahoma, sans-serif; transition: background 0.3s, color 0.3s;
+      }
+      .neu { background: var(--bg); box-shadow: 9px 9px 20px var(--sd), -9px -9px 20px var(--sl); }
+      .neu-sm { background: var(--bg); box-shadow: 5px 5px 12px var(--sd), -5px -5px 12px var(--sl); }
+      .neu-in { background: var(--bg); box-shadow: inset 5px 5px 10px var(--sd), inset -5px -5px 10px var(--sl); }
+      .cta {
+        background: linear-gradient(135deg, var(--accent-2), var(--accent)); color: #fff; border: 0;
+        box-shadow: 6px 6px 14px var(--sd), -6px -6px 14px var(--sl), 0 8px 24px rgba(13, 148, 136, 0.35);
+        transition: 0.25s;
+      }
+      .cta:hover { filter: brightness(1.06); transform: translateY(-2px); }
+      .ghost { background: var(--bg); border: 0; box-shadow: 5px 5px 12px var(--sd), -5px -5px 12px var(--sl); }
+      .ghost:hover { transform: translateY(-2px); }
+      .glow { position: fixed; border-radius: 9999px; filter: blur(110px); pointer-events: none; z-index: 0; opacity: 0.2; }
+      [data-theme='dark'] .glow { opacity: 0.09; }
+      .wrap { position: relative; z-index: 2; max-width: 1060px; margin: 0 auto; padding: 28px 20px 60px; }
+      .theme-btn {
+        position: fixed; top: 18px; left: 18px; z-index: 4; width: 46px; height: 46px; padding: 0;
+        border: 0; border-radius: 16px; cursor: pointer; color: var(--sub); display: grid; place-items: center;
+        background: var(--bg); box-shadow: 5px 5px 12px var(--sd), -5px -5px 12px var(--sl);
+      }
+      header.head { text-align: center; margin-bottom: 30px; }
+      .brand-fa { margin: 0; font-size: 30px; font-weight: 900; }
+      .brand-sub { margin: 8px 0 0; color: var(--sub); font-size: 14px; font-weight: 600; }
+      .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; }
+      .plan { border-radius: 28px; padding: 24px; display: flex; flex-direction: column; }
+      .plan.pop { box-shadow: 9px 9px 20px var(--sd), -9px -9px 20px var(--sl), 0 0 0 2px var(--accent); }
+      .pill {
+        align-self: flex-start; font-size: 11.5px; font-weight: 800; padding: 5px 13px; border-radius: 9999px;
+        background: var(--bar); color: var(--sub);
+      }
+      .pill.ok { background: var(--ok-bg); color: var(--ok); }
+      .plan h2 { margin: 14px 0 4px; font-size: 22px; font-weight: 900; }
+      .plan .lead { margin: 0 0 16px; color: var(--sub); font-size: 13px; font-weight: 600; line-height: 1.9; }
+      .price { font-size: 13px; font-weight: 800; color: var(--sub); margin-bottom: 18px; }
+      .features { list-style: none; padding: 0; margin: 0 0 22px; display: grid; gap: 10px; }
+      .features li { display: flex; gap: 9px; align-items: flex-start; font-size: 13.5px; font-weight: 600; }
+      .tick { flex-shrink: 0; width: 20px; height: 20px; border-radius: 7px; display: grid; place-items: center;
+        font-size: 11px; font-weight: 900; background: var(--ok-bg); color: var(--ok); }
+      .tick.no { background: var(--bar); color: var(--sub); }
+      .plan .btn { margin-top: auto; border-radius: 16px; padding: 14px; font-size: 14.5px; font-weight: 800; cursor: pointer; }
+      h3.section { margin: 44px 0 14px; font-size: 18px; font-weight: 900; }
+      .tablecard { border-radius: 24px; padding: 8px 6px; overflow-x: auto; }
+      table { border-collapse: collapse; width: 100%; min-width: 720px; }
+      th, td { padding: 13px 16px; text-align: right; font-size: 13.5px; }
+      thead th { font-size: 12px; color: var(--sub); font-weight: 800; }
+      thead th:nth-child(2), thead th:nth-child(3), thead th:nth-child(4),
+      td:nth-child(2), td:nth-child(3), td:nth-child(4) { text-align: center; width: 150px; }
+      tbody tr { border-top: 1px solid var(--bar); }
+      tr.group td { background: var(--bar); font-weight: 900; font-size: 12.5px; }
+      .yes { color: var(--ok); font-weight: 900; }
+      .no { color: var(--sub); }
+      .cap { font-weight: 800; }
+      .note { margin-top: 22px; color: var(--sub); font-size: 12.5px; line-height: 2; }
+      .legend { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 12px; color: var(--sub); font-size: 12px; }
+    </style>
+  </head>
+  <body>
+    <div class="glow" style="width: 480px; height: 480px; background: #14b8a6; top: -170px; left: -150px"></div>
+    <div class="glow" style="width: 420px; height: 420px; background: #f59e0b; bottom: -170px; right: -150px; opacity: 0.15"></div>
+
+    <button class="theme-btn" onclick="document.documentElement.dataset.theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'" aria-label="تعویض تم">◐</button>
+
+    <div class="wrap">
+      <p class="note" style="margin-top: 0">
+        <b>توضیح وضعیت:</b> این فایل، طرح اولیهٔ همان صفحه است. پس از بازخوردهای مالک، نسخهٔ اجراشده
+        در <code>apps/web/src/plans/PlansPage.tsx</code> است با این تغییرها: نام پلن‌ها «آزمایشی / مطب / کلینیک»،
+        مطب و کلینیک اشتراک <b>یک‌ساله</b>، هدیهٔ پیامکی (۱۰۰ پیامک برای آزمایشی و ۳۰۰٬۰۰۰ تومان برای هر دو پکیج)،
+        دامنهٔ اختصاصی و پنل پیامکی اختصاصی در هر دو پکیج، و بدون تأکید روی طول دورهٔ آزمایشی. متن‌های همان نسخه مرجع است.
+      </p>
+      <header class="head">
+        <p class="brand-fa">هومانا</p>
+        <p class="brand-sub">۳۰ روز رایگان امتحان کنید؛ بعد پکیجی را انتخاب کنید که به مطب یا کلینیک شما می‌خورد.</p>
+      </header>
+
+      <!-- ═══ کارت‌های پکیج ═══ -->
+      <section class="cards">
+        <article class="plan neu">
+          <span class="pill">شروع</span>
+          <h2>رایگان</h2>
+          <p class="lead">همان پکیج مطب، اما <b>محدود</b> — برای شناختن هومانا در ۳۰ روز.</p>
+          <p class="price">۰ تومان · ۳۰ روز</p>
+          <ul class="features">
+            <li><span class="tick">✓</span> ۱ پزشک (حالت مطب)، کارکنان بی‌نهایت</li>
+            <li><span class="tick">✓</span> نوبت‌دهی و تقویم کامل شمسی</li>
+            <li><span class="tick">✓</span> رزرو آنلاین بیمار با کد پیامکی</li>
+            <li><span class="tick">✓</span> بیماران بی‌نهایت + ایمپورت اکسل</li>
+            <li><span class="tick">✓</span> حسابداری و گزارش اکسل</li>
+            <li><span class="tick">✓</span> پنل پیامکی + یادآوری و لیست روزانه</li>
+          </ul>
+          <button class="btn cta">شروع ۳۰ روز رایگان</button>
+        </article>
+
+        <article class="plan neu pop">
+          <span class="pill ok">محبوب</span>
+          <h2>مطب</h2>
+          <p class="lead">برای پزشک تنها یا مطب کوچک — بدون سقف بیمار و با همهٔ ابزارها.</p>
+          <p class="price">قیمت‌گذاری: به‌زودی</p>
+          <ul class="features">
+            <li><span class="tick">✓</span> ۱ پزشک، کارکنان بی‌نهایت</li>
+            <li><span class="tick">✓</span> همهٔ امکانات نوبت‌دهی و بیماران</li>
+            <li><span class="tick">✓</span> ایمپورت اکسل بیماران</li>
+            <li><span class="tick">✓</span> حسابداری و گزارش اکسل</li>
+            <li><span class="tick">✓</span> پنل پیامکی اختصاصی + یادآوری و لیست روزانه</li>
+            <li><span class="tick no">—</span> دامنهٔ اختصاصی و دسترسی سفارشی</li>
+          </ul>
+          <button class="btn ghost">انتخاب پکیج مطب</button>
+        </article>
+
+        <article class="plan neu">
+          <span class="pill">کامل</span>
+          <h2>کلینیک</h2>
+          <p class="lead">چند پزشک، چند کاربر با دسترسی ماژولی، چند شعبه و دامنهٔ اختصاصی.</p>
+          <p class="price">قیمت‌گذاری: به‌زودی</p>
+          <ul class="features">
+            <li><span class="tick">✓</span> پزشکان و کارکنان نامحدود</li>
+            <li><span class="tick">✓</span> انتخاب پزشک در نوبت‌دهی و حضور روزانه</li>
+            <li><span class="tick">✓</span> کاربران با دسترسی سفارشی (ماژولی)</li>
+            <li><span class="tick">✓</span> چند شعبه</li>
+            <li><span class="tick">✓</span> دامنهٔ اختصاصی کلینیک</li>
+            <li><span class="tick">✓</span> پشتیبانی اختصاصی</li>
+          </ul>
+          <button class="btn ghost">انتخاب پکیج کلینیک</button>
+        </article>
+      </section>
+
+      <!-- ═══ ماتریس مقایسه ═══ -->
+      <h3 class="section">مقایسهٔ کامل امکانات</h3>
+      <div class="tablecard neu">
+        <table>
+          <thead>
+            <tr>
+              <th>امکانات</th>
+              <th>رایگان (۳۰ روز)</th>
+              <th>مطب</th>
+              <th>کلینیک</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="group"><td colspan="4">پایه و کاربران</td></tr>
+            <tr><td>تعداد پزشکان</td><td class="cap">۱</td><td class="cap">۱</td><td class="cap">نامحدود</td></tr>
+            <tr><td>کاربران کارکنان (منشی/پذیرش)</td><td class="cap">نامحدود</td><td class="cap">نامحدود</td><td class="cap">نامحدود</td></tr>
+            <tr><td>دسترسی سفارشی به ماژول‌ها (کاربر کاستوم)</td><td class="no">—</td><td class="no">—</td><td class="yes">✓</td></tr>
+            <tr><td>تعداد شعبه</td><td class="cap">۱</td><td class="cap">۱</td><td class="cap">نامحدود</td></tr>
+
+            <tr class="group"><td colspan="4">نوبت‌دهی</td></tr>
+            <tr><td>تقویم نوبت‌ها (روز/هفته/ماه، شمسی)</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+            <tr><td>ثبت نوبت توسط منشی</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+            <tr><td>رزرو آنلاین بیمار با کد پیامکی (OTP)</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+            <tr><td>انتخاب پزشک در نوبت‌دهی</td><td class="no">— (تک‌پزشک)</td><td class="no">— (تک‌پزشک)</td><td class="yes">✓</td></tr>
+            <tr><td>قوانین زمان‌بندی (بافر، سقف روزانه، استثناها)</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+            <tr><td>یادآوری پیامکی نوبت</td><td class="no">—</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+            <tr><td>لیست بیماران هر پزشک (پیامکی، زمان‌بندی‌شده + لحظه‌ای)</td><td class="no">—</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+
+            <tr class="group"><td colspan="4">بیماران</td></tr>
+            <tr><td>پروندهٔ بیمار (نام، موبایل، کد ملی، شمارهٔ پرونده، تاریخ تولد)</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+            <tr><td>سقف تعداد بیمار</td><td class="cap">نامحدود</td><td class="cap">نامحدود</td><td class="cap">نامحدود</td></tr>
+            <tr><td>ایمپورت گروهی از اکسل</td><td class="no">—</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+            <tr><td>ماژول پروندهٔ درمانی و گزارش‌ها (فاز بعد)</td><td class="no">—</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+
+            <tr class="group"><td colspan="4">مالی</td></tr>
+            <tr><td>حسابداری (تراکنش، دسته‌ها، روش پرداخت)</td><td class="no">—</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+            <tr><td>گزارش روز/ماه و خروجی اکسل</td><td class="no">—</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+
+            <tr class="group"><td colspan="4">پیامک</td></tr>
+            <tr><td>شارژ اعتباری از پنل مرکزی هومانا</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+            <tr><td>پنل پیامکی اختصاصی مستاجر (خط و اعتبار خودش)</td><td class="no">—</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+            <tr><td>کد پیامکی ورود/بازیابی</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+
+            <tr class="group"><td colspan="4">برند، دامنه و پشتیبانی</td></tr>
+            <tr><td>ساب‌دامین هومانا</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+            <tr><td>دامنهٔ اختصاصی کلینیک</td><td class="no">—</td><td class="no">—</td><td class="yes">✓</td></tr>
+            <tr><td>پشتیبانی</td><td class="cap">پایه</td><td class="cap">استاندارد</td><td class="cap">اختصاصی</td></tr>
+            <tr><td>مدت اعتبار</td><td class="cap">۳۰ روز</td><td class="cap">همیشگی</td><td class="cap">همیشگی</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="legend">
+        <span><b class="yes">✓</b> دارد</span>
+        <span><b class="no">—</b> ندارد</span>
+        <span>عدد = سقف همان پکیج</span>
+      </div>
+
+      <p class="note">
+        «رایگان» همان پکیج مطب است؛ تنها محدودیتش <b>زمان</b> است (۳۰ روز) و پیش از پایان هشدار می‌گیرید.<br />
+        روزهای رایگان از پنل مدیریت پلتفرم قابل تعیین است (فعلاً ۳۰ روز).<br />
+        مصوب ۲۰۲۶-۱۰-۱۳: رایگان بی‌سقف است (بدون سقف بیمار/پیامک/کاربر)؛ قیمت‌گذاری مطب و کلینیک پس از تأیید مالک ثبت می‌شود.
+      </p>
+    </div>
+  </body>
+</html>

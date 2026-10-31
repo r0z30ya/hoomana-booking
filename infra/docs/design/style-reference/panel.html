@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl" data-theme="light">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>هومانا | پنل کلینیک</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root{
+    --bg:#E9E5DD; --ink:#2E2B26; --sub:#7A756B;
+    --sd:#C9C3B6; --sl:#FFFFFF; --bar:rgba(46,43,38,.13);
+  }
+  [data-theme="dark"]{
+    --bg:#262421; --ink:#EDE9E1; --sub:#A09A8E;
+    --sd:#1D1B18; --sl:#32302B; --bar:rgba(237,233,225,.13);
+  }
+  *{-webkit-tap-highlight-color:transparent}
+  body{background:var(--bg);color:var(--ink);font-family:'Vazirmatn',sans-serif;transition:background .3s,color .3s}
+  ::selection{background:rgba(13,148,136,.25)}
+  input::placeholder{color:var(--sub)}
+  .t-sub{color:var(--sub)}
+
+  .neu    {background:var(--bg);box-shadow:9px 9px 20px var(--sd),-9px -9px 20px var(--sl);transition:box-shadow .25s,transform .25s}
+  .neu-sm {background:var(--bg);box-shadow:5px 5px 12px var(--sd),-5px -5px 12px var(--sl);transition:.2s}
+  .neu-in {background:var(--bg);box-shadow:inset 5px 5px 10px var(--sd),inset -5px -5px 10px var(--sl)}
+  .lift:hover{transform:translateY(-3px);box-shadow:12px 14px 26px var(--sd),-12px -12px 26px var(--sl)}
+  .press:active{transform:translateY(0);box-shadow:inset 4px 4px 10px var(--sd),inset -4px -4px 10px var(--sl)}
+
+  .cta{background:linear-gradient(135deg,#14B8A6,#0D9488);color:#fff;
+       box-shadow:6px 6px 14px var(--sd),-6px -6px 14px var(--sl),0 8px 24px rgba(13,148,136,.35);transition:.25s}
+  .cta:hover{filter:brightness(1.06);transform:translateY(-2px)}
+  .cta:active{transform:translateY(0)}
+
+  .nav-item{transition:color .2s}
+  .nav-item:hover{color:var(--ink)}
+  .nav-item.active{box-shadow:inset 5px 5px 10px var(--sd),inset -5px -5px 10px var(--sl);color:#0D9488}
+  .mnav{transition:color .2s}
+  .mnav.active{color:#0D9488}
+
+  .pill{font-size:12px;font-weight:700;padding:5px 14px;border-radius:9999px;white-space:nowrap}
+  .pill-ok{background:rgba(16,185,129,.16);color:#059669}
+  .pill-wait{background:rgba(245,158,11,.18);color:#B45309}
+  .pill-no{background:rgba(239,68,68,.14);color:#DC2626}
+  .pill-info{background:rgba(13,148,136,.14);color:#0D9488}
+  [data-theme="dark"] .pill-ok{color:#34D399}
+  [data-theme="dark"] .pill-wait{color:#FBBF24}
+  [data-theme="dark"] .pill-no{color:#F87171}
+
+  /* چیپ فیلتر */
+  .chip{font-size:13px;font-weight:700;padding:8px 18px;border-radius:9999px;color:var(--sub);transition:.2s;cursor:pointer}
+  .chip.active{box-shadow:inset 4px 4px 9px var(--sd),inset -4px -4px 9px var(--sl);color:#0D9488}
+
+  /* سوییچ نیومورفیک */
+  .tgl{width:48px;height:26px;border-radius:9999px;position:relative;cursor:pointer;flex-shrink:0;
+       box-shadow:inset 4px 4px 8px var(--sd),inset -4px -4px 8px var(--sl);transition:.25s}
+  .tgl::after{content:'';position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:9999px;
+       background:var(--bg);box-shadow:2px 2px 6px var(--sd),-2px -2px 6px var(--sl);transition:.25s}
+  .tgl.on::after{transform:translateX(-22px);background:linear-gradient(135deg,#14B8A6,#0D9488)}
+
+  .glow{position:fixed;border-radius:9999px;filter:blur(100px);pointer-events:none;z-index:0;opacity:.20}
+  [data-theme="dark"] .glow{opacity:.09}
+
+  .bar{background:var(--bar);border-radius:14px 14px 6px 6px;transition:.3s}
+  .bar:hover{background:var(--sub)}
+  .bar-now{background:linear-gradient(180deg,#14B8A6,#0D9488);box-shadow:0 8px 20px rgba(13,148,136,.45)}
+  .bar-now:hover{background:linear-gradient(180deg,#14B8A6,#0D9488)}
+
+  [data-theme="dark"] .only-moon{display:none}
+  html:not([data-theme="dark"]) .only-sun{display:none}
+
+  table{border-collapse:collapse;width:100%}
+  th{font-size:12px;font-weight:700;color:var(--sub);text-align:right;padding:12px 16px}
+  td{padding:14px 16px;border-top:1px solid var(--bar);font-size:14px}
+  tbody tr{transition:background .15s}
+  tbody tr:hover{background:rgba(0,0,0,.03)}
+  [data-theme="dark"] tbody tr:hover{background:rgba(255,255,255,.03)}
+</style>
+</head>
+<body class="min-h-screen">
+
+<div class="glow" style="width:420px;height:420px;background:#14B8A6;top:-130px;left:-110px"></div>
+<div class="glow" style="width:380px;height:380px;background:#F59E0B;bottom:-150px;right:-130px;opacity:.15"></div>
+
+<!-- ================= سایدبار ================= -->
+<aside class="fixed top-0 right-0 bottom-0 w-[264px] hidden lg:flex flex-col p-5 z-20">
+  <div class="flex items-center gap-3 px-2 mb-8">
+    <div class="w-12 h-12 rounded-2xl cta flex items-center justify-center text-xl font-black">هـ</div>
+    <div>
+      <p class="font-extrabold text-lg leading-tight">هومانا</p>
+      <p class="text-xs t-sub">کلینیک سلامت پارس</p>
+    </div>
+  </div>
+
+  <nav class="flex flex-col gap-2 text-[15px] font-medium flex-1">
+    <a onclick="go('dashboard')" data-page="dashboard" class="nav-item active flex items-center gap-3 px-4 py-3 rounded-2xl cursor-pointer">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"/></svg>
+      داشبورد</a>
+    <a onclick="go('appointments')" data-page="appointments" class="nav-item flex items-center gap-3 px-4 py-3 rounded-2xl t-sub cursor-pointer">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+      نوبت‌ها</a>
+    <a onclick="go('patients')" data-page="patients" class="nav-item flex items-center gap-3 px-4 py-3 rounded-2xl t-sub cursor-pointer">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      بیماران</a>
+    <a onclick="go('accounting')" data-page="accounting" class="nav-item flex items-center gap-3 px-4 py-3 rounded-2xl t-sub cursor-pointer">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></svg>
+      حسابداری</a>
+    <a onclick="go('settings')" data-page="settings" class="nav-item flex items-center gap-3 px-4 py-3 rounded-2xl t-sub cursor-pointer">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg>
+      تنظیمات</a>
+  </nav>
+
+  <div class="neu-in rounded-2xl flex items-center gap-3 p-3">
+    <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white" style="background:linear-gradient(135deg,#14B8A6,#0F766E)">س</div>
+    <div class="flex-1 min-w-0">
+      <p class="text-sm font-bold truncate">سارا محمدی</p>
+      <p class="text-[11px] t-sub">منشی کلینیک</p>
+    </div>
+    <button class="t-sub hover:text-red-500 transition">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5M21 12H9"/></svg>
+    </button>
+  </div>
+</aside>
+
+<!-- ================= محتوا ================= -->
+<main class="lg:mr-[264px] px-4 sm:px-6 lg:px-8 py-6 pb-28 lg:pb-8 relative z-10">
+
+  <!-- نوار بالا (مشترک) -->
+  <div class="flex items-center gap-4 mb-8">
+    <div class="neu-in rounded-2xl flex items-center gap-2 px-4 py-3 w-full max-w-sm">
+      <svg class="t-sub shrink-0" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <input class="bg-transparent outline-none text-sm w-full" placeholder="جستجو…">
+    </div>
+    <div class="flex-1"></div>
+    <button onclick="toggleTheme()" class="neu-sm press rounded-2xl p-3.5 t-sub hover:text-teal-600 transition">
+      <svg class="only-moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      <svg class="only-sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    </button>
+    <button class="neu-sm press rounded-2xl p-3.5 t-sub relative hover:text-teal-600 transition">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+      <span class="absolute top-2.5 left-2.5 w-2.5 h-2.5 rounded-full bg-amber-400 ring-2" style="--tw-ring-color:var(--bg)"></span>
+    </button>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- ===================== ۱) داشبورد ========================= -->
+  <!-- ============================================================ -->
+  <section id="page-dashboard" class="page">
+    <div class="flex flex-wrap items-center gap-4 mb-8">
+      <div class="flex-1 min-w-[240px]">
+        <h1 id="greet" class="text-2xl lg:text-3xl font-black">صبح بخیر، سارا 👋</h1>
+        <p class="t-sub text-sm mt-1.5"><span id="fdate"></span> · امروز <b class="text-teal-600">۴۸ نوبت</b> فعال داری</p>
+      </div>
+      <button onclick="go('appointments')" class="cta rounded-2xl px-6 py-3.5 font-bold flex items-center gap-2">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        نوبت جدید
+      </button>
+    </div>
+
+    <div class="grid grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-5 mb-6">
+      <div class="neu lift rounded-3xl p-5">
+        <div class="neu-in w-12 h-12 rounded-2xl flex items-center justify-center text-teal-600 mb-4">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+        </div>
+        <p class="text-3xl font-black">۴۸</p>
+        <p class="t-sub text-xs mt-1 mb-3">نوبت‌های امروز</p>
+        <span class="pill pill-ok">▲ ۱۲٪</span>
+      </div>
+      <div class="neu lift rounded-3xl p-5">
+        <div class="neu-in w-12 h-12 rounded-2xl flex items-center justify-center text-violet-500 mb-4">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <p class="text-3xl font-black">۱۹</p>
+        <p class="t-sub text-xs mt-1 mb-3">بیمار جدید</p>
+        <span class="pill pill-ok">▲ ۴٪</span>
+      </div>
+      <div class="neu lift rounded-3xl p-5">
+        <div class="neu-in w-12 h-12 rounded-2xl flex items-center justify-center text-amber-500 mb-4">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></svg>
+        </div>
+        <p class="text-3xl font-black">۱۲.۴م</p>
+        <p class="t-sub text-xs mt-1 mb-3">درآمد امروز (تومان)</p>
+        <span class="pill pill-ok">▲ ۸٪</span>
+      </div>
+      <div class="neu lift rounded-3xl p-5">
+        <div class="neu-in w-12 h-12 rounded-2xl flex items-center justify-center text-rose-500 mb-4">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+        </div>
+        <p class="text-3xl font-black">۴٪</p>
+        <p class="t-sub text-xs mt-1 mb-3">نرخ غیبت</p>
+        <span class="pill pill-ok">▼ ۲٪ بهبود</span>
+      </div>
+    </div>
+
+    <div class="grid lg:grid-cols-3 gap-4 lg:gap-5">
+      <!-- برنامه امروز -->
+      <div class="neu rounded-3xl p-6 lg:col-span-2">
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="font-extrabold text-lg">برنامه امروز</h2>
+          <a onclick="go('appointments')" class="text-sm font-bold text-teal-600 hover:opacity-70 transition cursor-pointer">همه نوبت‌ها ←</a>
+        </div>
+        <div class="divide-y" style="border-color:var(--bar)">
+          <div class="flex items-center gap-4 py-4">
+            <div class="neu-in rounded-xl px-3 py-2 text-sm font-extrabold w-16 text-center shrink-0">۰۹:۳۰</div>
+            <div class="w-11 h-11 rounded-full flex items-center justify-center font-bold text-white shrink-0" style="background:linear-gradient(135deg,#14B8A6,#0F766E)">ز</div>
+            <div class="flex-1 min-w-0"><p class="font-bold text-[15px]">زهرا محمدی</p><p class="text-xs t-sub mt-0.5">ویزیت عمومی · دکتر رضایی</p></div>
+            <span class="pill pill-ok">تأیید شد</span>
+          </div>
+          <div class="flex items-center gap-4 py-4">
+            <div class="neu-in rounded-xl px-3 py-2 text-sm font-extrabold w-16 text-center shrink-0">۱۰:۰۰</div>
+            <div class="w-11 h-11 rounded-full flex items-center justify-center font-bold text-white shrink-0" style="background:linear-gradient(135deg,#F59E0B,#D97706)">ع</div>
+            <div class="flex-1 min-w-0"><p class="font-bold text-[15px]">علی کریمی</p><p class="text-xs t-sub mt-0.5">کنترل فشار خون · دکتر احمدی</p></div>
+            <span class="pill pill-wait">در انتظار</span>
+          </div>
+          <div class="flex items-center gap-4 py-4">
+            <div class="neu-in rounded-xl px-3 py-2 text-sm font-extrabold w-16 text-center shrink-0">۱۰:۳۰</div>
+            <div class="w-11 h-11 rounded-full flex items-center justify-center font-bold text-white shrink-0" style="background:linear-gradient(135deg,#8B5CF6,#7C3AED)">م</div>
+            <div class="flex-1 min-w-0"><p class="font-bold text-[15px]">مریم حسینی</p><p class="text-xs t-sub mt-0.5">مشاوره تغذیه · دکتر نوری</p></div>
+            <span class="pill pill-ok">تأیید شد</span>
+          </div>
+          <div class="flex items-center gap-4 py-4">
+            <div class="neu-in rounded-xl px-3 py-2 text-sm font-extrabold w-16 text-center shrink-0">۱۱:۰۰</div>
+            <div class="w-11 h-11 rounded-full flex items-center justify-center font-bold text-white shrink-0" style="background:linear-gradient(135deg,#EC4899,#DB2777)">ح</div>
+            <div class="flex-1 min-w-0"><p class="font-bold text-[15px]">حسین رضایی</p><p class="text-xs t-sub mt-0.5">پیگیری آزمایش · دکتر رضایی</p></div>
+            <span class="pill pill-no">لغو شد</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- نمودار هفته -->
+      <div class="neu rounded-3xl p-6">
+        <h2 class="font-extrabold text-lg mb-1">نوبت‌های این هفته</h2>
+        <p class="t-sub text-xs mb-5">امروز <b class="text-teal-600">۸۰٪</b> ظرفیت تکمیل شده</p>
+        <div class="flex items-end justify-between gap-2.5 h-40">
+          <div class="flex flex-col items-center gap-2 flex-1 h-full justify-end"><div class="bar w-full" style="height:50%"></div><span class="text-[11px] t-sub">ش</span></div>
+          <div class="flex flex-col items-center gap-2 flex-1 h-full justify-end"><div class="bar w-full" style="height:75%"></div><span class="text-[11px] t-sub">ی</span></div>
+          <div class="flex flex-col items-center gap-2 flex-1 h-full justify-end"><div class="bar w-full" style="height:58%"></div><span class="text-[11px] t-sub">د</span></div>
+          <div class="flex flex-col items-center gap-2 flex-1 h-full justify-end"><div class="bar w-full" style="height:92%"></div><span class="text-[11px] t-sub">س</span></div>
+          <div class="flex flex-col items-center gap-2 flex-1 h-full justify-end"><div class="bar w-full" style="height:67%"></div><span class="text-[11px] t-sub">چ</span></div>
+          <div class="flex flex-col items-center gap-2 flex-1 h-full justify-end"><div class="bar bar-now w-full" style="height:100%"></div><span class="text-[11px] font-extrabold text-teal-600">پ</span></div>
+          <div class="flex flex-col items-center gap-2 flex-1 h-full justify-end"><div class="bar w-full" style="height:33%"></div><span class="text-[11px] t-sub">ج</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- ===================== ۲) نوبت‌ها ========================== -->
+  <!-- ============================================================ -->
+  <section id="page-appointments" class="page hidden">
+    <div class="flex flex-wrap items-center gap-4 mb-6">
+      <div class="flex-1 min-w-[240px]">
+        <h1 class="text-2xl lg:text-3xl font-black">نوبت‌ها</h1>
+        <p class="t-sub text-sm mt-1.5">سه‌شنبه، <span id="fdate2"></span></p>
+      </div>
+      <button class="cta rounded-2xl px-6 py-3.5 font-bold flex items-center gap-2">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        نوبت جدید
+      </button>
+    </div>
+
+    <!-- نوار روزهای هفته -->
+    <div class="neu rounded-3xl p-4 mb-5">
+      <div class="flex justify-between gap-2 overflow-x-auto">
+        <div class="flex flex-col items-center gap-2 neu-in rounded-2xl px-4 py-3 min-w-[56px]"><span class="text-[11px] t-sub">ش</span><span class="font-extrabold text-sm">۱۵</span><span class="w-1.5 h-1.5 rounded-full bg-transparent"></span></div>
+        <div class="flex flex-col items-center gap-2 neu-in rounded-2xl px-4 py-3 min-w-[56px]"><span class="text-[11px] t-sub">ی</span><span class="font-extrabold text-sm">۱۶</span><span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span></div>
+        <div class="flex flex-col items-center gap-2 neu-in rounded-2xl px-4 py-3 min-w-[56px]"><span class="text-[11px] t-sub">د</span><span class="font-extrabold text-sm">۱۷</span><span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span></div>
+        <div class="flex flex-col items-center gap-2 neu rounded-2xl px-4 py-3 min-w-[56px]"><span class="text-[11px] text-teal-600 font-bold">پ</span><span class="font-extrabold text-sm text-teal-600">۱۸</span><span class="w-1.5 h-1.5 rounded-full bg-teal-500"></span></div>
+        <div class="flex flex-col items-center gap-2 neu-in rounded-2xl px-4 py-3 min-w-[56px]"><span class="text-[11px] t-sub">چ</span><span class="font-extrabold text-sm">۱۹</span><span class="w-1.5 h-1.5 rounded-full bg-transparent"></span></div>
+        <div class="flex flex-col items-center gap-2 neu-in rounded-2xl px-4 py-3 min-w-[56px]"><span class="text-[11px] t-sub">ج</span><span class="font-extrabold text-sm">۲۰</span><span class="w-1.5 h-1.5 rounded-full bg-transparent"></span></div>
+      </div>
+    </div>
+
+    <!-- فیلترها -->
+    <div class="flex flex-wrap items-center gap-3 mb-5">
+      <span class="chip active" data-filter="all" onclick="setFilter(this)">همه (۴۸)</span>
+      <span class="chip" data-filter="wait" onclick="setFilter(this)">در انتظار (۱۲)</span>
+      <span class="chip" data-filter="ok" onclick="setFilter(this)">تأیید شده (۳۰)</span>
+      <span class="chip" data-filter="no" onclick="setFilter(this)">لغو شده (۶)</span>
+      <div class="flex-1"></div>
+      <button class="neu-sm press rounded-full px-5 py-2.5 text-sm font-bold t-sub flex items-center gap-2">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 3H2l8 9.46V19l4 2v-8.54z"/></svg>
+        فیلتر پیشرفته
+      </button>
+    </div>
+
+    <!-- لیست نوبت‌ها -->
+    <div class="neu rounded-3xl p-4 sm:p-6">
+      <div class="divide-y" style="border-color:var(--bar)">
+        <div class="apt flex flex-wrap sm:flex-nowrap items-center gap-3 sm:gap-4 py-4" data-status="wait">
+          <div class="neu-in rounded-xl px-3 py-2 text-sm font-extrabold w-16 text-center shrink-0">۰۹:۰۰</div>
+          <div class="w-11 h-11 rounded-full flex items-center justify-center font-bold text-white shrink-0" style="background:linear-gradient(135deg,#0EA5E9,#0284C7)">ن</div>
+          <div class="flex-1 min-w-[140px]"><p class="font-bold text-[15px]">ندا اکبری</p><p class="text-xs t-sub mt-0.5">ویزیت پوست · دکتر کریمی</p></div>
+          <span class="pill pill-wait">در انتظار</span>
+          <div class="flex gap-2 shrink-0">
+            <button class="neu-sm press rounded-xl p-2.5 text-emerald-500 hover:text-emerald-600" title="تأیید"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="m5 13 4 4L19 7"/></svg></button>
+            <button class="neu-sm press rounded-xl p-2.5 text-rose-400 hover:text-rose-600" title="لغو"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+          </div>
+        </div>
+        <div class="apt flex flex-wrap sm:flex-nowrap items-center gap-3 sm:gap-4 py-4" data-status="ok">
+          <div class="neu-in rounded-xl px-3 py-2 text-sm font-extrabold w-16 text-center shrink-0">۰۹:۳۰</div>
+          <div class="w-11 h-11 rounded-full flex items-center justify-center font-bold text-white shrink-0" style="background:linear-gradient(135deg,#14B8A6,#0F766E)">ز</div>
+          <div class="flex-1 min-w-[140px]"><p class="font-bold text-[15px]">زهرا محمدی</p><p class="text-xs t-sub mt-0.5">ویزیت عمومی · دکتر رضایی</p></div>
+          <span class="pill pill-ok">تأیید شد</span>
+          <div class="flex gap-2 shrink-0">
+            <button class="neu-sm press rounded-xl p-2.5 t-sub hover:text-teal-600" title="پرونده"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></button>
+            <button class="neu-sm press rounded-xl p-2.5 t-sub hover:text-rose-500" title="لغو"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+          </div>
+        </div>
+        <div class="apt flex flex-wrap sm:flex-nowrap items-center gap-3 sm:gap-4 py-4" data-status="wait">
+          <div class="neu-in rounded-xl px-3 py-2 text-sm font-extrabold w-16 text-center shrink-0">۱۰:۰۰</div>
+          <div class="w-11 h-11 rounded-full flex items-center justify-center font-bold text-white shrink-0" style="background:linear-gradient(135deg,#F59E0B,#D97706)">ع</div>
+          <div class="flex-1 min-w-[140px]"><p class="font-bold text-[15px]">علی کریمی</p><p class="text-xs t-sub mt-0.5">کنترل فشار خون · دکتر احمدی</p></div>
+          <span class="pill pill-wait">در انتظار</span>
+          <div class="flex gap-2 shrink-0">
+            <button class="neu-sm press rounded-xl p-2.5 text-emerald-500" title="تأیید"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="m5 13 4 4L19 7"/></svg></button>
+            <button class="neu-sm press rounded-xl p-2.5 text-rose-400" title="لغو"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+          </div>
+        </div>
+        <div class="apt flex flex-wrap sm:flex-nowrap items-center gap-3 sm:gap-4 py-4" data-status="no">
+          <div class="neu-in rounded-xl px-3 py-2 text-sm font-extrabold w-16 text-center shrink-0">۱۰:۳۰</div>
+          <div class="w-11 h-11 rounded-full flex items-center justify-center font-bold text-white shrink-0" style="background:linear-gradient(135deg,#EC4899,#DB2777)">ح</div>
+          <div class="flex-1 min-w-[140px]"><p class="font-bold text-[15px] line-through opacity-60">حسین رضایی</p><p class="text-xs t-sub mt-0.5">پیگیری آزمایش · دکتر رضایی</p></div>
+          <span class="pill pill-no">لغو شد</span>
+          <div class="flex gap-2 shrink-0">
+            <button class="neu-sm press rounded-xl p-2.5 t-sub hover:text-teal-600 text-xs font-bold px-3">بازآرایی</button>
+          </div>
+        </div>
+        <div class="apt flex flex-wrap sm:flex-nowrap items-center gap-3 sm:gap-4 py-4" data-status="ok">
+          <div class="neu-in rounded-xl px-3 py-2 text-sm font-extrabold w-16 text-center shrink-0">۱۱:۰۰</div>
+          <div class="w-11 h-11 rounded-full flex items-center justify-center font-bold text-white shrink-0" style="background:linear-gradient(135deg,#8B5CF6,#7C3AED)">م</div>
+          <div class="flex-1 min-w-[140px]"><p class="font-bold text-[15px]">مریم حسینی</p><p class="text-xs t-sub mt-0.5">مشاوره تغذیه · دکتر نوری</p></div>
+          <span class="pill pill-ok">تأیید شد</span>
+          <div class="flex gap-2 shrink-0">
+            <button class="neu-sm press rounded-xl p-2.5 t-sub hover:text-teal-600" title="پرونده"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></button>
+            <button class="neu-sm press rounded-xl p-2.5 t-sub hover:text-rose-500" title="لغو"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+          </div>
+        </div>
+      </div>
+      <div class="flex items-center justify-between mt-6 pt-5" style="border-top:1px solid var(--bar)">
+        <p class="t-sub text-xs">نمایش ۱ تا ۵ از ۴۸ نوبت</p>
+        <div class="flex gap-2">
+          <button class="neu-sm press rounded-xl px-4 py-2 text-sm font-bold t-sub">قبلی</button>
+          <button class="neu-in rounded-xl px-4 py-2 text-sm font-bold text-teal-600">۱</button>
+          <button class="neu-sm press rounded-xl px-4 py-2 text-sm font-bold t-sub">۲</button>
+          <button class="neu-sm press rounded-xl px-4 py-2 text-sm font-bold t-sub">بعدی</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- ===================== ۳) بیماران ========================== -->
+  <!-- ============================================================ -->
+  <section id="page-patients" class="page hidden">
+    <div class="flex flex-wrap items-center gap-4 mb-6">
+      <div class="flex-1 min-w-[240px]">
+        <h1 class="text-2xl lg:text-3xl font-black">بیماران</h1>
+        <p class="t-sub text-sm mt-1.5">۲٫۸۴۰ بیمار ثبت‌شده در کلینیک شما</p>
+      </div>
+      <button class="cta rounded-2xl px-6 py-3.5 font-bold flex items-center gap-2">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        بیمار جدید
+      </button>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-3 mb-5">
+      <div class="neu-in rounded-full flex items-center gap-2 px-4 py-2.5 w-full max-w-xs">
+        <svg class="t-sub shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input class="bg-transparent outline-none text-sm w-full" placeholder="جستجوی نام یا شماره تماس…">
+      </div>
+      <span class="chip active">همه</span>
+      <span class="chip">بیماران دائم</span>
+      <span class="chip">جدید این ماه</span>
+    </div>
+
+    <div class="neu rounded-3xl p-4 sm:p-6 overflow-x-auto">
+      <table class="min-w-[640px]">
+        <thead><tr>
+          <th>بیمار</th><th>شماره تماس</th><th>آخرین مراجعه</th><th>تعداد مراجعه</th><th>وضعیت</th><th></th>
+        </tr></thead>
+        <tbody>
+          <tr>
+            <td><div class="flex items-center gap-3"><div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white" style="background:linear-gradient(135deg,#14B8A6,#0F766E)">ز</div><div><p class="font-bold">زهرا محمدی</p><p class="text-[11px] t-sub">زن · ۳۴ ساله</p></div></div></td>
+            <td class="t-sub">۰۹۱۲۳۴۵۶۷۸۹</td>
+            <td class="t-sub">۲ روز پیش</td>
+            <td class="font-bold">۱۴ بار</td>
+            <td><span class="pill pill-ok">بیمار دائم</span></td>
+            <td><button class="neu-sm press rounded-xl p-2.5 t-sub hover:text-teal-600" title="پرونده"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button></td>
+          </tr>
+          <tr>
+            <td><div class="flex items-center gap-3"><div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white" style="background:linear-gradient(135deg,#F59E0B,#D97706)">ع</div><div><p class="font-bold">علی کریمی</p><p class="text-[11px] t-sub">مرد · ۵۱ ساله</p></div></div></td>
+            <td class="t-sub">۰۹۳۵۱۲۳۴۵۶۷</td>
+            <td class="t-sub">امروز</td>
+            <td class="font-bold">۸ بار</td>
+            <td><span class="pill pill-info">پیگیری فشار خون</span></td>
+            <td><button class="neu-sm press rounded-xl p-2.5 t-sub hover:text-teal-600"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button></td>
+          </tr>
+          <tr>
+            <td><div class="flex items-center gap-3"><div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white" style="background:linear-gradient(135deg,#8B5CF6,#7C3AED)">م</div><div><p class="font-bold">مریم حسینی</p><p class="text-[11px] t-sub">زن · ۲۸ ساله</p></div></div></td>
+            <td class="t-sub">۰۹۰۱۹۸۷۶۵۴۳</td>
+            <td class="t-sub">۱ هفته پیش</td>
+            <td class="font-bold">۳ بار</td>
+            <td><span class="pill pill-wait">در حال درمان</span></td>
+            <td><button class="neu-sm press rounded-xl p-2.5 t-sub hover:text-teal-600"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button></td>
+          </tr>
+          <tr>
+            <td><div class="flex items-center gap-3"><div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white" style="background:linear-gradient(135deg,#0EA5E9,#0284C7)">ن</div><div><p class="font-bold">ندا اکبری</p><p class="text-[11px] t-sub">زن · ۴۲ ساله</p></div></div></td>
+            <td class="t-sub">۰۹۱۲۷۷۷۸۸۹۹</td>
+            <td class="t-sub">۳ هفته پیش</td>
+            <td class="font-bold">۱ بار</td>
+            <td><span class="pill" style="background:var(--bar);color:var(--sub)">جدید</span></td>
+            <td><button class="neu-sm press rounded-xl p-2.5 t-sub hover:text-teal-600"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button></td>
+          </tr>
+          <tr>
+            <td><div class="flex items-center gap-3"><div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white" style="background:linear-gradient(135deg,#EC4899,#DB2777)">ح</div><div><p class="font-bold">حسین رضایی</p><p class="text-[11px] t-sub">مرد · ۶۳ ساله</p></div></div></td>
+            <td class="t-sub">۰۹۱۹۴۵۶۱۲۳۴</td>
+            <td class="t-sub">۱ ماه پیش</td>
+            <td class="font-bold">۵ بار</td>
+            <td><span class="pill pill-no">غیرفعال</span></td>
+            <td><button class="neu-sm press rounded-xl p-2.5 t-sub hover:text-teal-600"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button></td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="flex items-center justify-between mt-5 pt-5" style="border-top:1px solid var(--bar)">
+        <p class="t-sub text-xs">نمایش ۱ تا ۵ از ۲٫۸۴۰ بیمار</p>
+        <div class="flex gap-2">
+          <button class="neu-sm press rounded-xl px-4 py-2 text-sm font-bold t-sub">قبلی</button>
+          <button class="neu-in rounded-xl px-4 py-2 text-sm font-bold text-teal-600">۱</button>
+          <button class="neu-sm press rounded-xl px-4 py-2 text-sm font-bold t-sub">بعدی</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- ==================== ۴) حسابداری ========================== -->
+  <!-- ============================================================ -->
+  <section id="page-accounting" class="page hidden">
+    <div class="flex flex-wrap items-center gap-4 mb-6">
+      <div class="flex-1 min-w-[240px]">
+        <h1 class="text-2xl lg:text-3xl font-black">حسابداری</h1>
+        <p class="t-sub text-sm mt-1.5">آبان ۱۴۰۴</p>
+      </div>
+      <button class="neu press rounded-2xl px-6 py-3.5 font-bold t-sub hover:text-teal-600 transition flex items-center gap-2">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+        گزارش اکسل
+      </button>
+    </div>
+
+    <div class="grid grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-5 mb-6">
+      <div class="neu lift rounded-3xl p-5">
+        <p class="t-sub text-xs mb-2">درآمد این ماه</p>
+        <p class="text-2xl xl:text-3xl font-black">۱۸۶.۲م</p>
+        <p class="t-sub text-[11px] mt-1 mb-3">تومان</p>
+        <span class="pill pill-ok">▲ ۱۵٪</span>
+      </div>
+      <div class="neu lift rounded-3xl p-5">
+        <p class="t-sub text-xs mb-2">دریافتی امروز</p>
+        <p class="text-2xl xl:text-3xl font-black">۱۲.۴م</p>
+        <p class="t-sub text-[11px] mt-1 mb-3">تومان</p>
+        <span class="pill pill-ok">▲ ۸٪</span>
+      </div>
+      <div class="neu lift rounded-3xl p-5">
+        <p class="t-sub text-xs mb-2">در انتظار دریافت</p>
+        <p class="text-2xl xl:text-3xl font-black">۷.۸م</p>
+        <p class="t-sub text-[11px] mt-1 mb-3">۷ فاکتور باز</p>
+        <span class="pill pill-wait">پیگیری</span>
+      </div>
+      <div class="neu lift rounded-3xl p-5">
+        <p class="t-sub text-xs mb-2">میانگین هر نوبت</p>
+        <p class="text-2xl xl:text-3xl font-black">۴۲۰هزار</p>
+        <p class="t-sub text-[11px] mt-1 mb-3">تومان</p>
+        <span class="pill pill-info">ثابت</span>
+      </div>
+    </div>
+
+    <div class="grid lg:grid-cols-3 gap-4 lg:gap-5 mb-6">
+      <!-- نمودار درآمد ۶ ماه -->
+      <div class="neu rounded-3xl p-6">
+        <h2 class="font-extrabold text-lg mb-1">درآمد ۶ ماه اخیر</h2>
+        <p class="t-sub text-xs mb-5">میلیون تومان</p>
+        <div class="flex items-end justify-between gap-2.5 h-40">
+          <div class="flex flex-col items-center gap-2 flex-1 h-full justify-end"><div class="bar w-full" style="height:55%"></div><span class="text-[11px] t-sub">شهر</span></div>
+          <div class="flex flex-col items-center gap-2 flex-1 h-full justify-end"><div class="bar w-full" style="height:70%"></div><span class="text-[11px] t-sub">مهر</span></div>
+          <div class="flex flex-col items-center gap-2 flex-1 h-full justify-end"><div class="bar w-full" style="height:62%"></div><span class="text-[11px] t-sub">آبان</span></div>
+          <div class="flex flex-col items-center gap-2 flex-1 h-full justify-end"><div class="bar w-full" style="height:80%"></div><span class="text-[11px] t-sub">آذر</span></div>
+          <div class="flex flex-col items-center gap-2 flex-1 h-full justify-end"><div class="bar w-full" style="height:74%"></div><span class="text-[11px] t-sub">دی</span></div>
+          <div class="flex flex-col items-center gap-2 flex-1 h-full justify-end"><span class="neu-in text-[11px] font-bold text-teal-600 px-2 py-0.5 rounded-lg mb-1">۱۸۶</span><div class="bar bar-now w-full" style="height:100%"></div><span class="text-[11px] font-extrabold text-teal-600">بهمن</span></div>
+        </div>
+      </div>
+
+      <!-- روش‌های پرداخت -->
+      <div class="neu rounded-3xl p-6 lg:col-span-2">
+        <h2 class="font-extrabold text-lg mb-5">روش‌های پرداخت این ماه</h2>
+        <div class="space-y-4">
+          <div>
+            <div class="flex justify-between text-sm mb-2"><span class="font-bold">درگاه آنلاین</span><span class="t-sub">۴۵٪ · ۸۳.۸م</span></div>
+            <div class="neu-in rounded-full h-3.5 overflow-hidden"><div class="h-full rounded-full" style="width:45%;background:linear-gradient(90deg,#14B8A6,#0D9488)"></div></div>
+          </div>
+          <div>
+            <div class="flex justify-between text-sm mb-2"><span class="font-bold">کارت‌خوان مطب</span><span class="t-sub">۳۵٪ · ۶۵.۲م</span></div>
+            <div class="neu-in rounded-full h-3.5 overflow-hidden"><div class="h-full rounded-full" style="width:35%;background:linear-gradient(90deg,#F59E0B,#D97706)"></div></div>
+          </div>
+          <div>
+            <div class="flex justify-between text-sm mb-2"><span class="font-bold">نقدی</span><span class="t-sub">۲۰٪ · ۳۷.۲م</span></div>
+            <div class="neu-in rounded-full h-3.5 overflow-hidden"><div class="h-full rounded-full" style="width:20%;background:linear-gradient(90deg,#8B5CF6,#7C3AED)"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- تراکنش‌ها -->
+    <div class="neu rounded-3xl p-4 sm:p-6 overflow-x-auto">
+      <div class="flex flex-wrap items-center gap-3 mb-4">
+        <h2 class="font-extrabold text-lg">آخرین تراکنش‌ها</h2>
+        <div class="flex-1"></div>
+        <span class="chip active">همه</span>
+        <span class="chip">پرداخت‌شده</span>
+        <span class="chip">در انتظار</span>
+      </div>
+      <table class="min-w-[640px]">
+        <thead><tr><th>بیمار</th><th>شرح</th><th>مبلغ (تومان)</th><th>روش</th><th>وضعیت</th><th>تاریخ</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="font-bold">زهرا محمدی</td><td class="t-sub">ویزیت عمومی</td><td class="font-extrabold">۳۵۰٫۰۰۰</td>
+            <td><span class="pill pill-info">آنلاین</span></td><td><span class="pill pill-ok">پرداخت شد</span></td><td class="t-sub">امروز</td>
+          </tr>
+          <tr>
+            <td class="font-bold">علی کریمی</td><td class="t-sub">کنترل فشار خون</td><td class="font-extrabold">۴۵۰٫۰۰۰</td>
+            <td><span class="pill" style="background:var(--bar);color:var(--sub)">کارت‌خوان</span></td><td><span class="pill pill-ok">پرداخت شد</span></td><td class="t-sub">امروز</td>
+          </tr>
+          <tr>
+            <td class="font-bold">مریم حسینی</td><td class="t-sub">مشاوره تغذیه</td><td class="font-extrabold">۴۰۰٫۰۰۰</td>
+            <td><span class="pill pill-info">آنلاین</span></td><td><span class="pill pill-wait">در انتظار</span></td><td class="t-sub">امروز</td>
+          </tr>
+          <tr>
+            <td class="font-bold">ندا اکبری</td><td class="t-sub">ویزیت پوست</td><td class="font-extrabold">۵۵۰٫۰۰۰</td>
+            <td><span class="pill" style="background:var(--bar);color:var(--sub)">نقدی</span></td><td><span class="pill pill-ok">پرداخت شد</span></td><td class="t-sub">دیروز</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- ==================== ۵) تنظیمات =========================== -->
+  <!-- ============================================================ -->
+  <section id="page-settings" class="page hidden">
+    <div class="flex flex-wrap items-center gap-4 mb-6">
+      <div class="flex-1 min-w-[240px]">
+        <h1 class="text-2xl lg:text-3xl font-black">تنظیمات</h1>
+        <p class="t-sub text-sm mt-1.5">مدیریت کلینیک، ساعات کاری، خدمات و کاربران</p>
+      </div>
+      <button class="cta rounded-2xl px-6 py-3.5 font-bold">ذخیره تغییرات</button>
+    </div>
+
+    <div class="grid lg:grid-cols-3 gap-4 lg:gap-5">
+
+      <!-- ستون راست -->
+      <div class="flex flex-col gap-4 lg:gap-5 lg:col-span-2">
+        <!-- اطلاعات کلینیک -->
+        <div class="neu rounded-3xl p-6">
+          <h2 class="font-extrabold text-lg mb-5">اطلاعات کلینیک</h2>
+          <div class="grid sm:grid-cols-2 gap-4">
+            <div>
+              <label class="text-xs t-sub font-bold block mb-2">نام کلینیک</label>
+              <input class="neu-in rounded-2xl px-4 py-3 text-sm outline-none w-full bg-transparent" value="کلینیک سلامت پارس">
+            </div>
+            <div>
+              <label class="text-xs t-sub font-bold block mb-2">شماره تماس</label>
+              <input class="neu-in rounded-2xl px-4 py-3 text-sm outline-none w-full bg-transparent" value="۰۲۱-۸۸۷۷۶۶۵۵">
+            </div>
+            <div>
+              <label class="text-xs t-sub font-bold block mb-2">آدرس</label>
+              <input class="neu-in rounded-2xl px-4 py-3 text-sm outline-none w-full bg-transparent" value="تهران، سعادت‌آباد، بلوار دریا">
+            </div>
+            <div>
+              <label class="text-xs t-sub font-bold block mb-2">لینک اختصاصی رزرو</label>
+              <input class="neu-in rounded-2xl px-4 py-3 text-sm outline-none w-full bg-transparent" value="hoomana.ir/salamat-pars" dir="ltr">
+            </div>
+          </div>
+        </div>
+
+        <!-- ساعات کاری -->
+        <div class="neu rounded-3xl p-6">
+          <h2 class="font-extrabold text-lg mb-5">ساعات کاری</h2>
+          <div class="divide-y" style="border-color:var(--bar)">
+            <div class="flex items-center gap-4 py-3.5">
+              <span class="font-bold text-sm w-20">شنبه</span>
+              <span class="neu-in rounded-xl px-3 py-1.5 text-xs font-bold t-sub">۰۹:۰۰ — ۲۱:۰۰</span>
+              <div class="flex-1"></div>
+              <div class="tgl on" onclick="this.classList.toggle('on')"></div>
+            </div>
+            <div class="flex items-center gap-4 py-3.5">
+              <span class="font-bold text-sm w-20">یکشنبه</span>
+              <span class="neu-in rounded-xl px-3 py-1.5 text-xs font-bold t-sub">۰۹:۰۰ — ۲۱:۰۰</span>
+              <div class="flex-1"></div>
+              <div class="tgl on" onclick="this.classList.toggle('on')"></div>
+            </div>
+            <div class="flex items-center gap-4 py-3.5">
+              <span class="font-bold text-sm w-20">دوشنبه</span>
+              <span class="neu-in rounded-xl px-3 py-1.5 text-xs font-bold t-sub">۱۴:۰۰ — ۲۱:۰۰</span>
+              <div class="flex-1"></div>
+              <div class="tgl on" onclick="this.classList.toggle('on')"></div>
+            </div>
+            <div class="flex items-center gap-4 py-3.5">
+              <span class="font-bold text-sm w-20">جمعه</span>
+              <span class="t-sub text-xs">تعطیل</span>
+              <div class="flex-1"></div>
+              <div class="tgl" onclick="this.classList.toggle('on')"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- خدمات و تعرفه -->
+        <div class="neu rounded-3xl p-6">
+          <div class="flex items-center justify-between mb-5">
+            <h2 class="font-extrabold text-lg">خدمات و تعرفه‌ها</h2>
+            <button class="neu-sm press rounded-full px-4 py-2 text-xs font-bold text-teal-600 flex items-center gap-1.5">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+              خدمت جدید
+            </button>
+          </div>
+          <div class="divide-y" style="border-color:var(--bar)">
+            <div class="flex items-center gap-4 py-3.5">
+              <div class="neu-in w-10 h-10 rounded-xl flex items-center justify-center text-teal-600 shrink-0"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
+              <div class="flex-1"><p class="font-bold text-sm">ویزیت عمومی</p><p class="text-[11px] t-sub">۲۰ دقیقه</p></div>
+              <span class="neu-in rounded-xl px-3 py-1.5 text-xs font-extrabold">۳۵۰٫۰۰۰</span>
+              <button class="t-sub hover:text-teal-600 transition"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/></svg></button>
+            </div>
+            <div class="flex items-center gap-4 py-3.5">
+              <div class="neu-in w-10 h-10 rounded-xl flex items-center justify-center text-violet-500 shrink-0"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
+              <div class="flex-1"><p class="font-bold text-sm">ویزیت تخصصی</p><p class="text-[11px] t-sub">۳۰ دقیقه</p></div>
+              <span class="neu-in rounded-xl px-3 py-1.5 text-xs font-extrabold">۵۵۰٫۰۰۰</span>
+              <button class="t-sub hover:text-teal-600 transition"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/></svg></button>
+            </div>
+            <div class="flex items-center gap-4 py-3.5">
+              <div class="neu-in w-10 h-10 rounded-xl flex items-center justify-center text-amber-500 shrink-0"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
+              <div class="flex-1"><p class="font-bold text-sm">مشاوره تغذیه</p><p class="text-[11px] t-sub">۳۰ دقیقه</p></div>
+              <span class="neu-in rounded-xl px-3 py-1.5 text-xs font-extrabold">۴۰۰٫۰۰۰</span>
+              <button class="t-sub hover:text-teal-600 transition"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/></svg></button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ستون چپ -->
+      <div class="flex flex-col gap-4 lg:gap-5">
+        <!-- اشتراک -->
+        <div class="neu rounded-3xl p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="font-extrabold text-lg">اشتراک</h2>
+            <span class="pill pill-ok">فعال</span>
+          </div>
+          <p class="text-2xl font-black mb-1">پلن کلینیک</p>
+          <p class="t-sub text-xs mb-5">تمدید خودکار · ۱۸ آبان ۱۴۰۴</p>
+          <div class="flex justify-between text-xs mb-2"><span class="t-sub">پیامک‌های این ماه</span><span class="font-extrabold">۳۴۰ از ۵۰۰</span></div>
+          <div class="neu-in rounded-full h-3.5 overflow-hidden mb-5"><div class="h-full rounded-full" style="width:68%;background:linear-gradient(90deg,#14B8A6,#0D9488)"></div></div>
+          <button class="neu-sm press rounded-2xl w-full py-3 text-sm font-bold text-teal-600">ارتقای پلن</button>
+        </div>
+
+        <!-- کاربران -->
+        <div class="neu rounded-3xl p-6 flex-1">
+          <h2 class="font-extrabold text-lg mb-5">کاربران و دسترسی‌ها</h2>
+          <div class="flex flex-col gap-4">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white" style="background:linear-gradient(135deg,#14B8A6,#0F766E)">س</div>
+              <div class="flex-1 min-w-0"><p class="text-sm font-bold truncate">سارا محمدی</p><p class="text-[11px] t-sub">دسترسی کامل</p></div>
+              <span class="pill pill-info">مدیر کلینیک</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white" style="background:linear-gradient(135deg,#F59E0B,#D97706)">ر</div>
+              <div class="flex-1 min-w-0"><p class="text-sm font-bold truncate">دکتر رضا رضایی</p><p class="text-[11px] t-sub">تقویم خودش + پرونده</p></div>
+              <span class="pill pill-ok">پزشک</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white" style="background:linear-gradient(135deg,#8B5CF6,#7C3AED)">ن</div>
+              <div class="flex-1 min-w-0"><p class="text-sm font-bold truncate">نگار توکلی</p><p class="text-[11px] t-sub">فقط نوبت‌ها</p></div>
+              <span class="pill pill-wait">منشی</span>
+            </div>
+          </div>
+          <button class="neu-sm press rounded-2xl w-full py-3 text-sm font-bold t-sub hover:text-teal-600 transition mt-6">افزودن کاربر</button>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- ================= ناوبری موبایل ================= -->
+<nav class="lg:hidden fixed bottom-3 left-3 right-3 z-30 neu-sm rounded-[28px] px-3 py-3 flex justify-between">
+  <a onclick="go('dashboard')" data-page="dashboard" class="mnav active flex flex-col items-center gap-1 cursor-pointer w-1/5">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"/></svg>
+    <span class="text-[10px] font-bold">داشبورد</span></a>
+  <a onclick="go('appointments')" data-page="appointments" class="mnav flex flex-col items-center gap-1 t-sub cursor-pointer w-1/5">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+    <span class="text-[10px]">نوبت‌ها</span></a>
+  <a onclick="go('patients')" data-page="patients" class="mnav flex flex-col items-center gap-1 t-sub cursor-pointer w-1/5">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    <span class="text-[10px]">بیماران</span></a>
+  <a onclick="go('accounting')" data-page="accounting" class="mnav flex flex-col items-center gap-1 t-sub cursor-pointer w-1/5">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></svg>
+    <span class="text-[10px]">حسابداری</span></a>
+  <a onclick="go('settings')" data-page="settings" class="mnav flex flex-col items-center gap-1 t-sub cursor-pointer w-1/5">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg>
+    <span class="text-[10px]">تنظیمات</span></a>
+</nav>
+
+<script>
+  // ===== ناوبری بین صفحات =====
+  function go(page){
+    document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));
+    document.getElementById('page-'+page).classList.remove('hidden');
+    document.querySelectorAll('[data-page]').forEach(n=>n.classList.toggle('active',n.dataset.page===page));
+    window.scrollTo({top:0});
+  }
+
+  // ===== فیلتر نوبت‌ها =====
+  function setFilter(chip){
+    document.querySelectorAll('#page-appointments .chip').forEach(c=>c.classList.remove('active'));
+    chip.classList.add('active');
+    const f=chip.dataset.filter;
+    document.querySelectorAll('#page-appointments .apt').forEach(r=>{
+      r.style.display=(f==='all'||r.dataset.status===f)?'flex':'none';
+    });
+  }
+
+  // ===== تاریخ و سلام =====
+  try{
+    const d=new Intl.DateTimeFormat('fa-IR',{dateStyle:'full'}).format(new Date());
+    document.getElementById('fdate').textContent=d;
+    document.getElementById('fdate2').textContent=d;
+  }catch(e){}
+  const h=new Date().getHours();
+  document.getElementById('greet').textContent=(h<12?'صبح بخیر':h<17?'ظهر بخیر':h<21?'عصر بخیر':'شب بخیر')+'، سارا 👋';
+
+  // ===== تم =====
+  function toggleTheme(){const r=document.documentElement;r.dataset.theme=r.dataset.theme==='dark'?'light':'dark';}
+</script>
+</body>
+</html>

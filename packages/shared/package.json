@@ -1,0 +1,30 @@
+{
+  "name": "@hmn/shared",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Cross-cutting runtime concerns: environment loading, logging, errors and Redis.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "tsc -b --clean"
+  },
+  "dependencies": {
+    "@hmn/validation": "*",
+    "ioredis": "^6.0.0",
+    "pino": "^10.4.0"
+  },
+  "devDependencies": {
+    "pino-pretty": "^13.2.0"
+  }
+}
