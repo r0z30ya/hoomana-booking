@@ -1,6 +1,7 @@
 import { checkDatabase, createDatabaseClient } from '@hmn/db';
 import {
   createLogger,
+  base32Decode,
   hashPassword,
   loadEnvironment,
   mfaConfigFromEnvironment,
@@ -36,7 +37,11 @@ const app = buildServer({
     database: () => Promise.resolve({ dependency: 'database', status: 'ok', latencyMs: 1 }),
     redis: () => Promise.resolve({ dependency: 'redis', status: 'ok', latencyMs: 1 }),
   },
-  platform: { client: platform, ...(mfa === undefined ? {} : { mfa }) },
+  platform: {
+    client: platform,
+    smsEncryption: { key: Buffer.alloc(32, 7), keyVersion: 1 },
+    ...(mfa === undefined ? {} : { mfa }),
+  },
 });
 
 const dbAvailable = (await checkDatabase(platform, 3_000)).status === 'ok';
@@ -79,8 +84,22 @@ describe('platform admin routes', () => {
       payload: { mobile: adminMobile, password: 'platform-test-passphrase' },
     });
     expect(first.statusCode).toBe(200);
-    const enrollment = first.json() as { enrollmentToken: string; secret: string };
-    const secret = Buffer.from(enrollment.secret, 'base64');
+    const enrollment = first.json<{
+      enrollmentToken: string;
+      secret: string;
+      otpauthUri: string;
+    }>();
+    expect(new URL(enrollment.otpauthUri).searchParams.get('secret')).toBe(enrollment.secret);
+    const secret = base32Decode(enrollment.secret);
+    expect(secret).toBeDefined();
+    if (secret === undefined) throw new Error('Invalid TOTP secret');
+    const wrongCode = await app.inject({
+      method: 'POST',
+      url: '/platform/auth/enroll',
+      payload: { enrollmentToken: enrollment.enrollmentToken, code: 'invalid' },
+    });
+    expect(wrongCode.statusCode).toBe(401);
+    expect(wrongCode.json<{ error: { code: string } }>().error.code).toBe('MFA_FAILED');
     const enroll = await app.inject({
       method: 'POST',
       url: '/platform/auth/enroll',
@@ -102,7 +121,23 @@ describe('platform admin routes', () => {
       },
     });
     expect(created.statusCode).toBe(201);
-    tenantId = (created.json() as { account: { tenantId: string } }).account.tenantId;
+    tenantId = created.json<{ account: { tenantId: string } }>().account.tenantId;
+
+    const domain = await app.inject({
+      method: 'POST',
+      url: `/platform/accounts/${tenantId}/domains`,
+      headers: { cookie },
+      payload: { hostname: `clinic-${run}.example.com` },
+    });
+    expect(domain.statusCode).toBe(200);
+    const sms = await app.inject({
+      method: 'POST',
+      url: `/platform/accounts/${tenantId}/sms`,
+      headers: { cookie },
+      payload: { panelRef: 'secret-panel-reference-1234', sender: '50001234' },
+    });
+    expect(sms.statusCode).toBe(200);
+    expect(sms.body).not.toContain('secret-panel-reference-1234');
 
     const listed = await app.inject({
       method: 'GET',
@@ -111,9 +146,9 @@ describe('platform admin routes', () => {
     });
     expect(listed.statusCode).toBe(200);
     expect(
-      (listed.json() as { accounts: Array<{ id: string }> }).accounts.some(
-        (item) => item.id === tenantId,
-      ),
+      listed
+        .json<{ accounts: Array<{ id: string }> }>()
+        .accounts.some((item) => item.id === tenantId),
     ).toBe(true);
 
     const suspended = await app.inject({
@@ -130,10 +165,10 @@ describe('platform admin routes', () => {
       headers: { cookie },
     });
     expect(detail.statusCode).toBe(200);
-    expect(
-      (detail.json() as { account: { state: string }; activity: unknown[] }).account.state,
-    ).toBe('SUSPENDED');
-    expect((detail.json() as { activity: unknown[] }).activity.length).toBeGreaterThan(0);
+    expect(detail.json<{ account: { state: string }; activity: unknown[] }>().account.state).toBe(
+      'SUSPENDED',
+    );
+    expect(detail.json<{ activity: unknown[] }>().activity.length).toBeGreaterThan(0);
 
     const subscription = await app.inject({
       method: 'POST',

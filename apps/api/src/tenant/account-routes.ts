@@ -1,37 +1,20 @@
 import { randomBytes, randomUUID } from 'node:crypto';
+import { resolveTxt } from 'node:dns/promises';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import {
-  findSessionByTokenHash,
-  hashToken,
-  recordAuditEvent,
-  type PrismaClient,
-  withTenantTx,
-} from '@hmn/db';
+import { recordAuditEvent, type PrismaClient, withTenantTx } from '@hmn/db';
 import {
   ConflictError,
   ForbiddenError,
   NotFoundError,
   UnauthorizedError,
   ValidationError,
-  decryptSecret,
-  encryptSecret,
   type SecretEncryptionConfig,
 } from '@hmn/shared';
 import { normalizeHostname } from '@hmn/validation';
-import { SESSION_COOKIE_NAME } from '../auth/auth-service.js';
+import { currentSession } from '../auth/session.js';
 
 interface DomainBody {
   readonly hostname?: unknown;
-}
-
-interface VerifyDomainBody {
-  readonly token?: unknown;
-}
-
-interface SmsBody {
-  readonly provider?: unknown;
-  readonly panelRef?: unknown;
-  readonly sender?: unknown;
 }
 
 interface SubscriptionBody {
@@ -42,6 +25,7 @@ interface SubscriptionBody {
 export interface TenantAccountRoutesOptions {
   readonly client: PrismaClient;
   readonly smsEncryption?: SecretEncryptionConfig;
+  readonly customDomainsEnabled?: boolean;
 }
 
 function isNonEmptyString(value: unknown): value is string {
@@ -50,6 +34,25 @@ function isNonEmptyString(value: unknown): value is string {
 
 function isOwnerRole(role: string): boolean {
   return role === 'OWNER';
+}
+
+function mayUseCustomDomain(
+  subscription: {
+    status: string;
+    currentPeriodStart: Date;
+    currentPeriodEnd: Date;
+    plan: { tier: string; isActive: boolean };
+  } | null,
+): boolean {
+  const now = new Date();
+  return (
+    subscription !== null &&
+    subscription.status === 'ACTIVE' &&
+    subscription.plan.tier !== 'FREE' &&
+    subscription.plan.isActive &&
+    subscription.currentPeriodStart <= now &&
+    subscription.currentPeriodEnd > now
+  );
 }
 
 function validHostname(raw: unknown): string {
@@ -70,16 +73,6 @@ function validHostname(raw: unknown): string {
   return hostname;
 }
 
-function panelSender(raw: unknown): string {
-  if (!isNonEmptyString(raw) || !/^\d{5,20}$/.test(raw.trim())) {
-    throw new ValidationError('A valid SMS sender line is required', {
-      code: 'SMS_SENDER_INVALID',
-    });
-  }
-
-  return raw.trim();
-}
-
 function subscriptionTier(raw: unknown): 'FREE' | 'STARTER' | 'PRO' | 'BUSINESS' | 'ENTERPRISE' {
   if (
     raw !== 'FREE' &&
@@ -92,20 +85,6 @@ function subscriptionTier(raw: unknown): 'FREE' | 'STARTER' | 'PRO' | 'BUSINESS'
   }
 
   return raw;
-}
-
-async function currentSession(client: PrismaClient, request: FastifyRequest) {
-  const raw = request.cookies[SESSION_COOKIE_NAME];
-  if (!isNonEmptyString(raw)) return undefined;
-
-  const session = await findSessionByTokenHash(client, hashToken(raw));
-  if (session === undefined || session.revokedAt !== null) return undefined;
-
-  const now = Date.now();
-  if (session.expiresAt.getTime() <= now || session.idleExpiresAt.getTime() <= now)
-    return undefined;
-
-  return session;
 }
 
 async function ownerContext(client: PrismaClient, request: FastifyRequest) {
@@ -161,6 +140,9 @@ export function tenantAccountRoutes(
 
     return reply.send({
       tenant,
+      customDomainsEnabled: options.customDomainsEnabled === true,
+      customDomainsAvailable:
+        options.customDomainsEnabled === true && mayUseCustomDomain(data.subscription),
       domains: data.domains.map((domain) => ({
         id: domain.id,
         hostname: domain.hostname,
@@ -168,6 +150,7 @@ export function tenantAccountRoutes(
         isVerified: domain.isVerified,
         verificationStatus: domain.verificationStatus,
         verificationMethod: domain.verificationMethod,
+        verificationToken: domain.isVerified ? null : domain.verificationToken,
         lastCheckedAt: domain.lastCheckedAt,
         verifiedAt: domain.verifiedAt,
       })),
@@ -209,11 +192,25 @@ export function tenantAccountRoutes(
 
   app.post('/tenant/domains', async (request, reply) => {
     const context = await ownerContext(client, request);
+    if (options.customDomainsEnabled !== true) {
+      throw new ForbiddenError('Custom domains are not enabled', {
+        code: 'DOMAIN_FEATURE_DISABLED',
+      });
+    }
     const body = request.body as DomainBody | undefined;
     const hostname = validHostname(body?.hostname);
     const verificationToken = randomBytes(18).toString('hex');
 
     const domain = await withTenantTx(client, context.tenantId, async (tx) => {
+      const subscription = await tx.tenantSubscription.findFirst({
+        orderBy: { createdAt: 'desc' },
+        include: { plan: true },
+      });
+      if (!mayUseCustomDomain(subscription)) {
+        throw new ForbiddenError('A current paid subscription is required', {
+          code: 'DOMAIN_PAID_PLAN_REQUIRED',
+        });
+      }
       const existing = await tx.domain.findUnique({ where: { hostname } });
       if (existing !== null) {
         throw new ConflictError('This hostname is already registered', { code: 'DOMAIN_EXISTS' });
@@ -258,23 +255,63 @@ export function tenantAccountRoutes(
 
   app.post('/tenant/domains/:id/verify', async (request, reply) => {
     const context = await ownerContext(client, request);
-    const body = request.body as VerifyDomainBody | undefined;
-    const token = isNonEmptyString(body?.token) ? body.token.trim() : '';
-    const domainId = request.params as { id?: string };
-    const requestedDomainId = domainId.id;
-    if (!isNonEmptyString(requestedDomainId) || token.length === 0) {
-      throw new ValidationError('A domain id and verification token are required', {
+    if (options.customDomainsEnabled !== true) {
+      throw new ForbiddenError('Custom domains are not enabled', {
+        code: 'DOMAIN_FEATURE_DISABLED',
+      });
+    }
+    const requestedDomainId = (request.params as { id?: string }).id;
+    if (!isNonEmptyString(requestedDomainId)) {
+      throw new ValidationError('A domain id is required', {
         code: 'DOMAIN_VERIFICATION_REQUIRED',
       });
     }
+    const domain = await withTenantTx(client, context.tenantId, async (tx) => {
+      const subscription = await tx.tenantSubscription.findFirst({
+        orderBy: { createdAt: 'desc' },
+        include: { plan: true },
+      });
+      if (!mayUseCustomDomain(subscription))
+        throw new ForbiddenError('A current paid subscription is required', {
+          code: 'DOMAIN_PAID_PLAN_REQUIRED',
+        });
+      return tx.domain.findFirst({ where: { id: requestedDomainId, tenantId: context.tenantId } });
+    });
+    if (domain === null) throw new NotFoundError('Domain not found');
+    let records: string[][];
+    try {
+      records = await resolveTxt(`_hoomana-verification.${domain.hostname}`);
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (code === 'ENODATA' || code === 'ENOTFOUND' || code === 'ENONAME') records = [];
+      else
+        return reply.code(503).send({
+          error: {
+            code: 'DNS_UNAVAILABLE',
+            message: 'DNS lookup is temporarily unavailable; please retry',
+          },
+        });
+    }
+    const originalHostname = domain.hostname;
+    const domainToken = domain.verificationToken;
+    const valid = domainToken !== null && records.some((record) => record.join('') === domainToken);
 
     const result = await withTenantTx(client, context.tenantId, async (tx) => {
+      const subscription = await tx.tenantSubscription.findFirst({
+        orderBy: { createdAt: 'desc' },
+        include: { plan: true },
+      });
+      if (!mayUseCustomDomain(subscription))
+        throw new ForbiddenError('A current paid subscription is required', {
+          code: 'DOMAIN_PAID_PLAN_REQUIRED',
+        });
       const domain = await tx.domain.findFirst({
         where: { id: requestedDomainId, tenantId: context.tenantId },
       });
       if (domain === null) throw new NotFoundError('Domain not found');
 
-      const valid = domain.verificationToken === token;
+      if (domain.verificationToken !== domainToken || domain.hostname !== originalHostname)
+        throw new ConflictError('Domain verification changed; retry', { code: 'DOMAIN_CHANGED' });
       const updated = await tx.domain.update({
         where: { id: domain.id },
         data: {
@@ -318,120 +355,24 @@ export function tenantAccountRoutes(
     });
   });
 
-  app.post('/tenant/sms', async (request, reply) => {
-    const context = await ownerContext(client, request);
-    const body = request.body as SmsBody | undefined;
-    const provider = body?.provider === undefined ? 'melipayamak' : body.provider;
-    const panelRef = isNonEmptyString(body?.panelRef) ? body.panelRef.trim() : '';
-    const sender = panelSender(body?.sender);
-
-    if (provider !== 'melipayamak') {
-      throw new ValidationError('Only the Melipayamak provider is enabled currently', {
-        code: 'SMS_PROVIDER_INVALID',
+  for (const path of ['/tenant/sms', '/tenant/sms/disable', '/tenant/sms/check']) {
+    app.post(path, async (request) => {
+      await ownerContext(client, request);
+      throw new ForbiddenError('SMS connection is managed by the platform', {
+        code: 'SMS_PLATFORM_MANAGED',
       });
-    }
-    if (panelRef.length < 16) {
-      throw new ValidationError('The SMS panel reference is invalid', {
-        code: 'SMS_PANEL_INVALID',
-      });
-    }
-    if (options.smsEncryption === undefined) {
-      return reply.code(503).send({
-        error: {
-          code: 'SMS_ENCRYPTION_UNAVAILABLE',
-          message: 'کلید رمزنگاری پنل پیامک تنظیم نشده است',
-        },
-      });
-    }
-
-    const saved = await withTenantTx(client, context.tenantId, async (tx) => {
-      const existing = await tx.tenantSmsAccount.findUnique({
-        where: { tenantId: context.tenantId },
-      });
-      const id = existing?.id ?? randomUUID();
-      const encrypted = encryptSecret(
-        panelRef,
-        `${context.tenantId}|${id}`,
-        options.smsEncryption!,
-      );
-      const account = await tx.tenantSmsAccount.upsert({
-        where: { tenantId: context.tenantId },
-        create: {
-          id,
-          tenantId: context.tenantId,
-          provider: 'melipayamak',
-          panelRefCiphertext: encrypted.ciphertext as unknown as Uint8Array<ArrayBuffer>,
-          panelRefIv: encrypted.iv as unknown as Uint8Array<ArrayBuffer>,
-          panelRefAuthTag: encrypted.authTag as unknown as Uint8Array<ArrayBuffer>,
-          keyVersion: encrypted.keyVersion,
-          sender,
-        },
-        update: {
-          provider: 'melipayamak',
-          panelRefCiphertext: encrypted.ciphertext as unknown as Uint8Array<ArrayBuffer>,
-          panelRefIv: encrypted.iv as unknown as Uint8Array<ArrayBuffer>,
-          panelRefAuthTag: encrypted.authTag as unknown as Uint8Array<ArrayBuffer>,
-          keyVersion: encrypted.keyVersion,
-          sender,
-          isActive: true,
-          lastError: null,
-        },
-      });
-
-      await recordAuditEvent(tx, {
-        tenantId: context.tenantId,
-        actorUserId: context.session.userId,
-        actorRole: 'OWNER',
-        action: 'tenant.sms.configure',
-        targetType: 'tenant_sms_account',
-        targetId: account.id,
-        details: { provider: 'melipayamak', sender },
-      });
-
-      return account;
     });
-
-    return reply.send({
-      sms: {
-        provider: saved.provider,
-        sender: saved.sender,
-        configured: true,
-        isActive: saved.isActive,
-      },
-    });
-  });
-
-  app.post('/tenant/sms/disable', async (request, reply) => {
-    const context = await ownerContext(client, request);
-    const result = await withTenantTx(client, context.tenantId, async (tx) => {
-      const account = await tx.tenantSmsAccount.findUnique({
-        where: { tenantId: context.tenantId },
-      });
-      if (account === null) throw new NotFoundError('SMS panel is not configured');
-      const updated = await tx.tenantSmsAccount.update({
-        where: { id: account.id },
-        data: { isActive: false },
-      });
-      await recordAuditEvent(tx, {
-        tenantId: context.tenantId,
-        actorUserId: context.session.userId,
-        actorRole: 'OWNER',
-        action: 'tenant.sms.disable',
-        targetType: 'tenant_sms_account',
-        targetId: account.id,
-      });
-      return updated;
-    });
-
-    return reply.send({
-      sms: { configured: true, isActive: result.isActive, sender: result.sender },
-    });
-  });
+  }
 
   app.post('/tenant/subscription', async (request, reply) => {
     const context = await ownerContext(client, request);
     const body = request.body as SubscriptionBody | undefined;
     const tier = subscriptionTier(body?.tier);
+    if (tier !== 'FREE') {
+      throw new ForbiddenError('Paid subscriptions require authorized activation', {
+        code: 'PAID_SUBSCRIPTION_REQUIRES_ACTIVATION',
+      });
+    }
     const months =
       typeof body?.months === 'number' && Number.isInteger(body.months) ? body.months : 1;
     if (months < 1 || months > 12) {
@@ -516,47 +457,6 @@ export function tenantAccountRoutes(
 
     return reply.send({
       subscription: { id: updated.id, cancelAtPeriodEnd: updated.cancelAtPeriodEnd },
-    });
-  });
-
-  // Keep the decryption path exercised without returning the credential. This endpoint
-  // is used by the future provider health check and proves the stored secret is usable.
-  app.post('/tenant/sms/check', async (request, reply) => {
-    const context = await ownerContext(client, request);
-    if (options.smsEncryption === undefined) {
-      return reply.code(503).send({
-        error: { code: 'SMS_ENCRYPTION_UNAVAILABLE', message: 'کلید رمزنگاری تنظیم نشده است' },
-      });
-    }
-
-    const account = await withTenantTx(client, context.tenantId, (tx) =>
-      tx.tenantSmsAccount.findUnique({ where: { tenantId: context.tenantId } }),
-    );
-    if (account === null) throw new NotFoundError('SMS panel is not configured');
-
-    const panelRef = decryptSecret(
-      {
-        ciphertext: account.panelRefCiphertext,
-        iv: account.panelRefIv,
-        authTag: account.panelRefAuthTag,
-      },
-      `${context.tenantId}|${account.id}`,
-      options.smsEncryption,
-    );
-    const updated = await withTenantTx(client, context.tenantId, (tx) =>
-      tx.tenantSmsAccount.update({
-        where: { id: account.id },
-        data: { lastVerifiedAt: new Date(), lastError: null },
-      }),
-    );
-
-    return reply.send({
-      sms: {
-        configured: true,
-        isActive: updated.isActive,
-        sender: updated.sender,
-        panelRefLength: panelRef.length,
-      },
     });
   });
 }

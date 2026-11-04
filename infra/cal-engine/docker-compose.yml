@@ -1,0 +1,77 @@
+# Local evaluation only. This stack has its own database, Redis, and volumes.
+name: hmn-cal-engine
+services:
+  database:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: cal
+      POSTGRES_PASSWORD: ${CAL_DB_PASSWORD:?create the local .env first}
+      POSTGRES_DB: cal
+    volumes:
+      - cal_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U cal -d cal']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - cal_redis:/data
+  web:
+    build:
+      context: ../cal-engine-upstream
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_WEBAPP_URL: http://localhost:3100
+        NEXT_PUBLIC_API_V2_URL: http://localhost:5556/api/v2
+        DATABASE_URL: ${CAL_DATABASE_URL:?create the local .env first}
+        NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:?create the local .env first}
+        CALENDSO_ENCRYPTION_KEY: ${CALENDSO_ENCRYPTION_KEY:?create the local .env first}
+        CALCOM_TELEMETRY_DISABLED: '1'
+    env_file: .env
+    environment:
+      DATABASE_URL: ${CAL_DATABASE_URL}
+      DATABASE_DIRECT_URL: ${CAL_DATABASE_URL}
+      DATABASE_HOST: database:5432
+      NEXT_PUBLIC_WEBAPP_URL: http://localhost:3100
+      NEXTAUTH_URL: http://localhost:3100
+      NEXT_PUBLIC_API_V2_URL: http://localhost:5556/api/v2
+      CALCOM_TELEMETRY_DISABLED: '1'
+    ports:
+      - '127.0.0.1:3100:3000'
+    depends_on:
+      database:
+        condition: service_healthy
+  api:
+    build:
+      context: ../cal-engine-upstream
+      dockerfile: apps/api/v2/Dockerfile
+      args:
+        DATABASE_URL: ${CAL_DATABASE_URL}
+        DATABASE_DIRECT_URL: ${CAL_DATABASE_URL}
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      API_PORT: '5556'
+      API_URL: http://localhost:5556
+      WEB_APP_URL: http://localhost:3100
+      DATABASE_URL: ${CAL_DATABASE_URL}
+      DATABASE_DIRECT_URL: ${CAL_DATABASE_URL}
+      DATABASE_READ_URL: ${CAL_DATABASE_URL}
+      DATABASE_WRITE_URL: ${CAL_DATABASE_URL}
+      REDIS_URL: redis://redis:6379
+      REWRITE_API_V2_PREFIX: 'true'
+      API_KEY_PREFIX: cal_
+    ports:
+      - '127.0.0.1:5556:5556'
+    depends_on:
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      web:
+        condition: service_healthy
+volumes:
+  cal_data:
+  cal_redis:

@@ -39,10 +39,11 @@ export interface ActiveOtp {
   readonly codeHash: string;
   readonly attempts: number;
   readonly expiresAt: Date;
+  readonly consumedAt: Date | null;
 }
 
 /**
- * The newest unconsumed code for this identifier and purpose, expired or not — the
+ * The newest code for this identifier and purpose, expired or not — the
  * caller decides, so "expired code" and "no code" can share one response shape.
  */
 export async function findLatestOtp(
@@ -51,9 +52,9 @@ export async function findLatestOtp(
   purpose: OtpPurpose,
 ): Promise<ActiveOtp | undefined> {
   const row = await client.authOtp.findFirst({
-    where: { identifier, purpose, consumedAt: null },
+    where: { identifier, purpose },
     orderBy: { createdAt: 'desc' },
-    select: { id: true, codeHash: true, attempts: true, expiresAt: true },
+    select: { id: true, codeHash: true, attempts: true, expiresAt: true, consumedAt: true },
   });
 
   return row ?? undefined;
@@ -68,12 +69,28 @@ export async function countOtpsSince(
   return client.authOtp.count({ where: { identifier, purpose, createdAt: { gte: since } } });
 }
 
-export async function addOtpAttempt(client: PrismaClient, id: string): Promise<void> {
-  await client.authOtp.update({ where: { id }, data: { attempts: { increment: 1 } } });
+export async function addOtpAttempt(
+  client: PrismaClient,
+  id: string,
+  maxAttempts: number,
+): Promise<void> {
+  await client.authOtp.updateMany({
+    where: { id, consumedAt: null, attempts: { lt: maxAttempts } },
+    data: { attempts: { increment: 1 } },
+  });
 }
 
-export async function consumeOtp(client: PrismaClient, id: string): Promise<void> {
-  await client.authOtp.update({ where: { id }, data: { consumedAt: new Date() } });
+export async function consumeOtp(
+  client: PrismaClient,
+  id: string,
+  maxAttempts: number,
+): Promise<boolean> {
+  const now = new Date();
+  const result = await client.authOtp.updateMany({
+    where: { id, consumedAt: null, expiresAt: { gt: now }, attempts: { lt: maxAttempts } },
+    data: { consumedAt: now },
+  });
+  return result.count === 1;
 }
 
 /** Drop a code that failed too often, so it cannot be replayed. */

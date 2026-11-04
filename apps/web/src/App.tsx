@@ -52,16 +52,17 @@ function statusText(health: HealthState): string | null {
 
   switch (health.kind) {
     case 'loading':
-      return development ? 'Checking…' : null;
+      return development ? 'در حال بررسی اتصال…' : null;
     case 'ok':
-      return development ? 'API is ok' : null;
+      return development ? 'اتصال به سرور برقرار است' : null;
     case 'error':
-      return development ? `API is unavailable: ${health.message}` : 'اتصال به سرور برقرار نیست';
+      return 'اتصال به سرور برقرار نیست';
   }
 }
 
 export function App(): JSX.Element {
-  const platformHost = window.location.hostname === 'admin.localhost' || window.location.hostname.startsWith('admin.');
+  const platformHost =
+    window.location.hostname === 'admin.localhost' || window.location.hostname.startsWith('admin.');
   const [health, setHealth] = useState<HealthState>({ kind: 'loading' });
   const [profile, setProfile] = useState<SessionProfile | null>(null);
   const [screen, setScreen] = useState<'login' | 'register' | 'plans'>('login');

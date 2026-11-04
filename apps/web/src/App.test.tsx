@@ -57,7 +57,7 @@ describe('App', () => {
     render(<App />);
 
     await waitFor(() => {
-      expect(screen.getByTestId('health-status')).toHaveTextContent('API is ok');
+      expect(screen.getByTestId('health-status')).toHaveTextContent('اتصال به سرور برقرار است');
     });
   });
 
@@ -67,7 +67,7 @@ describe('App', () => {
     render(<App />);
 
     await waitFor(() => {
-      expect(screen.getByTestId('health-status')).toHaveTextContent('503');
+      expect(screen.getByTestId('health-status')).toHaveTextContent('اتصال به سرور برقرار نیست');
     });
   });
 
@@ -77,7 +77,7 @@ describe('App', () => {
     render(<App />);
 
     await waitFor(() => {
-      expect(screen.getByTestId('health-status')).toHaveTextContent('network down');
+      expect(screen.getByTestId('health-status')).toHaveTextContent('اتصال به سرور برقرار نیست');
     });
   });
 
@@ -87,7 +87,7 @@ describe('App', () => {
     render(<App />);
 
     await waitFor(() => {
-      expect(screen.getByTestId('health-status')).toHaveTextContent('Unexpected health response');
+      expect(screen.getByTestId('health-status')).toHaveTextContent('اتصال به سرور برقرار نیست');
     });
   });
 
@@ -97,7 +97,7 @@ describe('App', () => {
     render(<App />);
 
     await waitFor(() => {
-      expect(screen.getByTestId('health-status')).toHaveTextContent('Unexpected health response');
+      expect(screen.getByTestId('health-status')).toHaveTextContent('اتصال به سرور برقرار نیست');
     });
   });
 

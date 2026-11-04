@@ -1,4 +1,6 @@
 import { useEffect, useState, type FormEvent, type JSX } from 'react';
+import { QRCodeSVG } from 'qrcode.react';
+import { persianError } from '../errors';
 import './platform.css';
 
 const PASSWORD_FIELD = 'password';
@@ -24,10 +26,12 @@ interface AccountSummary {
 interface AccountDetail {
   readonly account: AccountSummary;
   readonly domains: readonly {
+    id: string;
     hostname: string;
     isVerified: boolean;
     isPrimary: boolean;
     verificationStatus: string;
+    verificationToken: string | null;
   }[];
   readonly sms: {
     provider: string;
@@ -57,8 +61,7 @@ async function bodyOf(response: Response): Promise<Record<string, unknown>> {
 }
 
 function errorText(body: Record<string, unknown>, fallback: string): string {
-  const error = body.error as { message?: string } | undefined;
-  return error?.message ?? fallback;
+  return persianError(body, fallback);
 }
 
 export function PlatformAdminPage(): JSX.Element {
@@ -90,6 +93,8 @@ export function PlatformAdminPage(): JSX.Element {
     planTier: 'FREE',
   });
   const [subscription, setSubscription] = useState({ planTier: 'FREE', months: '1' });
+  const [domainForm, setDomainForm] = useState({ hostname: '', domainId: '' });
+  const [smsForm, setSmsForm] = useState({ panelRef: '', sender: '' });
 
   async function loadAccounts(): Promise<void> {
     const params = new URLSearchParams({ search });
@@ -114,6 +119,8 @@ export function PlatformAdminPage(): JSX.Element {
       return;
     }
     setSelected(body as unknown as AccountDetail);
+    setDomainForm({ hostname: '', domainId: '' });
+    setSmsForm({ panelRef: '', sender: '' });
     const account = body.account as AccountSummary;
     setForm({
       name: account.name,
@@ -141,12 +148,18 @@ export function PlatformAdminPage(): JSX.Element {
 
   async function login(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
-    const response = await fetch('/platform/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'same-origin',
-      body: JSON.stringify({ mobile, [PASSWORD_FIELD]: passphrase }),
-    });
+    let response: Response;
+    try {
+      response = await fetch('/platform/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ mobile, [PASSWORD_FIELD]: passphrase }),
+      });
+    } catch {
+      setNotice({ kind: 'error', text: 'ارتباط با سرور برقرار نشد. اتصال را بررسی کنید.' });
+      return;
+    }
     const body = await bodyOf(response);
     if (body.mfaEnrollmentRequired === true) {
       setEnrollment({
@@ -285,6 +298,65 @@ export function PlatformAdminPage(): JSX.Element {
     await loadDetail(selected.account.id);
   }
 
+  async function saveDomain(event: FormEvent<HTMLFormElement>): Promise<void> {
+    event.preventDefault();
+    if (!selected) return;
+    const response = await fetch(`/platform/accounts/${selected.account.id}/domains`, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        hostname: domainForm.hostname,
+        ...(domainForm.domainId ? { domainId: domainForm.domainId } : {}),
+      }),
+    });
+    const body = await bodyOf(response);
+    if (!response.ok) {
+      setNotice({ kind: 'error', text: errorText(body, 'ثبت دامنه ناموفق بود') });
+      return;
+    }
+    setNotice({ kind: 'ok', text: 'دامنه ثبت شد؛ مالکیت آن باید با DNS بررسی شود.' });
+    await loadAccounts();
+    await loadDetail(selected.account.id);
+  }
+
+  async function saveSms(event: FormEvent<HTMLFormElement>): Promise<void> {
+    event.preventDefault();
+    if (!selected) return;
+    const response = await fetch(`/platform/accounts/${selected.account.id}/sms`, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(smsForm),
+    });
+    const body = await bodyOf(response);
+    if (!response.ok) {
+      setNotice({ kind: 'error', text: errorText(body, 'ثبت پنل پیامک ناموفق بود') });
+      return;
+    }
+    setNotice({ kind: 'ok', text: 'تنظیمات پیامک ذخیره شد؛ اتصال به سرویس هنوز بررسی نشده است.' });
+    await loadAccounts();
+    await loadDetail(selected.account.id);
+  }
+
+  async function checkDomain(domainId: string): Promise<void> {
+    if (!selected) return;
+    const response = await fetch(
+      `/platform/accounts/${selected.account.id}/domains/${domainId}/verify`,
+      {
+        method: 'POST',
+        credentials: 'same-origin',
+      },
+    );
+    setNotice(
+      response.ok
+        ? { kind: 'ok', text: 'مالکیت دامنه تأیید شد؛ اتصال نهایی جداگانه انجام می‌شود.' }
+        : { kind: 'error', text: 'تأیید دامنه انجام نشد؛ رکورد DNS و اتصال را بررسی کنید.' },
+    );
+    await loadDetail(selected.account.id);
+    await loadAccounts();
+  }
+
   async function signOut(): Promise<void> {
     await fetch('/platform/auth/logout', { method: 'POST', credentials: 'same-origin' });
     setAuthenticated(false);
@@ -310,12 +382,24 @@ export function PlatformAdminPage(): JSX.Element {
                 <div>
                   <strong>اتصال اپلیکیشن احراز هویت</strong>
                   <small>
-                    کلید زیر را در Google Authenticator یا Microsoft Authenticator وارد کنید.
+                    در برنامه احراز هویت، افزودن حساب و اسکن کد QR را انتخاب کنید. می‌توانید کلید
+                    راه‌اندازی را هم به‌صورت دستی وارد کنید.
                   </small>
                 </div>
               </div>
+              <div className="platform-auth-qr">
+                <QRCodeSVG
+                  value={enrollment.uri}
+                  size={200}
+                  marginSize={4}
+                  level="M"
+                  role="img"
+                  aria-label="کد QR برای اتصال برنامه احراز هویت"
+                />
+                <small>کد را با برنامه احراز هویت در گوشی اسکن کنید.</small>
+              </div>
               <p>
-                Secret: <code>{enrollment.secret}</code>
+                کلید راه‌اندازی: <code>{enrollment.secret}</code>
                 <button
                   className="platform-copy-button"
                   type="button"
@@ -323,9 +407,6 @@ export function PlatformAdminPage(): JSX.Element {
                 >
                   {copiedValue === 'secret' ? 'کپی شد' : 'کپی'}
                 </button>
-              </p>
-              <p>
-                <small>{enrollment.uri}</small>
               </p>
               <p>کدهای بازیابی را امن نگه دارید: {enrollment.recovery.join('، ')}</p>
               <input
@@ -336,6 +417,17 @@ export function PlatformAdminPage(): JSX.Element {
               />
               <button className="pnl-cta cta" type="submit">
                 تکمیل MFA
+              </button>
+              <button
+                className="icon-btn neu-sm"
+                type="button"
+                onClick={() => {
+                  setEnrollment(null);
+                  setCode('');
+                  setNotice(null);
+                }}
+              >
+                بازگشت و ساخت کلید جدید
               </button>
             </form>
           ) : challengeToken !== '' ? (
@@ -536,7 +628,7 @@ export function PlatformAdminPage(): JSX.Element {
                   مالک: {selected.account.ownerName} · دامنه‌ها: {selected.account.domainCount} (
                   {selected.account.verifiedDomainCount} تأییدشده) · پیامک:{' '}
                   {selected.sms?.isActive ? 'فعال' : selected.sms ? 'غیرفعال' : 'تنظیم نشده'}
-                  {' · پرداخت: '}
+                  {' · اشتراک: '}
                   {selected.subscription?.status ?? selected.account.subscriptionStatus ?? '—'}
                   {' · انقضا: '}
                   {selected.subscription?.currentPeriodEnd
@@ -619,14 +711,99 @@ export function PlatformAdminPage(): JSX.Element {
                   <button className="pnl-cta cta">تغییر پلن و تمدید</button>
                 </form>
                 <h3>دامنه‌ها</h3>
+                <p className="pnl-card-help">
+                  دامنه جدید پس از ثبت، در انتظار تأیید مالکیت است. تغییر دامنه تأیید قبلی را لغو
+                  می‌کند.
+                </p>
                 <ul className="pnl-list">
                   {selected.domains.map((domain) => (
                     <li key={domain.hostname}>
-                      {domain.hostname} ·{' '}
-                      {domain.isVerified ? 'تأییدشده' : domain.verificationStatus}
+                      <span dir="ltr">{domain.hostname}</span> ·{' '}
+                      {domain.isVerified ? 'مالکیت تأیید شده' : 'در انتظار تأیید'}{' '}
+                      <button
+                        type="button"
+                        className="platform-copy-button"
+                        onClick={() =>
+                          setDomainForm({ hostname: domain.hostname, domainId: domain.id })
+                        }
+                      >
+                        ویرایش
+                      </button>
+                      {!domain.isVerified && (
+                        <button
+                          type="button"
+                          className="platform-copy-button"
+                          onClick={() => void checkDomain(domain.id)}
+                        >
+                          بررسی DNS
+                        </button>
+                      )}
+                      {!domain.isVerified && domain.verificationToken && (
+                        <small className="platform-dns-record" dir="ltr">
+                          TXT _hoomana-verification.{domain.hostname}: {domain.verificationToken}
+                        </small>
+                      )}
                     </li>
                   ))}
                 </ul>
+                <form className="pnl-inline-form" onSubmit={(event) => void saveDomain(event)}>
+                  <input
+                    dir="ltr"
+                    aria-label="دامنه اختصاصی"
+                    placeholder="clinic.example.com"
+                    required
+                    value={domainForm.hostname}
+                    onChange={(event) =>
+                      setDomainForm({ ...domainForm, hostname: event.target.value })
+                    }
+                  />
+                  <button className="pnl-cta cta" type="submit">
+                    {domainForm.domainId ? 'ذخیره دامنه' : 'افزودن دامنه'}
+                  </button>
+                  {domainForm.domainId && (
+                    <button
+                      className="icon-btn neu-sm"
+                      type="button"
+                      onClick={() => setDomainForm({ hostname: '', domainId: '' })}
+                    >
+                      انصراف
+                    </button>
+                  )}
+                </form>
+                <h3>پنل پیامک اختصاصی</h3>
+                <p className="pnl-card-help">
+                  {selected.sms
+                    ? `خط ارسال: ${selected.sms.sender}`
+                    : 'برای این کلینیک پنلی ثبت نشده است.'}{' '}
+                  اطلاعات اتصال فقط توسط مدیریت پلتفرم تنظیم می‌شود.
+                </p>
+                <form className="pnl-settings-form" onSubmit={(event) => void saveSms(event)}>
+                  <label>
+                    شناسه پنل ملی‌پیامک
+                    <input
+                      type="password"
+                      autoComplete="new-password"
+                      required
+                      minLength={16}
+                      value={smsForm.panelRef}
+                      onChange={(event) => setSmsForm({ ...smsForm, panelRef: event.target.value })}
+                    />
+                  </label>
+                  <label>
+                    خط ارسال
+                    <input
+                      dir="ltr"
+                      inputMode="numeric"
+                      required
+                      pattern="[0-9]{5,20}"
+                      value={smsForm.sender}
+                      onChange={(event) => setSmsForm({ ...smsForm, sender: event.target.value })}
+                    />
+                  </label>
+                  <button className="pnl-cta cta" type="submit">
+                    ذخیره تنظیمات پیامک
+                  </button>
+                </form>
                 <h3>گزارش فعالیت</h3>
                 <ul className="pnl-list">
                   {selected.activity.slice(0, 20).map((event, index) => (

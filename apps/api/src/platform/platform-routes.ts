@@ -1,4 +1,5 @@
-import { randomUUID } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
+import { resolveTxt } from 'node:dns/promises';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { hashToken, withTenantTx, type PrismaClient } from '@hmn/db';
 import {
@@ -6,6 +7,7 @@ import {
   UnauthorizedError,
   ValidationError,
   buildTotpUri,
+  base32Encode,
   decryptMfaSecret,
   encryptMfaSecret,
   generateRecoveryCodes,
@@ -14,8 +16,11 @@ import {
   verifyTotpCode,
   verifyPassword,
   dummyVerify,
+  encryptSecret,
   type MfaConfig,
+  type SecretEncryptionConfig,
 } from '@hmn/shared';
+import { normalizeHostname } from '@hmn/validation';
 import {
   generateSessionToken,
   RATE_LIMIT_MAX_FAILURES,
@@ -51,6 +56,7 @@ interface AccountBody {
 export interface PlatformRoutesOptions {
   readonly client: PrismaClient;
   readonly mfa?: MfaConfig;
+  readonly smsEncryption?: SecretEncryptionConfig;
 }
 
 type TokenPayload = {
@@ -367,7 +373,7 @@ export function platformRoutes(app: FastifyInstance, options: PlatformRoutesOpti
       return reply.send({
         mfaEnrollmentRequired: true,
         enrollmentToken,
-        secret: secret.toString('base64'),
+        secret: base32Encode(secret),
         otpauthUri: buildTotpUri(secret, mobile, 'Hoomana Platform'),
         recoveryCodes: recovery.plain,
       });
@@ -427,7 +433,7 @@ export function platformRoutes(app: FastifyInstance, options: PlatformRoutesOpti
     const code = validText(field(body, 'code'), 'MFA_CODE_REQUIRED');
     const secret = Buffer.from(enrollment.secret ?? '', 'base64url');
     if (!enrollment.factorId || secret.length === 0 || !verifyTotpCode(secret, code))
-      throw new UnauthorizedError('Invalid MFA code');
+      return reply.code(401).send({ error: { code: 'MFA_FAILED', message: 'Invalid MFA code' } });
     const encrypted = encryptMfaSecret(secret, `${enrollment.userId}|${enrollment.factorId}`, mfa);
     await client.$queryRaw`SELECT public.platform_auth_enroll_mfa(${enrollment.userId}::uuid, ${enrollment.factorId}::uuid, ${encrypted.ciphertext}, ${encrypted.iv}, ${encrypted.authTag}, ${encrypted.keyVersion}, ${enrollment.recoveryHashes ?? []}::text[])`;
     const token = await createPlatformSession(client, enrollment.userId);
@@ -515,6 +521,88 @@ export function platformRoutes(app: FastifyInstance, options: PlatformRoutesOpti
     });
   });
 
+  app.post('/platform/accounts/:id/domains', async (request, reply) => {
+    const actor = await requirePlatformSession(client, request);
+    const tenantId = validId((request.params as { id?: unknown }).id);
+    const raw = validText(field(request.body, 'hostname'), 'DOMAIN_REQUIRED');
+    const hostname = normalizeHostname(raw);
+    if (
+      raw.includes(':') ||
+      hostname.length > 253 ||
+      !hostname.includes('.') ||
+      hostname.split('.').some((label) => !/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(label))
+    ) {
+      throw new ValidationError('Invalid domain', { code: 'DOMAIN_INVALID' });
+    }
+    const requestedId = field(request.body, 'domainId');
+    const domainId = requestedId === undefined ? randomUUID() : validId(requestedId);
+    const token = randomBytes(18).toString('hex');
+    const rows = await client.$queryRaw<Array<{ changed: boolean }>>`
+      SELECT public.platform_save_domain(${tenantId}::uuid, ${domainId}::uuid, ${hostname}, ${token}, ${requestedId !== undefined}, ${actor.userId}::uuid) AS changed`;
+    if (!rows[0]?.changed) throw new NotFoundError('Clinic or domain not found');
+    return reply.send({ ok: true });
+  });
+
+  app.post('/platform/accounts/:id/domains/:domainId/verify', async (request, reply) => {
+    const actor = await requirePlatformSession(client, request);
+    const params = request.params as { id?: unknown; domainId?: unknown };
+    const tenantId = validId(params.id);
+    const domainId = validId(params.domainId);
+    const domain = await withTenantTx(client, tenantId, (tx) =>
+      tx.domain.findFirst({ where: { id: domainId, tenantId } }),
+    );
+    if (domain === null) throw new NotFoundError('Domain not found');
+    let records: string[][];
+    try {
+      records = await resolveTxt(`_hoomana-verification.${domain.hostname}`);
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (code === 'ENODATA' || code === 'ENOTFOUND' || code === 'ENONAME') records = [];
+      else
+        return reply.code(503).send({
+          error: { code: 'DNS_UNAVAILABLE', message: 'DNS lookup is temporarily unavailable' },
+        });
+    }
+    const verified =
+      domain.verificationToken !== null &&
+      records.some((record) => record.join('') === domain.verificationToken);
+    const rows = await client.$queryRaw<Array<{ changed: boolean }>>`
+      SELECT public.platform_check_domain(${tenantId}::uuid, ${domainId}::uuid, ${domain.hostname}, ${domain.verificationToken}, ${verified}, ${actor.userId}::uuid) AS changed`;
+    if (!rows[0]?.changed)
+      return reply
+        .code(409)
+        .send({ error: { code: 'DOMAIN_CHANGED', message: 'Domain changed; retry verification' } });
+    if (!verified)
+      return reply
+        .code(422)
+        .send({ error: { code: 'DOMAIN_NOT_VERIFIED', message: 'DNS record does not match' } });
+    return reply.send({ ok: true });
+  });
+
+  app.post('/platform/accounts/:id/sms', async (request, reply) => {
+    const actor = await requirePlatformSession(client, request);
+    const tenantId = validId((request.params as { id?: unknown }).id);
+    const panelRef = validText(field(request.body, 'panelRef'), 'SMS_PANEL_REQUIRED');
+    const sender = validText(field(request.body, 'sender'), 'SMS_SENDER_REQUIRED');
+    if (panelRef.length < 16 || panelRef.length > 512 || !/^\d{5,20}$/.test(sender)) {
+      throw new ValidationError('Invalid SMS connection', { code: 'SMS_CONNECTION_INVALID' });
+    }
+    if (options.smsEncryption === undefined) {
+      return reply.code(503).send({
+        error: {
+          code: 'SMS_ENCRYPTION_UNAVAILABLE',
+          message: 'SMS encryption is not configured',
+        },
+      });
+    }
+    const accountId = randomUUID();
+    const encrypted = encryptSecret(panelRef, `${tenantId}|${accountId}`, options.smsEncryption);
+    const rows = await client.$queryRaw<Array<{ changed: boolean }>>`
+      SELECT public.platform_save_sms(${tenantId}::uuid, ${accountId}::uuid, ${encrypted.ciphertext}, ${encrypted.iv}, ${encrypted.authTag}, ${encrypted.keyVersion}, ${sender}, ${actor.userId}::uuid) AS changed`;
+    if (!rows[0]?.changed) throw new NotFoundError('Clinic not found');
+    return reply.send({ ok: true });
+  });
+
   app.post('/platform/accounts', async (request, reply) => {
     const actor = await requirePlatformSession(client, request);
     const body = request.body as AccountBody | undefined;
@@ -544,7 +632,10 @@ export function platformRoutes(app: FastifyInstance, options: PlatformRoutesOpti
     const state = field(body, 'state');
     if (state !== 'ACTIVE' && state !== 'SUSPENDED' && state !== 'BLOCKED')
       throw new ValidationError('The account state is invalid', { code: 'STATE_INVALID' });
-    await client.$queryRaw`SELECT public.platform_set_tenant_state(${tenantId}::uuid, ${state}, ${String(field(body, 'reason') ?? '')}, ${actor.userId}::uuid)`;
+    const reason = field(body, 'reason');
+    if (reason !== undefined && typeof reason !== 'string')
+      throw new ValidationError('The reason is invalid', { code: 'REASON_INVALID' });
+    await client.$queryRaw`SELECT public.platform_set_tenant_state(${tenantId}::uuid, ${state}, ${reason ?? ''}, ${actor.userId}::uuid)`;
     return reply.send({ ok: true, state });
   });
 

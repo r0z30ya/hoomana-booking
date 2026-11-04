@@ -8,7 +8,6 @@ import {
   createSession,
   findCredentialByUserId,
   findLatestOtp,
-  findSessionByTokenHash,
   hashOtpCode,
   hashToken,
   invalidateOtp,
@@ -31,6 +30,7 @@ import {
   sessionDeadlines,
   SESSION_COOKIE_NAME,
 } from './auth-service.js';
+import { currentSession } from './session.js';
 
 /**
  * Auth routes (ADR-0005 D-A).
@@ -116,33 +116,6 @@ export function authRoutes(app: FastifyInstance, options: AuthRoutesOptions): vo
     reply.clearCookie(SESSION_COOKIE_NAME, { path: '/' });
   }
 
-  /** Resolve the live session behind the request's cookie, if any. */
-  async function currentSession(request: FastifyRequest) {
-    const sessionValue = request.cookies[SESSION_COOKIE_NAME];
-    if (sessionValue === undefined || sessionValue === '') return undefined;
-
-    const session = await findSessionByTokenHash(client, hashToken(sessionValue));
-    if (session === undefined) return undefined;
-    if (session.revokedAt !== null) return undefined;
-
-    const now = new Date();
-    if (session.expiresAt.getTime() <= now.getTime()) return undefined;
-    if (session.idleExpiresAt.getTime() <= now.getTime()) return undefined;
-
-    if (session.activeTenantId !== null) {
-      const tenant = await client.tenant.findUnique({
-        where: { id: session.activeTenantId },
-        select: { isSuspended: true, blockedAt: true },
-      });
-      if (tenant === null || tenant.isSuspended || tenant.blockedAt !== null) {
-        await revokeSession(client, session.id);
-        return undefined;
-      }
-    }
-
-    return session;
-  }
-
   async function defaultTenantId(userId: string): Promise<string | undefined> {
     const rows = await client.$queryRaw<Array<{ tenantId: string | null }>>`
       SELECT public.user_default_tenant(${userId}::uuid) AS "tenantId"
@@ -155,7 +128,7 @@ export function authRoutes(app: FastifyInstance, options: AuthRoutesOptions): vo
   async function verifyOtp(mobile: string, purpose: OtpPurpose, code: string): Promise<boolean> {
     const active = await findLatestOtp(client, mobile, purpose);
 
-    if (active === undefined) return false;
+    if (active === undefined || active.consumedAt !== null) return false;
     if (active.expiresAt.getTime() <= Date.now()) return false;
 
     if (active.attempts >= OTP_MAX_ATTEMPTS) {
@@ -164,12 +137,11 @@ export function authRoutes(app: FastifyInstance, options: AuthRoutesOptions): vo
     }
 
     if (active.codeHash !== hashOtpCode(code)) {
-      await addOtpAttempt(client, active.id);
+      await addOtpAttempt(client, active.id, OTP_MAX_ATTEMPTS);
       return false;
     }
 
-    await consumeOtp(client, active.id);
-    return true;
+    return consumeOtp(client, active.id, OTP_MAX_ATTEMPTS);
   }
 
   /**
@@ -370,7 +342,7 @@ export function authRoutes(app: FastifyInstance, options: AuthRoutesOptions): vo
       const otpUser = await client.user.findUnique({ where: { mobile } });
       const verified = await verifyOtp(mobile, 'LOGIN', code);
 
-      if (!verified || otpUser === null) {
+      if (!verified || otpUser === null || !otpUser.isActive) {
         await recordAttempt(client, { identifier: mobile, ipAddress: ip, succeeded: false });
         return reply.code(401).send({
           error: { code: 'AUTH_FAILED', message: 'Invalid credentials' },
@@ -414,7 +386,7 @@ export function authRoutes(app: FastifyInstance, options: AuthRoutesOptions): vo
     }
 
     const verified = await verifyPassword(passphrase, credential.passwordHash);
-    if (!verified.matches) {
+    if (!verified.matches || !user.isActive) {
       await recordAttempt(client, { identifier: mobile, ipAddress: ip, succeeded: false });
       return reply.code(401).send({
         error: { code: 'AUTH_FAILED', message: 'Invalid credentials' },
@@ -444,7 +416,7 @@ export function authRoutes(app: FastifyInstance, options: AuthRoutesOptions): vo
   });
 
   app.post('/auth/logout', async (request, reply) => {
-    const session = await currentSession(request);
+    const session = await currentSession(client, request);
 
     if (session !== undefined) {
       await revokeSession(client, session.id);
@@ -455,7 +427,7 @@ export function authRoutes(app: FastifyInstance, options: AuthRoutesOptions): vo
   });
 
   app.get('/auth/me', async (request, reply) => {
-    const session = await currentSession(request);
+    const session = await currentSession(client, request);
 
     if (session === undefined) {
       return reply.code(401).send({

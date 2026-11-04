@@ -71,6 +71,7 @@ async function main(): Promise<void> {
     },
     tenantAccount: {
       client: database,
+      customDomainsEnabled: environment.CUSTOM_DOMAINS_ENABLED === 'true',
       ...(smsEncryption === undefined ? {} : { smsEncryption }),
     },
     ...(platformDatabase === undefined
@@ -79,6 +80,7 @@ async function main(): Promise<void> {
           platform: {
             client: platformDatabase,
             ...(mfa === undefined ? {} : { mfa }),
+            ...(smsEncryption === undefined ? {} : { smsEncryption }),
           },
         }),
   });

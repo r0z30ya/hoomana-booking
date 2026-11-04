@@ -46,6 +46,7 @@ export const environmentSchema = z.object({
    * Production changes ONLY this value once the real domain is purchased.
    */
   APP_ROOT_DOMAIN: z.string().trim().min(1).default('localhost'),
+  CUSTOM_DOMAINS_ENABLED: z.enum(['true', 'false']).default('false'),
 
   /** Migration credentials: Prisma CLI ONLY. Runtime processes reject them (ADR-0003 D7). */
   DATABASE_URL: z.url(),

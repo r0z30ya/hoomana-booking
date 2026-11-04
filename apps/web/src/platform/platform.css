@@ -193,6 +193,14 @@
   font-size: 14px;
 }
 
+.platform-dns-record {
+  display: block;
+  margin-top: 6px;
+  color: var(--sub);
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+
 .platform-auth-page {
   display: grid;
   place-items: center;
@@ -302,6 +310,23 @@
   display: block;
 }
 
+.platform-auth-qr {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  color: var(--sub);
+  text-align: center;
+  font-size: 12px;
+}
+
+.platform-auth-qr svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  background: white;
+  border-radius: 12px;
+}
+
 .platform-auth-step strong {
   font-size: 13px;
 }
@@ -331,17 +356,6 @@
   display: inline-block;
   max-width: 100%;
   color: var(--ink);
-  overflow-wrap: anywhere;
-  word-break: break-word;
-}
-
-.platform-auth-card form > p:nth-of-type(2) small {
-  display: block;
-  max-height: 72px;
-  margin-top: 6px;
-  overflow: auto;
-  direction: ltr;
-  text-align: left;
   overflow-wrap: anywhere;
   word-break: break-word;
 }
