@@ -1,3 +1,26 @@
+.pnl-scheduling form label,
+.pnl-scheduling section > label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 8px 14px;
+}
+
+.pnl-scheduling input:not([type='checkbox']),
+.pnl-scheduling select {
+  border: 1px solid var(--line, #d4d0c8);
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  padding: 9px 11px;
+  max-width: 100%;
+}
+
+.pnl-scheduling input[type='number'] { width: 80px; }
+.pnl-scheduling fieldset { border: 0; padding: 0; margin: 12px 0; }
+.pnl-scheduling button { cursor: pointer; }
+.pnl-scheduling li { margin-block: 10px; }
+
 /*
  * Panel shell styles.
  *
@@ -543,3 +566,13 @@
     overflow-y: auto;
   }
 }
+.pnl-buy { border: 1px solid rgba(13,148,136,.3); border-radius: 12px; background: rgba(13,148,136,.1); color: var(--accent); padding: 10px 14px; cursor: pointer; font-weight: 800; white-space: nowrap; }
+.pnl-buy span { margin-inline-start: 8px; }
+.pnl-checkout-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 1000px; }
+.pnl-checkout-grid .pnl-card { margin: 0; }
+.pnl-checkout-label { color: var(--accent); font-size: 13px; }
+.pnl-checkout-line { display: flex; justify-content: space-between; gap: 12px; padding: 18px 0; border-bottom: 1px solid var(--bar); }
+.pnl-checkout-line.total { font-weight: 900; margin-bottom: 18px; }
+.pnl-checkout-note { color: var(--sub); font-size: 12px; line-height: 2; }
+.pnl-checkout button:disabled { opacity: .6; cursor: not-allowed; }
+@media (max-width: 700px) { .pnl-checkout-grid { grid-template-columns: 1fr; } .pnl-buy { font-size: 12px; padding: 9px; } }

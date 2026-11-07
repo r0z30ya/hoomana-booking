@@ -67,6 +67,8 @@ describe('schema scope guard', () => {
       'domains',
       'platform_admins',
       'platform_mfa_factors',
+      'platform_settings',
+      'scheduling_doctors',
       'sessions',
       'subscription_plans',
       'tenant_memberships',

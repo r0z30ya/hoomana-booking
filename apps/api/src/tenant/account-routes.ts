@@ -121,7 +121,7 @@ export function tenantAccountRoutes(
     const context = await ownerContext(client, request);
     const tenant = await client.tenant.findUnique({
       where: { id: context.tenantId },
-      select: { id: true, name: true, slug: true, address: true, city: true, isSuspended: true },
+      select: { id: true, name: true, slug: true, address: true, city: true, practiceType: true, contactPhones: true, isSuspended: true },
     });
     if (tenant === null) throw new NotFoundError('Clinic not found');
 
@@ -364,8 +364,8 @@ export function tenantAccountRoutes(
     });
   }
 
-  app.post('/tenant/subscription', async (request, reply) => {
-    const context = await ownerContext(client, request);
+  app.post('/tenant/subscription', async (request) => {
+    await ownerContext(client, request);
     const body = request.body as SubscriptionBody | undefined;
     const tier = subscriptionTier(body?.tier);
     if (tier !== 'FREE') {
@@ -373,65 +373,8 @@ export function tenantAccountRoutes(
         code: 'PAID_SUBSCRIPTION_REQUIRES_ACTIVATION',
       });
     }
-    const months =
-      typeof body?.months === 'number' && Number.isInteger(body.months) ? body.months : 1;
-    if (months < 1 || months > 12) {
-      throw new ValidationError('Subscription duration must be between 1 and 12 months', {
-        code: 'SUBSCRIPTION_DURATION_INVALID',
-      });
-    }
-
-    const plan = await client.subscriptionPlan.findUnique({ where: { tier } });
-    if (plan === null || !plan.isActive) throw new NotFoundError('Subscription plan not found');
-
-    const updated = await withTenantTx(client, context.tenantId, async (tx) => {
-      const now = new Date();
-      const current = await tx.tenantSubscription.findFirst({ orderBy: { createdAt: 'desc' } });
-      const end = new Date(now);
-      end.setMonth(end.getMonth() + months);
-      const status = tier === 'FREE' ? 'TRIALING' : 'ACTIVE';
-      const subscription =
-        current === null
-          ? await tx.tenantSubscription.create({
-              data: {
-                tenantId: context.tenantId,
-                planId: plan.id,
-                status,
-                currentPeriodStart: now,
-                currentPeriodEnd: end,
-              },
-            })
-          : await tx.tenantSubscription.update({
-              where: { id: current.id },
-              data: {
-                planId: plan.id,
-                status,
-                currentPeriodStart: now,
-                currentPeriodEnd: end,
-                cancelAtPeriodEnd: false,
-              },
-            });
-
-      await recordAuditEvent(tx, {
-        tenantId: context.tenantId,
-        actorUserId: context.session.userId,
-        actorRole: 'OWNER',
-        action: 'tenant.subscription.change',
-        targetType: 'tenant_subscription',
-        targetId: subscription.id,
-        details: { tier, months },
-      });
-      return subscription;
-    });
-
-    return reply.send({
-      subscription: {
-        tier: plan.tier,
-        name: plan.name,
-        status: updated.status,
-        currentPeriodStart: updated.currentPeriodStart,
-        currentPeriodEnd: updated.currentPeriodEnd,
-      },
+    throw new ForbiddenError('Trials cannot be renewed by the tenant', {
+      code: 'TRIAL_RENEWAL_NOT_ALLOWED',
     });
   });
 

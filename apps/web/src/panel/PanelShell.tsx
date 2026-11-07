@@ -10,6 +10,8 @@ import {
 } from './navigation';
 import './panel.css';
 import { AccountSettingsPage } from './AccountSettingsPage';
+import { SchedulingPage } from './SchedulingPage';
+import { CheckoutPage } from './CheckoutPage';
 
 /**
  * The panel shell: sidebar, top bar, page body, and the mobile bottom bar plus drawer.
@@ -54,7 +56,7 @@ function NavIcon({ item }: { readonly item: PanelNavItem }): JSX.Element {
   );
 }
 
-function PageBody({ item }: { readonly item: PanelNavItem }): JSX.Element {
+function PageBody({ item, role }: { readonly item: PanelNavItem; readonly role: PanelRole }): JSX.Element {
   if (item.id === 'dashboard') {
     return (
       <>
@@ -103,6 +105,10 @@ function PageBody({ item }: { readonly item: PanelNavItem }): JSX.Element {
 
   if (item.id === 'settings') {
     return <AccountSettingsPage />;
+  }
+
+  if (item.id === 'doctors' || item.id === 'appointments') {
+    return <SchedulingPage mode={item.id} isOwner={role === 'OWNER'} />;
   }
 
   return (
@@ -159,6 +165,7 @@ export function PanelShell({ profile, tenantName, onSignOut }: PanelShellProps):
   // A hash that names a section this role may not see falls back to the first allowed
   // section, so a bookmarked link can never open a page the menu hides.
   const current = pageFromHash(hash, items) ?? items[0]?.id ?? 'dashboard';
+  const checkout = roleKnown && role === 'OWNER' && hash === '#/checkout';
   const currentItem = items.find((item) => item.id === current) ?? items[0];
 
   const toggleTheme = useCallback((): void => {
@@ -266,6 +273,10 @@ export function PanelShell({ profile, tenantName, onSignOut }: PanelShellProps):
 
           <div className="pnl-grow" />
 
+          {roleKnown && role === 'OWNER' && <button type="button" className="pnl-buy" onClick={() => { window.location.hash = '#/checkout'; setHash('#/checkout'); }}>
+            خرید اشتراک <span>←</span>
+          </button>}
+
           <button
             type="button"
             className="pnl-cta cta"
@@ -294,7 +305,7 @@ export function PanelShell({ profile, tenantName, onSignOut }: PanelShellProps):
             </p>
           )}
 
-          {currentItem && <PageBody item={currentItem} />}
+          {checkout ? <CheckoutPage /> : currentItem && <PageBody item={currentItem} role={role} />}
         </main>
       </div>
 

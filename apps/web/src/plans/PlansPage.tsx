@@ -1,331 +1,79 @@
-import { Fragment, useState, type JSX } from 'react';
-import { MoonIcon, SunIcon } from '../auth/LoginPage';
+import { useEffect, useState, type JSX } from 'react';
+import './plans.css';
+import { BrandMark } from '../auth/LoginPage';
 
-/**
- * Plans & comparison screen.
- *
- * Approved rules (owner, 2026-10-13):
- * - Hoomana is a management panel for doctors and treatment clinics: appointments,
- *   patient management, accounting, and appointment/reminder SMS to patient and doctor.
- * - Three plans: **آزمایشی** (the practice plan with a limited period), **مطب**
- *   (single doctor, yearly subscription) and **کلینیک** (several doctors, custom-module
- *   users, branches, dedicated support, yearly subscription).
- * - Both paid plans include a **custom domain** and an **exclusive SMS panel** with a
- *   gift credit (e.g. 300,000 Toman); the trial includes 100 gift messages.
- * - The trial length is set in the platform panel, so the UI deliberately does not
- *   advertise a number. SMS top-up exists in the panel but is not described here.
- */
-
-type PlanId = 'free' | 'practice' | 'clinic';
-
-interface PlanCard {
-  readonly id: PlanId;
-  readonly badge: string;
-  readonly popular: boolean;
-  readonly name: string;
-  readonly lead: string;
-  readonly price: string;
-  readonly features: readonly { readonly text: string; readonly included: boolean }[];
-  readonly cta: string;
-}
-
-const GIFT_PRACTICE = '۳۰۰٬۰۰۰ تومان شارژ هدیه';
-
-const CARDS: readonly PlanCard[] = [
-  {
-    id: 'free',
-    badge: 'شروع',
-    popular: false,
-    name: 'آزمایشی',
-    lead: 'برای آشنایی کامل با هومانا: همان امکانات پکیج مطب، همراه ۱۰۰ پیامک هدیه.',
-    price: 'برای آشنایی با هومانا',
-    features: [
-      { text: '۱ پزشک (حالت مطب)', included: true },
-      { text: 'نوبت‌دهی، تقویم شمسی و رزرو آنلاین بیمار', included: true },
-      { text: 'مدیریت بیماران بی‌نهایت + ایمپورت اکسل', included: true },
-      { text: 'حسابداری و گزارش اکسل', included: true },
-      { text: 'پنل پیامکی اختصاصی + ۱۰۰ پیامک هدیه', included: true },
-      { text: 'دامنهٔ اختصاصی مطب', included: true },
-    ],
-    cta: 'شروع دورهٔ آزمایشی',
-  },
-  {
-    id: 'practice',
-    badge: 'محبوب',
-    popular: true,
-    name: 'مطب',
-    lead: 'اشتراک یک‌سالهٔ پزشک تنها یا مطب کوچک — با همهٔ ابزارها و هدیهٔ پیامکی.',
-    price: 'اشتراک یک‌ساله · قیمت‌گذاری: به‌زودی',
-    features: [
-      { text: '۱ پزشک، کارکنان بی‌نهایت', included: true },
-      { text: 'همهٔ امکانات نوبت‌دهی، بیماران و حسابداری', included: true },
-      { text: 'پیامک نوبت و یادآوری برای بیمار و پزشک', included: true },
-      { text: `پنل پیامکی اختصاصی + ${GIFT_PRACTICE}`, included: true },
-      { text: 'دامنهٔ اختصاصی مطب', included: true },
-      { text: 'لیست روزانهٔ بیماران برای پزشک', included: true },
-    ],
-    cta: 'انتخاب پکیج مطب',
-  },
-  {
-    id: 'clinic',
-    badge: 'کامل',
-    popular: false,
-    name: 'کلینیک',
-    lead: 'اشتراک یک‌سالهٔ کلینیک چندپزشکی: کاربران سفارشی، چند شعبه و پشتیبانی اختصاصی.',
-    price: 'اشتراک یک‌ساله · قیمت‌گذاری: به‌زودی',
-    features: [
-      { text: 'پزشکان و کارکنان بی‌نهایت', included: true },
-      { text: 'انتخاب پزشک در نوبت‌دهی و حضور روزانه', included: true },
-      { text: 'کاربران با دسترسی سفارشی (ماژولی)', included: true },
-      { text: `پنل پیامکی اختصاصی + ${GIFT_PRACTICE}`, included: true },
-      { text: 'دامنهٔ اختصاصی کلینیک', included: true },
-      { text: 'چند شعبه و پشتیبانی اختصاصی', included: true },
-    ],
-    cta: 'انتخاب پکیج کلینیک',
-  },
-];
-
-const SECTIONS: readonly {
-  readonly title: string;
-  readonly rows: readonly {
-    readonly label: string;
-    readonly free: string;
-    readonly practice: string;
-    readonly clinic: string;
-  }[];
-}[] = [
-  {
-    title: 'پایه و کاربران',
-    rows: [
-      { label: 'تعداد پزشکان', free: '۱', practice: '۱', clinic: 'نامحدود' },
-      {
-        label: 'کاربران کارکنان (منشی/پذیرش)',
-        free: 'نامحدود',
-        practice: 'نامحدود',
-        clinic: 'نامحدود',
-      },
-      { label: 'دسترسی سفارشی به ماژول‌ها (کاربر کاستوم)', free: '—', practice: '—', clinic: '✓' },
-      { label: 'تعداد شعبه', free: '۱', practice: '۱', clinic: 'نامحدود' },
-      { label: 'محدودیت تعداد بیمار یا پیامک', free: 'ندارد', practice: 'ندارد', clinic: 'ندارد' },
-    ],
-  },
-  {
-    title: 'نوبت‌دهی',
-    rows: [
-      { label: 'تقویم نوبت‌ها (روز/هفته/ماه، شمسی)', free: '✓', practice: '✓', clinic: '✓' },
-      { label: 'ثبت نوبت توسط منشی', free: '✓', practice: '✓', clinic: '✓' },
-      { label: 'رزرو آنلاین بیمار با کد پیامکی (OTP)', free: '✓', practice: '✓', clinic: '✓' },
-      {
-        label: 'انتخاب پزشک در نوبت‌دهی',
-        free: '— (تک‌پزشک)',
-        practice: '— (تک‌پزشک)',
-        clinic: '✓',
-      },
-      { label: 'قوانین زمان‌بندی (بافر، سقف روزانه، استثناها)', free: '✓', practice: '✓', clinic: '✓' },
-      { label: 'یادآوری پیامکی نوبت', free: '✓', practice: '✓', clinic: '✓' },
-      { label: 'لیست بیماران هر پزشک (پیامکی، زمان‌بندی‌شده + لحظه‌ای)', free: '✓', practice: '✓', clinic: '✓' },
-    ],
-  },
-  {
-    title: 'بیماران',
-    rows: [
-      {
-        label: 'پروندهٔ بیمار (نام، موبایل، کد ملی، شمارهٔ پرونده، تاریخ تولد)',
-        free: '✓',
-        practice: '✓',
-        clinic: '✓',
-      },
-      { label: 'ایمپورت گروهی از اکسل', free: '✓', practice: '✓', clinic: '✓' },
-      { label: 'ماژول پروندهٔ درمانی و گزارش‌ها (فاز بعد)', free: '✓', practice: '✓', clinic: '✓' },
-    ],
-  },
-  {
-    title: 'مالی',
-    rows: [
-      { label: 'حسابداری (تراکنش، دسته‌ها، روش پرداخت)', free: '✓', practice: '✓', clinic: '✓' },
-      { label: 'گزارش روز/ماه و خروجی اکسل', free: '✓', practice: '✓', clinic: '✓' },
-    ],
-  },
-  {
-    title: 'پیامک',
-    rows: [
-      { label: 'پیامک نوبت و یادآوری برای بیمار و پزشک', free: '✓', practice: '✓', clinic: '✓' },
-      {
-        label: 'پنل پیامکی اختصاصی مستاجر (خط و اعتبار خودش)',
-        free: '✓',
-        practice: '✓',
-        clinic: '✓',
-      },
-      {
-        label: 'هدیهٔ اعتبار پیامک',
-        free: '۱۰۰ پیامک',
-        practice: GIFT_PRACTICE,
-        clinic: GIFT_PRACTICE,
-      },
-      { label: 'کد پیامکی ورود/بازیابی', free: '✓', practice: '✓', clinic: '✓' },
-    ],
-  },
-  {
-    title: 'برند، دامنه و پشتیبانی',
-    rows: [
-      { label: 'ساب‌دامین هومانا', free: '✓', practice: '✓', clinic: '✓' },
-      { label: 'دامنهٔ اختصاصی', free: '✓', practice: '✓', clinic: '✓' },
-      { label: 'پشتیبانی', free: 'پایه', practice: 'استاندارد', clinic: 'اختصاصی' },
-      { label: 'مدت اعتبار', free: 'دورهٔ آزمایشی', practice: '۱ ساله', clinic: '۱ ساله' },
-    ],
-  },
-];
-
-function Cell({ value }: { readonly value: string }): JSX.Element {
-  if (value === '✓') return <span className="cell-yes">✓</span>;
-  if (value === '—' || value.startsWith('—')) return <span className="cell-no">{value}</span>;
-  return <span>{value}</span>;
-}
-
+type PracticeType = 'SOLO' | 'CLINIC';
 export interface PlansPageProps {
-  /** Starts the trial: sends the visitor to the signup screen. */
-  readonly onStartFree: () => void;
-  /** Back to the login screen (optional). */
+  readonly onStartFree: (type: PracticeType) => void;
   readonly onBackToLogin?: (() => void) | undefined;
 }
 
+const plans = [
+  { type: 'SOLO' as const, name: 'مطب', tag: 'برای مطب‌های مستقل', price: '۲۵٬۰۰۰٬۰۰۰', description: 'همه چیز برای مدیریت برنامه کاری یک پزشک در یک فضای ساده و منظم.', features: ['مدیریت یک پزشک', 'تعریف خدمات و مدت هر نوبت', 'تنظیم ساعت کاری و گام نوبت‌دهی', 'ثبت و مدیریت نوبت‌ها', 'تعیین ظرفیت هم‌زمان هر خدمت'] },
+  { type: 'CLINIC' as const, name: 'کلینیک', tag: 'برای مجموعه‌های چندپزشکی', price: '۳۵٬۰۰۰٬۰۰۰', description: 'برنامه پزشکان و خدمات مجموعه را از یک پنل مدیریت کنید.', features: ['تعریف پزشکان بدون محدودیت تعداد', 'برنامه و خدمات جداگانه برای هر پزشک', 'تنظیم ساعت کاری و ظرفیت نوبت‌ها', 'ثبت و مدیریت نوبت‌های پزشکان', 'دسترسی مدیر و پذیرش به نوبت‌ها'] },
+];
+
 export function PlansPage({ onStartFree, onBackToLogin }: PlansPageProps): JSX.Element {
-  const [notice, setNotice] = useState<string | null>(null);
-  const [theme, setTheme] = useState(() => document.documentElement.dataset['theme'] ?? 'light');
-
-  function toggleTheme(): void {
-    const next = theme === 'dark' ? 'light' : 'dark';
-    document.documentElement.dataset['theme'] = next;
-    setTheme(next);
-  }
-
-  function choosePlan(id: PlanId): void {
-    if (id === 'free') {
-      onStartFree();
-      return;
-    }
-
-    setNotice('خرید پکیج به‌زودی فعال می‌شود؛ فعلاً دورهٔ آزمایشی را شروع کنید.');
-  }
-
-  return (
-    <div className="plans-shell">
-      <div className="glow glow-teal" />
-      <div className="glow glow-amber" />
-
-      <button
-        type="button"
-        className="theme-btn theme-float neu-sm press"
-        onClick={toggleTheme}
-        aria-label="تعویض تم"
-      >
-        {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
-      </button>
-
-      <main className="plans-wrap">
-        <header className="plans-head">
-          <p className="brand-fa">پکیج‌های هومانا</p>
-          <p className="brand-sub">
-            هومانا پنل مدیریت پزشکان و کلینیک‌های درمانی است: نوبت‌دهی، مدیریت بیماران، حسابداری و
-            ارسال پیامک نوبت و یادآوری برای بیمار و پزشک.
-          </p>
-          <p className="brand-sub">
-            پکیج مناسب خودتان را انتخاب کنید؛ هر دو پکیج مطب و کلینیک یک‌ساله‌اند و همراه دامنهٔ
-            اختصاصی و پنل پیامکی اختصاصی با شارژ هدیه ارائه می‌شوند.
-          </p>
-        </header>
-
-        {notice !== null && (
-          <p className="notice" role="status">
-            {notice}
-          </p>
-        )}
-
-        <section className="plans-cards">
-          {CARDS.map((plan) => (
-            <article key={plan.id} className={plan.popular ? 'plan neu plan-popular' : 'plan neu'}>
-              <span className={plan.popular ? 'plan-badge plan-badge-ok' : 'plan-badge'}>
-                {plan.badge}
-              </span>
-              <h2>{plan.name}</h2>
-              <p className="plan-lead">{plan.lead}</p>
-              <p className="plan-price">{plan.price}</p>
-
-              <ul className="plan-features">
-                {plan.features.map((feature) => (
-                  <li key={feature.text}>
-                    <span className={feature.included ? 'tick' : 'tick tick-off'}>
-                      {feature.included ? '✓' : '—'}
-                    </span>
-                    {feature.text}
-                  </li>
-                ))}
-              </ul>
-
-              <button
-                type="button"
-                className={plan.id === 'free' ? 'plan-btn cta' : 'plan-btn neu-sm press'}
-                onClick={() => {
-                  choosePlan(plan.id);
-                }}
-              >
-                {plan.cta}
-              </button>
-            </article>
-          ))}
-        </section>
-
-        <h3 className="plans-section-title">مقایسهٔ کامل امکانات</h3>
-
-        <div className="plans-table-card neu">
-          <table className="plans-table">
-            <thead>
-              <tr>
-                <th>امکانات</th>
-                <th>آزمایشی</th>
-                <th>مطب</th>
-                <th>کلینیک</th>
-              </tr>
-            </thead>
-            <tbody>
-              {SECTIONS.map((section) => (
-                <Fragment key={section.title}>
-                  <tr className="plans-group">
-                    <td colSpan={4}>{section.title}</td>
-                  </tr>
-                  {section.rows.map((row) => (
-                    <tr key={row.label}>
-                      <td>{row.label}</td>
-                      <td>
-                        <Cell value={row.free} />
-                      </td>
-                      <td>
-                        <Cell value={row.practice} />
-                      </td>
-                      <td>
-                        <Cell value={row.clinic} />
-                      </td>
-                    </tr>
-                  ))}
-                </Fragment>
-              ))}
-            </tbody>
-          </table>
+  const [days, setDays] = useState<number | null>(null);
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetch('/auth/trial', { signal: controller.signal }).then(async (r) => r.ok ? r.json() as Promise<{ trialDays?: unknown }> : null)
+      .then((data) => { if (typeof data?.trialDays === 'number') setDays(data.trialDays); })
+      .catch(() => {});
+    return () => controller.abort();
+  }, []);
+  const trial = days === null ? 'دوره آزمایشی رایگان' : `آزمایش رایگان ${days.toLocaleString('fa-IR')} روزه`;
+  return <div className="market" dir="rtl">
+    <header className="market-nav">
+      <a className="market-logo" href="#top"><BrandMark /><strong>هومانا</strong></a>
+      <nav aria-label="راهنمای صفحه"><a href="#features">امکانات</a><a href="#plans">تعرفه‌ها</a><a href="#questions">پرسش‌های متداول</a></nav>
+      <div className="market-nav-actions"><button type="button" className="market-login" onClick={onBackToLogin}>ورود</button><button type="button" className="market-button small" onClick={() => onStartFree('SOLO')}>شروع رایگان <span>←</span></button></div>
+    </header>
+    <main id="top">
+      <section className="market-hero">
+        <div className="market-hero-copy">
+          <span className="market-eyebrow"><i /> مدیریت ساده‌تر، رسیدگی بهتر</span>
+          <h1>زمان شما برای<br /><em>مراقبت از بیماران</em> است.</h1>
+          <p>از برنامه‌ریزی ساعت کاری تا ثبت نوبت بیماران، همه‌چیز را در یک پنل منظم و قابل فهم مدیریت کنید.</p>
+          <div className="market-hero-actions"><button type="button" className="market-button" onClick={() => onStartFree('SOLO')}>همین حالا رایگان امتحان کنید <span>←</span></button><a className="market-text-link" href="#plans">مشاهده تعرفه‌ها <span>↓</span></a></div>
+          <p className="market-assurance">✓ {trial} <span>·</span> ✓ بدون نیاز به کارت بانکی</p>
         </div>
-
-        <p className="plans-note">
-          «آزمایشی» همان پکیج مطب است؛ تفاوتش دورهٔ محدود و میزان هدیهٔ پیامکی است. طول دورهٔ
-          آزمایشی از پنل مدیریت تعیین می‌شود. مطب و کلینیک اشتراک یک‌ساله‌اند و در هر دو، دامنهٔ
-          اختصاصی و پنل پیامکی اختصاصی همراه شارژ هدیه ارائه می‌شود. قیمت‌گذاری پکیج‌ها پس از تأیید
-          مالک ثبت می‌شود.
-        </p>
-
-        <div className="plans-back">
-          <button type="button" className="link-btn" onClick={onBackToLogin}>
-            بازگشت به صفحهٔ ورود
-          </button>
+        <div className="market-visual" aria-hidden="true">
+          <div className="market-visual-top"><span className="visual-logo"><BrandMark /></span><div><strong>نمای کلی برنامه</strong><small>پنل مدیریت هومانا</small></div><span className="visual-dots">•••</span></div>
+          <div className="visual-heading"><div><small>برنامه کاری شما</small><strong>یک روز منظم‌تر</strong></div><span className="visual-badge">نوبت‌دهی</span></div>
+          <div className="visual-row"><span className="visual-time">۰۹:۰۰</span><span className="visual-line teal" /><div><strong>ویزیت و مشاوره</strong><small>برنامه پزشک</small></div><span className="visual-check">✓</span></div>
+          <div className="visual-row"><span className="visual-time">۱۰:۳۰</span><span className="visual-line amber" /><div><strong>خدمات مجموعه</strong><small>ظرفیت و مدت دلخواه</small></div><span className="visual-check">✓</span></div>
+          <div className="visual-row"><span className="visual-time">۱۱:۰۰</span><span className="visual-line teal" /><div><strong>مدیریت نوبت‌ها</strong><small>همه چیز در یک نگاه</small></div><span className="visual-check">✓</span></div>
+          <div className="visual-foot"><span>✦</span> برنامه‌ای هماهنگ با روش کار شما</div>
         </div>
-      </main>
-    </div>
-  );
+      </section>
+      <section className="market-strip"><span>برای مطب‌ها و کلینیک‌ها طراحی شده</span><b>●</b><span>تنظیمات منعطف نوبت‌دهی</span><b>●</b><span>دسترسی آسان از مرورگر</span></section>
+      <section id="features" className="market-section">
+        <div className="market-section-head"><span className="market-kicker">امکانات هومانا</span><h2>تمرکز بیشتر روی آنچه مهم است.</h2><p>ابزارهای کاربردی برای نظم دادن به برنامه پزشکان و پذیرش بیماران.</p></div>
+        <div className="market-features">
+          <article><span className="feature-icon">◷</span><h3>نوبت‌دهی منعطف</h3><p>ساعت کاری، مدت و فاصله نوبت‌ها را متناسب با برنامه مجموعه تنظیم کنید.</p></article>
+          <article><span className="feature-icon">✚</span><h3>پزشکان و خدمات</h3><p>خدمات را تعریف کنید و برای هر پزشک برنامه و خدمات خودش را داشته باشید.</p></article>
+          <article><span className="feature-icon">◎</span><h3>ظرفیت هم‌زمان</h3><p>تعداد نوبت قابل پذیرش در هر زمان را برای هر خدمت مشخص کنید.</p></article>
+          <article><span className="feature-icon">▤</span><h3>مدیریت نوبت‌ها</h3><p>زمان‌های آزاد را ببینید، نوبت ثبت کنید و برنامه پیش رو را پیگیری کنید.</p></article>
+        </div>
+      </section>
+      <section id="plans" className="market-section market-pricing">
+        <div className="market-section-head"><span className="market-kicker">تعرفه‌های شفاف</span><h2>پکیجی متناسب با مجموعه شما</h2><p>هر دو پکیج با {trial} شروع می‌شوند. پس از آن، برای ادامه اشتراک تهیه کنید.</p></div>
+        <div className="market-plans">{plans.map((plan) => <article className={plan.type === 'CLINIC' ? 'market-plan featured' : 'market-plan'} key={plan.type}>
+          <div className="market-plan-top"><div><span>{plan.tag}</span><h3>پکیج {plan.name}</h3></div>{plan.type === 'CLINIC' && <b>چندپزشکی</b>}</div>
+          <p>{plan.description}</p><div className="market-price"><strong>{plan.price}</strong> <span>تومان / سال</span></div>
+          <button className={plan.type === 'CLINIC' ? 'market-button' : 'market-outline'} type="button" onClick={() => onStartFree(plan.type)}>شروع رایگان {plan.name} <span>←</span></button>
+          <div className="market-includes">امکانات پکیج</div><ul>{plan.features.map((feature) => <li key={feature}><span>✓</span>{feature}</li>)}</ul>
+        </article>)}</div>
+        <p className="market-price-note">قیمت‌ها برای اشتراک یک‌ساله و به تومان هستند. پرداخت آنلاین پس از راه‌اندازی درگاه فعال می‌شود.</p>
+      </section>
+      <section id="questions" className="market-section market-faq"><div><span className="market-kicker">سوالات متداول</span><h2>پیش از شروع بیشتر بدانید.</h2></div><div>
+        <details><summary>دوره آزمایشی چگونه شروع می‌شود؟</summary><p>با ثبت‌نام و تأیید شماره مدیر، حساب آزمایشی مجموعه ساخته می‌شود. برای شروع به کارت بانکی نیازی نیست.</p></details>
+        <details><summary>تفاوت مطب و کلینیک چیست؟</summary><p>مطب برای یک پزشک است؛ در کلینیک می‌توانید چند پزشک تعریف کنید و برنامه هرکدام را جداگانه مدیریت کنید.</p></details>
+        <details><summary>بعد از پایان دوره آزمایشی چه می‌شود؟</summary><p>برای ادامه استفاده از نوبت‌دهی باید اشتراک فعال داشته باشید. اطلاعات برای بررسی در پنل باقی می‌ماند.</p></details>
+      </div></section>
+      <section className="market-final"><div><span>از همین امروز شروع کنید</span><h2>نوبت‌دهی منظم‌تر، با هومانا</h2><p>{trial} را برای مجموعه خود شروع کنید.</p></div><button type="button" className="market-button light" onClick={() => onStartFree('SOLO')}>ساخت حساب رایگان ←</button></section>
+    </main>
+    <footer className="market-footer"><span>هومانا · مدیریت هوشمند مطب و کلینیک</span><button type="button" onClick={onBackToLogin}>ورود به حساب</button></footer>
+  </div>;
 }

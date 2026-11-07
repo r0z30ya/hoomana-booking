@@ -106,6 +106,15 @@ describe.skipIf(!dbAvailable)('tenant account management', () => {
       });
     }
 
+    const renewal = await server.inject({
+      method: 'POST',
+      url: '/tenant/subscription',
+      headers: { cookie },
+      payload: { tier: 'FREE', months: 12 },
+    });
+    expect(renewal.statusCode).toBe(403);
+    expect(renewal.json()).toMatchObject({ error: { code: 'TRIAL_RENEWAL_NOT_ALLOWED' } });
+
     const freeDomain = await server.inject({
       method: 'POST',
       url: '/tenant/domains',

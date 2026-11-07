@@ -9,6 +9,7 @@ import {
   type SecretEncryptionConfig,
 } from '@hmn/shared';
 import { buildServer } from './server.js';
+import { SchedulingEngine } from './scheduling/engine.js';
 
 async function main(): Promise<void> {
   const environment = loadEnvironment();
@@ -47,6 +48,7 @@ async function main(): Promise<void> {
       ? { key: smsEncryptionKey, keyVersion: environment.SMS_ENCRYPTION_KEY_VERSION }
       : undefined;
   const mfa = mfaConfigFromEnvironment(environment);
+  const schedulingKey = environment.HNOBAT_ENCRYPTION_KEY === undefined ? undefined : Buffer.from(environment.HNOBAT_ENCRYPTION_KEY.trim(), 'base64');
 
   const server = buildServer({
     logger,
@@ -73,6 +75,11 @@ async function main(): Promise<void> {
       client: database,
       customDomainsEnabled: environment.CUSTOM_DOMAINS_ENABLED === 'true',
       ...(smsEncryption === undefined ? {} : { smsEncryption }),
+    },
+    scheduling: {
+      client: database,
+      ...(environment.HNOBAT_URL === undefined ? {} : { engine: new SchedulingEngine(environment.HNOBAT_URL) }),
+      ...(schedulingKey === undefined || schedulingKey.length !== 32 ? {} : { encryption: { key: schedulingKey, keyVersion: environment.HNOBAT_ENCRYPTION_KEY_VERSION } }),
     },
     ...(platformDatabase === undefined
       ? {}

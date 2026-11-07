@@ -122,11 +122,13 @@ export interface RegistrationInput {
   readonly passphraseHash?: string | undefined;
   readonly displayName: string;
   readonly tenantName: string;
+  readonly practiceType?: 'SOLO' | 'CLINIC';
   /** URL-safe tenant slug; a random one is generated when omitted. */
   readonly tenantSlug?: string;
   /** Collected right after OTP signup. */
   readonly address?: string | undefined;
   readonly city?: string | undefined;
+  readonly contactPhones?: string[] | undefined;
   readonly now?: Date;
 }
 
@@ -149,9 +151,9 @@ export async function registerTenant(
   input: RegistrationInput,
 ): Promise<RegistrationResult> {
   const now = input.now ?? new Date();
-  // 30 days for now. The owner decided the trial length becomes configurable in the
-  // platform panel; until that exists, this constant is the single place to change it.
-  const trialEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+  const settings = await client.platformSetting.findUnique({ where: { id: 1 } });
+  if (!settings) throw new Error('Trial settings are missing');
+  const trialEnd = new Date(now.getTime() + settings.trialDays * 24 * 60 * 60 * 1000);
 
   const user = await client.user.create({
     data: {
@@ -163,11 +165,13 @@ export async function registerTenant(
   const tenant = await client.tenant.create({
     data: {
       name: input.tenantName,
+      practiceType: input.practiceType ?? 'SOLO',
       // `slug` is unique and required; a random readable default keeps registration
       // frictionless, and the owner can change it later from tenant settings.
       slug: input.tenantSlug ?? `t-${randomBytes(6).toString('hex')}`,
       ...(input.address === undefined ? {} : { address: input.address }),
       ...(input.city === undefined ? {} : { city: input.city }),
+      ...(input.contactPhones === undefined ? {} : { contactPhones: input.contactPhones }),
     },
   });
 

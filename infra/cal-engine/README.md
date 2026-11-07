@@ -20,6 +20,11 @@ and token service returned HTTP 403. Retrying the API build with reduced downloa
 concurrency also stalled, so the API and web containers are not running. Restore
 access to Docker Hub and dependency downloads before retrying the build.
 
+After VPN was enabled, the token service and registry became reachable, but Docker
+Hub returned no published tags for `calcom/cal.diy`, and downloading the Node base
+image timed out at Docker's distribution host. A further source build again stalled
+while fetching dependencies. The separate database and Redis remain running.
+
 After restoring Docker registry access or successfully completing source builds:
 
 ```powershell

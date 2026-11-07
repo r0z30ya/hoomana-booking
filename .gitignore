@@ -43,3 +43,4 @@ legacy/
 # Owner-supplied files can contain live credentials (e.g. an SMS panel token);
 # they stay local and are never part of the repository.
 .zwork/
+.local-backups/

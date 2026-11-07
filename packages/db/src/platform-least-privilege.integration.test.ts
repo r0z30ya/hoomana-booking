@@ -145,6 +145,7 @@ describe.skipIf(!dbAvailable)('S9 — platform role holds least privilege (ADR-0
       'auth_otps',
       'credentials',
       'platform_mfa_factors',
+      'scheduling_doctors',
       'sessions',
     ];
 

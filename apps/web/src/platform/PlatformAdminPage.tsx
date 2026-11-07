@@ -95,6 +95,25 @@ export function PlatformAdminPage(): JSX.Element {
   const [subscription, setSubscription] = useState({ planTier: 'FREE', months: '1' });
   const [domainForm, setDomainForm] = useState({ hostname: '', domainId: '' });
   const [smsForm, setSmsForm] = useState({ panelRef: '', sender: '' });
+  const [trialDays, setTrialDays] = useState('14');
+
+  useEffect(() => {
+    if (!authenticated) return;
+    void fetch('/platform/settings/trial', { credentials: 'same-origin' }).then(async (response) => {
+      if (!response.ok) return;
+      const body = await bodyOf(response);
+      if (typeof body.trialDays === 'number') setTrialDays(String(body.trialDays));
+    }).catch(() => undefined);
+  }, [authenticated]);
+
+  async function saveTrialDays(event: FormEvent<HTMLFormElement>): Promise<void> {
+    event.preventDefault();
+    try {
+      const response = await fetch('/platform/settings/trial', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify({ trialDays: Number(trialDays) }) });
+      if (!response.ok) throw new Error();
+      setNotice({ kind: 'ok', text: 'مدت دوره آزمایشی برای ثبت‌نام‌های جدید ذخیره شد.' });
+    } catch { setNotice({ kind: 'error', text: 'ذخیره مدت دوره آزمایشی انجام نشد.' }); }
+  }
 
   async function loadAccounts(): Promise<void> {
     const params = new URLSearchParams({ search });
@@ -465,6 +484,11 @@ export function PlatformAdminPage(): JSX.Element {
               {notice.text}
             </p>
           )}
+          <form className="pnl-card neu pnl-inline-form" onSubmit={(event) => void saveTrialDays(event)}>
+            <label htmlFor="platform-trial-days">مدت آزمایشی ثبت‌نام‌های جدید (روز)</label>
+            <input id="platform-trial-days" type="number" min="1" max="365" required value={trialDays} onChange={(event) => setTrialDays(event.target.value)} />
+            <button type="submit" className="pnl-cta cta">ذخیره</button>
+          </form>
         </section>
       </main>
     );

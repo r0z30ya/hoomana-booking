@@ -44,7 +44,7 @@ describe('App', () => {
       expect(fetchMock).toHaveBeenCalled();
     });
 
-    const firstCall = fetchMock.mock.calls[0];
+    const firstCall = fetchMock.mock.calls.find((call) => call[0] === '/health');
 
     expect(firstCall?.[0]).toBe('/health');
     // The request must be abortable so an unmounted component cannot set state.
@@ -101,7 +101,7 @@ describe('App', () => {
     });
   });
 
-  it('opens on the login screen with the Persian brand and no English scaffolding copy', () => {
+  it('opens on the Persian introduction and offers login', () => {
     fetchMock.mockResolvedValue(jsonResponse({ status: 'ok' }));
 
     render(<App />);
@@ -109,22 +109,17 @@ describe('App', () => {
     // The owner removed the English masthead; the screen is Persian-first.
     expect(screen.queryByText('HMN SaaS')).not.toBeInTheDocument();
     expect(screen.getByText('هومانا')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'ورود به پنل' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'ورود' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /sign in/i })).not.toBeInTheDocument();
   });
 
-  it('leads from the login footer to the plans screen and then to signup', () => {
+  it('leads from the introduction to clinic signup and preserves the package', async () => {
     fetchMock.mockResolvedValue(jsonResponse({ status: 'ok' }));
 
     render(<App />);
 
-    // The owner asked for both "free demo" and "signup" to open the comparison page.
-    fireEvent.click(screen.getByRole('button', { name: 'ثبت‌نام رایگان' }));
-    expect(screen.getByText('پکیج‌های هومانا')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'کلینیک' })).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: 'شروع دورهٔ آزمایشی' }));
-    expect(screen.getByLabelText('شمارهٔ موبایل')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /شروع رایگان کلینیک/ }));
+    expect(screen.getByLabelText('شمارهٔ موبایل مدیر مجموعه')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'دریافت کد تأیید' })).toBeInTheDocument();
   });
 });

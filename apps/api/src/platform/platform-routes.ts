@@ -463,6 +463,24 @@ export function platformRoutes(app: FastifyInstance, options: PlatformRoutesOpti
     return reply.code(204).send();
   });
 
+  app.get('/platform/settings/trial', async (request) => {
+    await requirePlatformSession(client, request);
+    const setting = await client.platformSetting.findUnique({ where: { id: 1 } });
+    if (!setting) throw new NotFoundError('Trial settings not found');
+    return { trialDays: setting.trialDays };
+  });
+
+  app.post('/platform/settings/trial', async (request) => {
+    const actor = await requirePlatformSession(client, request);
+    let sameOrigin = false;
+    try { const origin = new URL(request.headers.origin ?? ''); sameOrigin = ['http:', 'https:'].includes(origin.protocol) && origin.host === request.headers.host; } catch { /* reject */ }
+    if (!sameOrigin) throw new ValidationError('A same-origin request is required');
+    const days = field(request.body, 'trialDays');
+    if (typeof days !== 'number' || !Number.isInteger(days) || days < 1 || days > 365) throw new ValidationError('Trial duration must be between 1 and 365 days');
+    await client.$queryRaw`SELECT public.platform_set_trial_days(${actor.userId}::uuid, ${days}::integer)`;
+    return { trialDays: days };
+  });
+
   app.get('/platform/accounts', async (request, reply) => {
     await requirePlatformSession(client, request);
     const rows = await listCustomers(client);

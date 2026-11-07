@@ -82,6 +82,10 @@ export const environmentSchema = z.object({
   SMS_ENCRYPTION_KEY: z.string().optional(),
   SMS_ENCRYPTION_KEY_VERSION: z.coerce.number().int().min(1).default(1),
 
+  HNOBAT_URL: z.url().optional(),
+  HNOBAT_ENCRYPTION_KEY: z.string().optional(),
+  HNOBAT_ENCRYPTION_KEY_VERSION: z.coerce.number().int().min(1).default(1),
+
   /**
    * Platform SMS panel (§2.10). Optional at boot on purpose: tenants may bring their
    * own panel credentials (stored per tenant, never here), and the platform panel is

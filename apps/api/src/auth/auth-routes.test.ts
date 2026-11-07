@@ -252,6 +252,9 @@ describe.skipIf(!dbAvailable)('auth routes (ADR-0005)', () => {
     const devCode = sent.json<{ devCode?: string }>().devCode;
     expect(devCode).toMatch(/^\d{5}$/);
 
+    const preliminary = await server.inject({ method: 'POST', url: '/auth/otp/verify-signup', payload: { mobile, code: devCode } });
+    expect(preliminary.statusCode).toBe(200);
+
     const response = await server.inject({
       method: 'POST',
       url: '/auth/register',
@@ -261,6 +264,7 @@ describe.skipIf(!dbAvailable)('auth routes (ADR-0005)', () => {
         displayName: 'دکتر آزمایشی',
         tenantName: tenantName('otp'),
         address: 'تهران، خیابان ولیعصر، پلاک ۱',
+        contactPhones: ['02112345678', '02187654321'],
         city: 'تهران',
       },
     });
@@ -271,6 +275,7 @@ describe.skipIf(!dbAvailable)('auth routes (ADR-0005)', () => {
 
     const tenantRow = await migrator.tenant.findUnique({ where: { id: body.tenantId } });
     expect(tenantRow?.address).toContain('ولیعصر');
+    expect(tenantRow?.contactPhones).toEqual(['02112345678', '02187654321']);
     expect(tenantRow?.city).toBe('تهران');
 
     // An OTP-only account starts without a passphrase credential on purpose.
@@ -298,6 +303,16 @@ describe.skipIf(!dbAvailable)('auth routes (ADR-0005)', () => {
     expect(cookieOf(response)).toContain('hmn_session=');
   });
 
+  it('only reveals an existing signup after the number owner proves the OTP', async () => {
+    const mobile = testMobile(24);
+    expect((await register(mobile, 'already-exists')).statusCode).toBe(201);
+    const sent = await server.inject({ method: 'POST', url: '/auth/otp/send', payload: { mobile, purpose: 'SIGNUP' } });
+    const code = sent.json<{ devCode: string }>().devCode;
+    const wrong = code === '00000' ? '00001' : '00000';
+    expect((await server.inject({ method: 'POST', url: '/auth/otp/verify-signup', payload: { mobile, code: wrong } })).statusCode).toBe(401);
+    expect((await server.inject({ method: 'POST', url: '/auth/otp/verify-signup', payload: { mobile, code } })).statusCode).toBe(409);
+  });
+
   it('rejects a wrong code and refuses an immediate resend', async () => {
     const mobile = testMobile(22);
     createdMobiles.push(mobile);
@@ -319,10 +334,13 @@ describe.skipIf(!dbAvailable)('auth routes (ADR-0005)', () => {
     const issued = sent.json<{ devCode?: string }>().devCode ?? '';
     const wrongCode = issued === '00000' ? '00001' : '00000';
 
+    const preliminary = await server.inject({ method: 'POST', url: '/auth/otp/verify-signup', payload: { mobile, code: wrongCode } });
+    expect(preliminary.statusCode).toBe(401);
+
     const wrong = await server.inject({
       method: 'POST',
       url: '/auth/register',
-      payload: { mobile, code: wrongCode, displayName: 'x', tenantName: tenantName('bad-otp') },
+      payload: { mobile, code: wrongCode, displayName: 'x', tenantName: tenantName('bad-otp'), city: 'تهران', address: 'خیابان اول', contactPhones: ['02112345678'] },
     });
 
     expect(wrong.statusCode).toBe(401);
@@ -330,6 +348,13 @@ describe.skipIf(!dbAvailable)('auth routes (ADR-0005)', () => {
   });
 
   it('validates input before touching the database', async () => {
+    const missingContact = await server.inject({
+      method: 'POST',
+      url: '/auth/register',
+      payload: { mobile: testMobile(23), code: '12345', displayName: 'x', tenantName: 'y', address: 'x', city: 'y' },
+    });
+    expect(missingContact.statusCode).toBe(400);
+
     const badMobile = await server.inject({
       method: 'POST',
       url: '/auth/register',

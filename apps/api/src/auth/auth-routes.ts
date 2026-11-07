@@ -76,8 +76,10 @@ interface RegisterBody {
   readonly mobile?: unknown;
   readonly displayName?: unknown;
   readonly tenantName?: unknown;
+  readonly practiceType?: unknown;
   readonly address?: unknown;
   readonly city?: unknown;
+  readonly contactPhones?: unknown;
 }
 
 interface LoginBody {
@@ -125,7 +127,7 @@ export function authRoutes(app: FastifyInstance, options: AuthRoutesOptions): vo
   }
 
   /** Verify a live code: check expiry and attempts, consume it on success. */
-  async function verifyOtp(mobile: string, purpose: OtpPurpose, code: string): Promise<boolean> {
+  async function verifyOtp(mobile: string, purpose: OtpPurpose, code: string, consume = true): Promise<boolean> {
     const active = await findLatestOtp(client, mobile, purpose);
 
     if (active === undefined || active.consumedAt !== null) return false;
@@ -141,7 +143,7 @@ export function authRoutes(app: FastifyInstance, options: AuthRoutesOptions): vo
       return false;
     }
 
-    return consumeOtp(client, active.id, OTP_MAX_ATTEMPTS);
+    return consume ? consumeOtp(client, active.id, OTP_MAX_ATTEMPTS) : true;
   }
 
   /**
@@ -211,6 +213,34 @@ export function authRoutes(app: FastifyInstance, options: AuthRoutesOptions): vo
     });
   });
 
+  app.get('/auth/trial', async () => {
+    const settings = await client.platformSetting.findUnique({ where: { id: 1 } });
+    return { trialDays: settings?.trialDays ?? null };
+  });
+
+  // Check ownership before revealing whether a number already has an account.
+  // Registration still consumes the code atomically; this preliminary check does not.
+  app.post('/auth/otp/verify-signup', async (request, reply) => {
+    const body = request.body as LoginBody | undefined;
+    const mobile = isNonEmptyString(body?.mobile) ? normaliseMobile(body.mobile) : undefined;
+    const code = isNonEmptyString(body?.[OTP_FIELD]) ? body[OTP_FIELD] : undefined;
+    if (!mobile || !code || !/^\d{5}$/.test(code)) {
+      return reply.code(400).send({ error: { code: 'VALIDATION_ERROR', message: 'شماره یا کد تأیید معتبر نیست' } });
+    }
+    const ip = clientIp(request);
+    if (!(await checkRateLimit(client, mobile, ip)).allowed) {
+      return reply.code(429).send({ error: { code: 'RATE_LIMITED', message: 'تلاش بیش از حد؛ بعداً دوباره امتحان کنید' } });
+    }
+    if (!(await verifyOtp(mobile, 'SIGNUP', code, false))) {
+      await recordAttempt(client, { identifier: mobile, ipAddress: ip, succeeded: false });
+      return reply.code(401).send({ error: { code: 'OTP_INVALID', message: 'کد تأیید نامعتبر یا منقضی شده است' } });
+    }
+    if (await client.user.findUnique({ where: { mobile }, select: { id: true } })) {
+      return reply.code(409).send({ error: { code: 'REGISTRATION_FAILED', message: 'این شماره قبلاً ثبت شده است' } });
+    }
+    return reply.send({ verified: true });
+  });
+
   app.post('/auth/register', async (request, reply) => {
     const body = request.body as RegisterBody | undefined;
     const mobile = isNonEmptyString(body?.mobile) ? normaliseMobile(body.mobile) : undefined;
@@ -220,8 +250,16 @@ export function authRoutes(app: FastifyInstance, options: AuthRoutesOptions): vo
     const code = isNonEmptyString(body?.[OTP_FIELD]) ? body[OTP_FIELD] : undefined;
     const displayName = isNonEmptyString(body?.displayName) ? body.displayName.trim() : undefined;
     const tenantName = isNonEmptyString(body?.tenantName) ? body.tenantName.trim() : undefined;
+    const practiceType = body?.practiceType ?? 'SOLO';
+    if (practiceType !== 'SOLO' && practiceType !== 'CLINIC') {
+      return reply.code(400).send({ error: { code: 'VALIDATION_ERROR', message: 'Invalid practice type' } });
+    }
     const address = isNonEmptyString(body?.address) ? body.address.trim() : undefined;
     const city = isNonEmptyString(body?.city) ? body.city.trim() : undefined;
+    const phones = body?.contactPhones;
+    if (phones !== undefined && (!Array.isArray(phones) || phones.length > 5 || phones.some((phone: unknown) => typeof phone !== 'string' || !/^0[0-9]{9,10}$/.test(phone)))) {
+      return reply.code(400).send({ error: { code: 'VALIDATION_ERROR', message: 'شماره تلفن مجموعه نامعتبر است' } });
+    }
     const ip = clientIp(request);
 
     if (mobile === undefined || displayName === undefined || tenantName === undefined) {
@@ -240,6 +278,13 @@ export function authRoutes(app: FastifyInstance, options: AuthRoutesOptions): vo
           message: 'Either the SMS code or the passphrase field is required',
         },
       });
+    }
+
+    if (displayName.length > 200 || tenantName.length > 200 || (city?.length ?? 0) > 120 || (address?.length ?? 0) > 500) {
+      return reply.code(400).send({ error: { code: 'VALIDATION_ERROR', message: 'اطلاعات مجموعه بیش از حد طولانی است' } });
+    }
+    if (passphrase === undefined && (!city || !address || !Array.isArray(phones) || phones.length === 0)) {
+      return reply.code(400).send({ error: { code: 'VALIDATION_ERROR', message: 'شهر، آدرس و شماره تلفن مجموعه الزامی است' } });
     }
 
     if (passphrase !== undefined && passphrase.length < 8) {
@@ -287,8 +332,10 @@ export function authRoutes(app: FastifyInstance, options: AuthRoutesOptions): vo
       ...(passphraseHash === undefined ? {} : { passphraseHash }),
       displayName,
       tenantName,
+      practiceType,
       ...(address === undefined ? {} : { address }),
       ...(city === undefined ? {} : { city }),
+      ...(phones === undefined ? {} : { contactPhones: phones as string[] }),
     });
 
     await recordAttempt(client, { identifier: mobile, ipAddress: ip, succeeded: true });

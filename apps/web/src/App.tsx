@@ -65,7 +65,8 @@ export function App(): JSX.Element {
     window.location.hostname === 'admin.localhost' || window.location.hostname.startsWith('admin.');
   const [health, setHealth] = useState<HealthState>({ kind: 'loading' });
   const [profile, setProfile] = useState<SessionProfile | null>(null);
-  const [screen, setScreen] = useState<'login' | 'register' | 'plans'>('login');
+  const [screen, setScreen] = useState<'login' | 'register' | 'plans'>('plans');
+  const [practiceType, setPracticeType] = useState<'SOLO' | 'CLINIC'>('SOLO');
 
   async function acceptAuthenticated(next: SessionProfile): Promise<void> {
     setProfile(next);
@@ -164,6 +165,7 @@ export function App(): JSX.Element {
         />
       ) : screen === 'register' ? (
         <RegisterPage
+          initialPracticeType={practiceType}
           onAuthenticated={(next) => {
             void acceptAuthenticated(next);
           }}
@@ -173,7 +175,8 @@ export function App(): JSX.Element {
         />
       ) : screen === 'plans' ? (
         <PlansPage
-          onStartFree={() => {
+          onStartFree={(type) => {
+            setPracticeType(type);
             setScreen('register');
           }}
           onBackToLogin={() => {

@@ -1,0 +1,212 @@
+// ============================================================
+// hnobat — Booking Engine (Phase 1: API only)
+// Prisma schema modeled after cal.com's open-source schema
+// (packages/prisma/schema.prisma), trimmed to the core booking
+// engine and adapted for SQLite:
+//   - SQLite has no enums        -> String columns + zod validation
+//   - SQLite has no scalar lists -> JSON-encoded String columns
+//   - SQLite has no Json type    -> JSON-encoded String columns
+// Swapping `provider = "postgresql"` later only requires restoring
+// enums/Json types; the data model stays the same.
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                Int       @id @default(autoincrement())
+  username          String    @unique
+  name              String?
+  email             String    @unique
+  emailVerified     DateTime?
+  passwordHash      String?
+  avatarUrl         String?
+  bio               String?
+  timeZone          String    @default("Etc/UTC")
+  weekStart         String    @default("Sunday") // "Sunday" | "Monday"
+  timeFormat        Int       @default(24) // 12 | 24
+  locale            String?
+  defaultScheduleId Int?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  eventTypes  EventType[]
+  schedules   Schedule[]
+  bookings    Booking[] // bookings hosted by this user
+  apiKeys     ApiKey[]
+  webhooks    Webhook[]
+  memberships Membership[]
+  teams       Team[] @relation("TeamOwner")
+}
+
+model EventType {
+  id                   Int       @id @default(autoincrement())
+  title                String
+  slug                 String
+  description          String?
+  position             Int       @default(0)
+  hidden               Boolean   @default(false) // cal.com: hidden = not listed publicly, still bookable by direct link
+  userId               Int
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  length               Int // event duration in minutes
+  locations            String    @default("[]") // JSON array, cal.com: ["integrations:daily", ...]
+  requiresConfirmation Boolean   @default(false) // cal.com: booking goes to PENDING
+  disableGuests        Boolean   @default(false)
+  minimumBookingNotice Int       @default(120) // minutes; cal.com default
+  beforeBufferTime     Int       @default(0) // minutes, cal.com EventManager buffers
+  afterBufferTime      Int       @default(0) // minutes
+  slotInterval         Int? // minutes between slots; default = length
+  scheduleId           Int?
+  schedule             Schedule? @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
+  timeZone             String? // overrides schedule timezone when set
+  periodType           String    @default("UNLIMITED") // UNLIMITED | ROLLING | RANGE
+  periodDays           Int?
+  periodCountCalendarDays Boolean?
+  periodStartDate      DateTime?
+  periodEndDate        DateTime?
+  seatsPerTimeSlot     Int? // cal.com: shared bookings capacity per slot
+  price                Int       @default(0)
+  currency             String    @default("usd")
+  metadata             String? // JSON
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  bookings Booking[]
+  teamId   Int?
+  team     Team?   @relation(fields: [teamId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, slug])
+  @@unique([teamId, slug])
+}
+
+model Schedule {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  timeZone  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  availability Availability[]
+  eventTypes   EventType[]
+}
+
+model Availability {
+  id         Int      @id @default(autoincrement())
+  scheduleId Int
+  schedule   Schedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  // cal.com uses `days Int[]`; SQLite adaptation: JSON array of weekdays,
+  // 0 = Sunday ... 6 = Saturday (JS Date.getDay() convention, same as cal.com)
+  days       String   @default("[0,1,2,3,4,5,6]")
+  // Wall-clock times stored on the epoch date (1970-01-01) and interpreted
+  // in the Schedule timezone — the same convention cal.com uses.
+  startTime  DateTime
+  endTime    DateTime
+  // cal.com "date override": when set, this row applies ONLY to this date
+  // (local date in Schedule timezone) and replaces the weekly rows for that day.
+  date       DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Booking {
+  id              Int       @id @default(autoincrement())
+  uid             String    @unique // public identifier (nanoid-style), like cal.com
+  eventTypeId     Int?
+  eventType       EventType? @relation(fields: [eventTypeId], references: [id], onDelete: SetNull)
+  userId          Int? // host
+  user            User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  title           String
+  description     String?
+  location        String?
+  startTime       DateTime
+  endTime         DateTime
+  timeZone        String? // attendee-declared timezone
+  // PENDING | ACCEPTED | REJECTED | CANCELLED (cal.com BookingStatus)
+  status          String    @default("ACCEPTED")
+  metadata        String? // JSON
+  responses       String? // JSON bookingFieldsResponses (cal.com)
+  paid            Boolean   @default(false)
+  rejectionReason String?
+  cancelledBy     String?
+  rescheduledBy   String?
+  // cal.com reschedule bookkeeping
+  rescheduled     String? // uid of the new booking this one was rescheduled to
+  fromReschedule  String? @unique // uid of the booking this one came from
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  attendees Attendee[]
+}
+
+model Attendee {
+  id       Int     @id @default(autoincrement())
+  bookingId Int
+  booking  Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  name     String
+  email    String?
+  timeZone String
+  locale   String  @default("en")
+  noShow   Boolean @default(false)
+  phone    String?
+}
+
+model ApiKey {
+  id        String    @id @default(cuid())
+  userId    Int
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String?
+  hashedKey String    @unique // sha-256 of "hnb_..." key (cal.com stores hashed cal_ keys)
+  createdAt DateTime  @default(now())
+  expiresAt DateTime?
+  lastUsedAt DateTime?
+}
+
+model Webhook {
+  id            String   @id @default(cuid())
+  userId        Int
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscriberUrl String
+  // JSON array of triggers; cal.com WebhookTriggerEvents subset:
+  // BOOKING_CREATED | BOOKING_REQUESTED | BOOKING_CONFIRMED | BOOKING_RESCHEDULED
+  // BOOKING_CANCELLED | BOOKING_REJECTED | BOOKING_PAID | MEETING_ENDED
+  eventTriggers String   @default("[]")
+  active        Boolean  @default(true)
+  secret        String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Team {
+  id        Int      @id @default(autoincrement())
+  name      String
+  slug      String?  @unique
+  logoUrl   String?
+  bio       String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ownerId     Int
+  owner       User         @relation("TeamOwner", fields: [ownerId], references: [id])
+  memberships Membership[]
+  eventTypes  EventType[]
+}
+
+model Membership {
+  id       Int    @id @default(autoincrement())
+  teamId   Int
+  team     Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  userId   Int
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role     String @default("MEMBER") // OWNER | ADMIN | MEMBER
+  accepted Boolean @default(false)
+
+  @@unique([teamId, userId])
+}

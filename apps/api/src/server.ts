@@ -6,6 +6,7 @@ import type { Logger } from 'pino';
 import { authRoutes } from './auth/auth-routes.js';
 import { platformRoutes, type PlatformRoutesOptions } from './platform/platform-routes.js';
 import { tenantAccountRoutes, type TenantAccountRoutesOptions } from './tenant/account-routes.js';
+import { schedulingRoutes, type SchedulingOptions } from './scheduling/routes.js';
 
 export interface HealthChecks {
   readonly database: () => Promise<HealthProbeResult>;
@@ -32,6 +33,7 @@ export interface ServerOptions {
   readonly auth?: AuthOptions;
   readonly platform?: PlatformRoutesOptions;
   readonly tenantAccount?: TenantAccountRoutesOptions;
+  readonly scheduling?: SchedulingOptions;
   /**
    * Whether dependency error text may appear in health responses. Enabled outside
    * production because the message ("connection refused", "password authentication
@@ -87,7 +89,7 @@ function toHealthBody(result: HealthProbeResult, options: ServerOptions): Health
 export function buildServer(options: ServerOptions) {
   const app = Fastify({ loggerInstance: options.logger });
 
-  if (options.auth !== undefined || options.platform !== undefined) {
+  if (options.auth !== undefined || options.platform !== undefined || options.scheduling !== undefined) {
     void app.register(cookie);
   }
 
@@ -111,6 +113,9 @@ export function buildServer(options: ServerOptions) {
 
   if (options.tenantAccount !== undefined) {
     void app.register(tenantAccountRoutes, options.tenantAccount);
+  }
+  if (options.scheduling !== undefined) {
+    void app.register(schedulingRoutes, options.scheduling);
   }
 
   // Liveness: proves the process is up. Deliberately touches no dependency, so a

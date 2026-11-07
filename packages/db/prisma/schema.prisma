@@ -103,6 +103,9 @@ model Tenant {
   /// Collected right after OTP signup (owner decision 2026-10-13).
   address   String?  @db.VarChar(500)
   city      String?  @db.VarChar(120)
+  contactPhones String[] @default([])
+  /// Product mode is independent of whether the subscription is paid or trialing.
+  practiceType String @default("CLINIC") @db.VarChar(10)
   /// Platform-owner lever: a suspended clinic cannot use the product. Written only
   /// through the SECURITY DEFINER gate (hmn_app has no UPDATE on tenants).
   isSuspended Boolean @default(false)
@@ -118,8 +121,32 @@ model Tenant {
   subscriptions TenantSubscription[]
   auditLogs     AuditLog[]
   sessions      Session[]
+  schedulingDoctors SchedulingDoctor[]
 
   @@map("tenants")
+}
+
+model PlatformSetting {
+  id        Int @id @default(1)
+  trialDays Int @default(14)
+  @@map("platform_settings")
+}
+
+/// An engine host belongs to exactly one clinic; its API key never reaches the browser.
+model SchedulingDoctor {
+  id           String @id @db.Uuid
+  tenantId     String @db.Uuid
+  name         String @db.VarChar(200)
+  engineUserId Int
+  keyCiphertext Bytes
+  keyIv        Bytes
+  keyAuthTag   Bytes
+  keyVersion   Int
+  createdAt    DateTime @default(now()) @db.Timestamptz(6)
+  tenant       Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@map("scheduling_doctors")
 }
 
 /// The catalogue of plans. Global: identical for every tenant; a tenant's
