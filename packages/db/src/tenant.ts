@@ -50,6 +50,7 @@ export async function withTenantTx<T>(
   client: PrismaClient,
   tenantId: string,
   fn: (tx: TenantTx) => Promise<T>,
+  options?: { timeout?: number; maxWait?: number },
 ): Promise<T> {
   if (typeof tenantId !== 'string' || !UUID_PATTERN.test(tenantId)) {
     throw new ValidationError('A valid tenant identifier is required', {
@@ -65,5 +66,5 @@ export async function withTenantTx<T>(
     // the brand asserts "this handle was created inside the transaction whose
     // RLS context was just set", which holds at exactly this point.
     return fn(tx as TenantTx);
-  });
+  }, options);
 }

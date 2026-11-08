@@ -138,6 +138,7 @@ model SchedulingDoctor {
   tenantId     String @db.Uuid
   name         String @db.VarChar(200)
   engineUserId Int
+  engineHostId String? @db.VarChar(64)
   keyCiphertext Bytes
   keyIv        Bytes
   keyAuthTag   Bytes

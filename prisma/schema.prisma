@@ -1,0 +1,310 @@
+// hbook — Prisma schema (v2)
+// Multi-tenant booking engine. Every row carries tenantId; all API access is
+// tenant-scoped by the authenticated API key. Deletes cascade from Tenant.
+//
+// v2 changes (Homana integration readiness):
+//  - EventType.capacity: concurrent seats per slot (default 1), enforced by
+//    SlotInstance rows + a DB CHECK + a constraint trigger (defense in depth)
+//  - patient identity = mobile number (email optional everywhere)
+//  - transactional webhook outbox: WebhookEvent + queued WebhookDelivery
+//  - webhook signing secrets encrypted at rest (AES-256-GCM)
+//  - API key scopes (admin > manage > book > read)
+//  - composite (id, tenantId) foreign keys so cross-tenant references are
+//    impossible even with raw SQL
+//  - IdempotencyKey table for safe retries of booking mutations
+//  - optional externalId mapping for the host platform (Homana)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+}
+
+enum DeliveryStatus {
+  PENDING
+  PROCESSING
+  DELIVERED
+  FAILED
+}
+
+model Tenant {
+  id        String   @id @default(cuid())
+  name      String   @db.VarChar(120)
+  slug      String   @unique @db.VarChar(60)
+  timezone  String   @default("Asia/Tehran") @db.VarChar(64)
+  createdAt DateTime @db.Timestamptz(3) @default(now())
+
+  users           User[]
+  eventTypes      EventType[]
+  bookings        Booking[]
+  apiKeys         ApiKey[]
+  webhooks        Webhook[]
+  webhookEvents   WebhookEvent[]
+  deliveries      WebhookDelivery[]
+  availability    Availability[]
+  dateOverrides   DateOverride[]
+  slotInstances   SlotInstance[]
+  idempotencyKeys IdempotencyKey[]
+}
+
+model User {
+  id         String   @id @default(cuid())
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name       String   @db.VarChar(120)
+  /// Optional since v2 — Homana identifies doctors by id/phone, not email.
+  email      String?  @db.VarChar(254)
+  timezone   String   @db.VarChar(64)
+  role       Role     @default(MEMBER)
+  isHost     Boolean  @default(true)
+  /// Host platform (Homana) identifier for id mapping.
+  externalId String?  @db.VarChar(128)
+  createdAt  DateTime @db.Timestamptz(3) @default(now())
+  updatedAt  DateTime @db.Timestamptz(3) @updatedAt
+
+  eventTypes    EventType[]
+  bookings      Booking[]
+  availability  Availability[]
+  dateOverrides DateOverride[]
+  slotInstances SlotInstance[]
+
+  @@unique([tenantId, email])
+  @@unique([tenantId, externalId])
+  @@unique([id, tenantId])
+  @@index([tenantId])
+}
+
+model ApiKey {
+  id         String    @id @default(cuid())
+  tenantId   String
+  tenant     Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name       String    @db.VarChar(80)
+  hashedKey  String    @unique @db.VarChar(64)
+  prefix     String    @db.VarChar(16)
+  /// Access scopes, hierarchical: admin > manage > book > read.
+  scopes     String[]  @default(["admin"])
+  lastUsedAt DateTime? @db.Timestamptz(3)
+  expiresAt  DateTime? @db.Timestamptz(3)
+  revokedAt  DateTime? @db.Timestamptz(3)
+  createdAt  DateTime  @db.Timestamptz(3) @default(now())
+
+  @@index([tenantId])
+}
+
+model EventType {
+  id                   String   @id @default(cuid())
+  tenantId             String
+  tenant               Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  hostId               String?
+  host                 User?    @relation(fields: [hostId], references: [id], onDelete: SetNull)
+  slug                 String   @db.VarChar(60)
+  title                String   @db.VarChar(120)
+  description          String?  @db.VarChar(1000)
+  durationMin          Int
+  slotIntervalMin      Int
+  /// Concurrent seats per exact (event type, start) slot. 1 = private appointment.
+  capacity             Int      @default(1)
+  bufferBeforeMin      Int      @default(0)
+  bufferAfterMin       Int      @default(0)
+  minLeadMinutes       Int      @default(0)
+  maxLeadDays          Int      @default(60)
+  location             String?  @db.VarChar(200)
+  requiresConfirmation Boolean  @default(false)
+  isActive             Boolean  @default(true)
+  externalId           String?  @db.VarChar(128)
+  createdAt            DateTime @db.Timestamptz(3) @default(now())
+  updatedAt            DateTime @db.Timestamptz(3) @updatedAt
+
+  bookings      Booking[]
+  slotInstances SlotInstance[]
+
+  @@unique([tenantId, slug])
+  @@unique([tenantId, externalId])
+  @@unique([id, tenantId])
+  @@index([hostId])
+}
+
+/// Weekly recurring availability of a host: minutes from local midnight.
+model Availability {
+  id          String @id @default(cuid())
+  tenantId    String
+  tenant      Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User   @relation(fields: [userId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  /// 0 = Sunday … 6 = Saturday (in the host timezone)
+  weekday     Int
+  startMinute Int
+  endMinute   Int
+
+  @@index([userId, weekday])
+}
+
+/// A specific local date is fully closed or has one custom window.
+model DateOverride {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation(fields: [userId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  date        DateTime @db.Date
+  isClosed    Boolean  @default(true)
+  startMinute Int?
+  endMinute   Int?
+
+  @@unique([userId, date])
+}
+
+model Booking {
+  id                 String        @id @default(cuid())
+  /// Public identifier used in URLs and webhooks.
+  uid                String        @unique
+  tenantId           String
+  tenant             Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  eventTypeId        String
+  /// Composite FK — the event type must belong to the SAME tenant.
+  eventType          EventType     @relation(fields: [eventTypeId, tenantId], references: [id, tenantId], onDelete: Restrict)
+  hostId             String
+  /// Composite FK — the host must belong to the SAME tenant.
+  host               User          @relation(fields: [hostId, tenantId], references: [id, tenantId], onDelete: Restrict)
+  startsAt           DateTime      @db.Timestamptz(3)
+  endsAt             DateTime      @db.Timestamptz(3)
+  status             BookingStatus @default(CONFIRMED)
+  /// Patient (attendee) contact — mobile-first: phone required, email optional.
+  attendeeName       String        @db.VarChar(120)
+  attendeeEmail      String?       @db.VarChar(254)
+  /// Normalized mobile: 09xxxxxxxxx (Iran) or +E.164. Required on create via API.
+  attendeePhone      String?       @db.VarChar(40)
+  attendeeTimezone   String?       @db.VarChar(64)
+  notes              String?       @db.Text
+  cancellationReason String?       @db.VarChar(500)
+  cancelledAt        DateTime?     @db.Timestamptz(3)
+  externalId         String?       @db.VarChar(128)
+  createdAt          DateTime      @db.Timestamptz(3) @default(now())
+  updatedAt          DateTime      @db.Timestamptz(3) @updatedAt
+
+  @@unique([tenantId, externalId])
+  @@index([tenantId, startsAt])
+  @@index([hostId, startsAt])
+  @@index([hostId, eventTypeId, startsAt])
+  @@index([eventTypeId])
+  @@index([attendeeEmail])
+  @@index([attendeePhone])
+}
+
+/// One row per (host, event type, exact slot start). Tracks concurrent seats.
+/// The CHECK (taken <= capacity) is the hard database guarantee that active
+/// bookings never exceed the configured capacity — race-safe via
+/// SELECT … FOR UPDATE (EPQ re-read) on every mutation.
+model SlotInstance {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  hostId      String
+  host        User     @relation(fields: [hostId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  eventTypeId String
+  eventType   EventType @relation(fields: [eventTypeId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  startsAt    DateTime @db.Timestamptz(3)
+  endsAt      DateTime @db.Timestamptz(3)
+  capacity    Int
+  taken       Int      @default(0)
+  createdAt   DateTime @db.Timestamptz(3) @default(now())
+  updatedAt   DateTime @db.Timestamptz(3) @updatedAt
+
+  @@unique([hostId, eventTypeId, startsAt])
+  @@index([tenantId])
+}
+
+/// Transactional outbox event. Created in the SAME transaction as the
+/// business mutation, so events can never be lost. `id` is the stable
+/// event id used across all delivery attempts (dedupe key for consumers).
+model WebhookEvent {
+  id        String   @id
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  type      String   @db.VarChar(40)
+  data      Json
+  createdAt DateTime @db.Timestamptz(3) @default(now())
+
+  deliveries WebhookDelivery[]
+
+  @@index([tenantId, createdAt])
+}
+
+/// Delivery queue row per (webhook, event). State machine:
+/// PENDING → PROCESSING → DELIVERED | (backoff) PENDING … → FAILED.
+/// Rows survive restarts; PROCESSING rows stuck after a crash are
+/// re-queued by the worker sweep (at-least-once delivery).
+model WebhookDelivery {
+  id             String         @id @default(cuid())
+  webhookId      String
+  webhook        Webhook        @relation(fields: [webhookId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  tenantId       String
+  tenant         Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  eventId        String
+  event          WebhookEvent   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  /// Denormalized event type (e.g. booking.created) for easy listing.
+  eventType      String         @db.VarChar(40)
+  status         DeliveryStatus @default(PENDING)
+  attempts       Int            @default(0)
+  nextAttemptAt  DateTime?      @db.Timestamptz(3)
+  lastAttemptAt  DateTime?      @db.Timestamptz(3)
+  lastStatusCode Int?
+  lastError      String?        @db.VarChar(300)
+  createdAt      DateTime       @db.Timestamptz(3) @default(now())
+  updatedAt      DateTime       @db.Timestamptz(3) @updatedAt
+
+  @@unique([webhookId, eventId])
+  @@index([status, nextAttemptAt])
+  @@index([webhookId, createdAt])
+  @@index([tenantId, eventType])
+}
+
+model Webhook {
+  id        String   @id @default(cuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  url       String   @db.VarChar(500)
+  /// AES-256-GCM encrypted signing secret ("enc.v1.…"). Legacy plaintext
+  /// values are re-encrypted lazily on first use.
+  secret    String   @db.VarChar(300)
+  events    String[]
+  isActive  Boolean  @default(true)
+  createdAt DateTime @db.Timestamptz(3) @default(now())
+
+  deliveries WebhookDelivery[]
+
+  @@unique([id, tenantId])
+}
+
+/// Server-side idempotency for booking mutations. Keyed by
+/// (tenant, Idempotency-Key header). Stores the first response so network
+/// retries can never create duplicate bookings.
+model IdempotencyKey {
+  id             String   @id @default(cuid())
+  tenantId       String
+  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  key            String   @db.VarChar(200)
+  endpoint       String   @db.VarChar(120)
+  requestHash    String   @db.VarChar(64)
+  responseStatus Int?
+  responseBody   Json?
+  createdAt      DateTime @db.Timestamptz(3) @default(now())
+
+  @@unique([tenantId, key])
+  @@index([createdAt])
+}

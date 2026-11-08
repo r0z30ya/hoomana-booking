@@ -1,0 +1,193 @@
+// hbook — Prisma schema
+// Multi-tenant booking engine. Every row carries tenantId; all API access is
+// tenant-scoped by the authenticated API key. Deletes cascade from Tenant.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+}
+
+model Tenant {
+  id        String   @id @default(cuid())
+  name      String   @db.VarChar(120)
+  slug      String   @unique @db.VarChar(60)
+  timezone  String   @default("Asia/Tehran") @db.VarChar(64)
+  createdAt DateTime @db.Timestamptz(3) @default(now())
+
+  users           User[]
+  eventTypes      EventType[]
+  bookings        Booking[]
+  apiKeys         ApiKey[]
+  webhooks        Webhook[]
+  deliveries      WebhookDelivery[]
+  availability    Availability[]
+  dateOverrides   DateOverride[]
+}
+
+model User {
+  id        String   @id @default(cuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name      String   @db.VarChar(120)
+  email     String   @db.VarChar(254)
+  timezone  String   @db.VarChar(64)
+  role      Role     @default(MEMBER)
+  isHost    Boolean  @default(true)
+  createdAt DateTime @db.Timestamptz(3) @default(now())
+  updatedAt DateTime @db.Timestamptz(3) @updatedAt
+
+  eventTypes    EventType[]
+  bookings      Booking[]
+  availability  Availability[]
+  dateOverrides DateOverride[]
+
+  @@unique([tenantId, email])
+  @@index([tenantId])
+}
+
+model ApiKey {
+  id         String    @id @default(cuid())
+  tenantId   String
+  tenant     Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name       String    @db.VarChar(80)
+  hashedKey  String    @unique @db.VarChar(64)
+  prefix     String    @db.VarChar(16)
+  lastUsedAt DateTime? @db.Timestamptz(3)
+  expiresAt  DateTime? @db.Timestamptz(3)
+  revokedAt  DateTime? @db.Timestamptz(3)
+  createdAt  DateTime @db.Timestamptz(3) @default(now())
+
+  @@index([tenantId])
+}
+
+model EventType {
+  id                   String   @id @default(cuid())
+  tenantId             String
+  tenant               Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  hostId               String?
+  host                 User?    @relation(fields: [hostId], references: [id], onDelete: SetNull)
+  slug                 String   @db.VarChar(60)
+  title                String   @db.VarChar(120)
+  description          String?  @db.VarChar(1000)
+  durationMin          Int
+  slotIntervalMin      Int
+  bufferBeforeMin      Int      @default(0)
+  bufferAfterMin       Int      @default(0)
+  minLeadMinutes       Int      @default(0)
+  maxLeadDays          Int      @default(60)
+  location             String?  @db.VarChar(200)
+  requiresConfirmation Boolean  @default(false)
+  isActive             Boolean  @default(true)
+  createdAt            DateTime @db.Timestamptz(3) @default(now())
+  updatedAt            DateTime @db.Timestamptz(3) @updatedAt
+
+  bookings Booking[]
+
+  @@unique([tenantId, slug])
+  @@index([hostId])
+}
+
+/// Weekly recurring availability of a host: minutes from local midnight.
+model Availability {
+  id          String @id @default(cuid())
+  tenantId    String
+  tenant      Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// 0 = Sunday … 6 = Saturday (in the host timezone)
+  weekday     Int
+  startMinute Int
+  endMinute   Int
+
+  @@index([userId, weekday])
+}
+
+/// A specific local date is fully closed or has one custom window.
+model DateOverride {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date        DateTime @db.Date
+  isClosed    Boolean  @default(true)
+  startMinute Int?
+  endMinute   Int?
+
+  @@unique([userId, date])
+}
+
+model Booking {
+  id                 String        @id @default(cuid())
+  /// Public identifier used in URLs and webhooks.
+  uid                String        @unique
+  tenantId           String
+  tenant             Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  eventTypeId        String
+  eventType          EventType     @relation(fields: [eventTypeId], references: [id], onDelete: Restrict)
+  hostId             String
+  host               User          @relation(fields: [hostId], references: [id], onDelete: Restrict)
+  startsAt           DateTime @db.Timestamptz(3)
+  endsAt             DateTime @db.Timestamptz(3)
+  status             BookingStatus @default(CONFIRMED)
+  attendeeName       String        @db.VarChar(120)
+  attendeeEmail      String        @db.VarChar(254)
+  attendeePhone      String?       @db.VarChar(40)
+  attendeeTimezone   String?       @db.VarChar(64)
+  notes              String?       @db.Text
+  cancellationReason String?       @db.VarChar(500)
+  cancelledAt        DateTime? @db.Timestamptz(3)
+  createdAt          DateTime @db.Timestamptz(3) @default(now())
+  updatedAt          DateTime @db.Timestamptz(3) @updatedAt
+
+  @@index([tenantId, startsAt])
+  @@index([hostId, startsAt])
+  @@index([eventTypeId])
+  @@index([attendeeEmail])
+}
+
+model Webhook {
+  id        String   @id @default(cuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  url       String   @db.VarChar(500)
+  secret    String   @db.VarChar(128)
+  events    String[]
+  isActive  Boolean  @default(true)
+  createdAt DateTime @db.Timestamptz(3) @default(now())
+
+  deliveries WebhookDelivery[]
+}
+
+model WebhookDelivery {
+  id         String   @id @default(cuid())
+  webhookId  String
+  webhook    Webhook  @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  event      String   @db.VarChar(40)
+  payload    Json
+  attempt    Int
+  success    Boolean
+  statusCode Int?
+  error      String?  @db.VarChar(300)
+  createdAt  DateTime @db.Timestamptz(3) @default(now())
+
+  @@index([webhookId, createdAt])
+}

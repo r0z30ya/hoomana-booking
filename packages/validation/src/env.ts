@@ -85,6 +85,8 @@ export const environmentSchema = z.object({
   HNOBAT_URL: z.url().optional(),
   HNOBAT_ENCRYPTION_KEY: z.string().optional(),
   HNOBAT_ENCRYPTION_KEY_VERSION: z.coerce.number().int().min(1).default(1),
+  HBOOK_URL: z.url().optional(),
+  HBOOK_SETUP_TOKEN: z.string().min(8).optional(),
 
   /**
    * Platform SMS panel (§2.10). Optional at boot on purpose: tenants may bring their

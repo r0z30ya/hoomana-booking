@@ -14,9 +14,9 @@ const tenantB = '22222222-2222-4222-8222-222222222222';
 const id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const encryption: SecretEncryptionConfig = { key: Buffer.alloc(32, 4), keyVersion: 1 };
 const encrypted = encryptSecret('hnb_private_value', `scheduling:${tenantA}:${id}`, encryption);
-const doctor = { id, tenantId: tenantA, name: 'A', engineUserId: 1, keyCiphertext: encrypted.ciphertext, keyIv: encrypted.iv, keyAuthTag: encrypted.authTag, keyVersion: 1, createdAt: new Date() };
+const doctor = { id, tenantId: tenantA, name: 'A', engineUserId: 1, engineHostId: 'host-a', keyCiphertext: encrypted.ciphertext, keyIv: encrypted.iv, keyAuthTag: encrypted.authTag, keyVersion: 1, createdAt: new Date() };
 const client = {
-  tenant: { findUnique: () => Promise.resolve({ practiceType: state.practiceType }) },
+  tenant: { findUnique: () => Promise.resolve({ name: 'Test clinic', practiceType: state.practiceType }) },
   tenantMembership: { findUnique: () => Promise.resolve({ role: state.role }) },
   tenantSubscription: { findFirst: () => Promise.resolve({ status: 'TRIALING', currentPeriodStart: new Date(Date.now() - 86400000), currentPeriodEnd: new Date(Date.now() + (state.expired ? -1000 : 86400000)) }) },
   schedulingDoctor: {
@@ -25,7 +25,7 @@ const client = {
     count: () => Promise.resolve(1),
   },
 } as unknown as PrismaClient;
-const send = vi.fn(() => Promise.resolve(Response.json({ data: { eventTypes: [], schedules: [] } })));
+const send = vi.fn((url: URL) => Promise.resolve(Response.json(url.pathname.endsWith('/availability') ? { weekly: [] } : { items: [], nextCursor: null })));
 const server = Fastify();
 await server.register(cookie);
 await server.register(schedulingRoutes, { client, engine: new SchedulingEngine('http://localhost:3002/api/v2', send as typeof fetch), encryption });
@@ -72,7 +72,7 @@ describe('scheduling security boundary', () => {
   });
   it('rejects public plaintext engine endpoints and URL traversal', async () => {
     expect(() => new SchedulingEngine('http://example.com/api/v2')).toThrow();
-    const engine = new SchedulingEngine('http://localhost:3002/api/v2', send);
+    const engine = new SchedulingEngine('http://localhost:3002/api/v2', send as typeof fetch);
     await expect(engine.request('../auth')).rejects.toThrow();
     expect(send).not.toHaveBeenCalled();
   });

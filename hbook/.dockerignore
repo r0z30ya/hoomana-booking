@@ -1,0 +1,11 @@
+node_modules
+dist
+.env
+*.log
+pgdata
+.git
+.github
+docs
+scripts/e2e.mjs
+scripts/webhook-receiver.js
+README.md

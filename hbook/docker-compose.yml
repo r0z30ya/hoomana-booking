@@ -1,0 +1,46 @@
+# hbook — one-command stack (API + PostgreSQL)
+# Usage:  cp .env.example .env  →  edit values  →  docker compose up -d --build
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: hbook
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me-strong}
+      POSTGRES_DB: hbook
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U hbook -d hbook']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://hbook:${POSTGRES_PASSWORD:-change-me-strong}@db:5432/hbook?connection_limit=10&pool_timeout=10
+      HBOOK_SETUP_TOKEN: ${HBOOK_SETUP_TOKEN:?Set HBOOK_SETUP_TOKEN in .env (openssl rand -hex 32)}
+      PORT: 3000
+      HOST: 0.0.0.0
+      NODE_ENV: production
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+      RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-300}
+      TRUST_PROXY: ${TRUST_PROXY:-false}
+      LOG_LEVEL: ${LOG_LEVEL:-warn}
+    ports:
+      - '${HBOOK_PORT:-3000}:3000'
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:3000/health || exit 1']
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+volumes:
+  db-data:

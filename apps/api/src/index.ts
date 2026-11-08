@@ -78,7 +78,7 @@ async function main(): Promise<void> {
     },
     scheduling: {
       client: database,
-      ...(environment.HNOBAT_URL === undefined ? {} : { engine: new SchedulingEngine(environment.HNOBAT_URL) }),
+      ...(environment.HBOOK_URL === undefined || environment.HBOOK_SETUP_TOKEN === undefined ? {} : { engine: new SchedulingEngine(environment.HBOOK_URL, fetch, environment.HBOOK_SETUP_TOKEN) }),
       ...(schedulingKey === undefined || schedulingKey.length !== 32 ? {} : { encryption: { key: schedulingKey, keyVersion: environment.HNOBAT_ENCRYPTION_KEY_VERSION } }),
     },
     ...(platformDatabase === undefined
