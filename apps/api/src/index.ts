@@ -10,6 +10,7 @@ import {
 } from '@hmn/shared';
 import { buildServer } from './server.js';
 import { SchedulingEngine } from './scheduling/engine.js';
+import { createCentralSmsService } from './platform/central-sms.js';
 
 async function main(): Promise<void> {
   const environment = loadEnvironment();
@@ -47,6 +48,9 @@ async function main(): Promise<void> {
     smsEncryptionKey !== undefined && smsEncryptionKey.length === 32
       ? { key: smsEncryptionKey, keyVersion: environment.SMS_ENCRYPTION_KEY_VERSION }
       : undefined;
+  const centralSmsSettings = platformDatabase && smsEncryption
+    ? createCentralSmsService(platformDatabase, smsEncryption, isSmsConfigured(environment) ? { panelRef: environment.SMS_MELIPAYAMAK_PANEL_REF!, sender: environment.SMS_MELIPAYAMAK_SENDER ?? '', otpBodyId: environment.SMS_MELIPAYAMAK_OTP_BODY_ID } : undefined)
+    : undefined;
   const mfa = mfaConfigFromEnvironment(environment);
   const schedulingKey = environment.HNOBAT_ENCRYPTION_KEY === undefined ? undefined : Buffer.from(environment.HNOBAT_ENCRYPTION_KEY.trim(), 'base64');
 
@@ -63,7 +67,7 @@ async function main(): Promise<void> {
       // Without a wired SMS provider the code is only revealed outside production, so
       // local runs stay testable and a production deployment fails loudly instead.
       exposeOtpInResponse: environment.NODE_ENV !== 'production',
-      ...(smsProvider === undefined
+      ...(centralSmsSettings !== undefined ? { otpSender: (mobile: string, code: string) => centralSmsSettings.sendOtp(mobile, code), otpAvailable: async () => (await centralSmsSettings.status()).configured } : smsProvider === undefined
         ? {}
         : {
             otpSender: async (mobile: string, code: string) => {
@@ -88,6 +92,8 @@ async function main(): Promise<void> {
             client: platformDatabase,
             ...(mfa === undefined ? {} : { mfa }),
             ...(smsEncryption === undefined ? {} : { smsEncryption }),
+            ...(centralSmsSettings === undefined ? {} : { centralSmsSettings }),
+            ...(smsProvider === undefined ? {} : { centralSms: { sender: environment.SMS_MELIPAYAMAK_SENDER ?? '', otpConfigured: environment.SMS_MELIPAYAMAK_OTP_BODY_ID !== undefined, fetchCredit: () => smsProvider.fetchCredit() } }),
           },
         }),
   });

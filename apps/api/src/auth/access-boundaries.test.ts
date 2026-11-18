@@ -89,6 +89,26 @@ describe.skipIf(!available)('identity and tenant boundaries', () => {
     await admin.$disconnect();
   });
 
+  it('isolates client records and payments between real authenticated clinics', async () => {
+    const first = clinics[0]!; const second = clinics[1]!;
+    const mutation = { host: 'clinic.localhost:3000', origin: 'http://clinic.localhost:3000', cookie: first.cookie };
+    const created = await server.inject({ method: 'POST', url: '/tenant/clients', headers: mutation, payload: { firstName: 'Test', lastName: 'Isolation', mobile: '09000001234', nationalId: '1234567890', fileNumber: 'ISOLATION-TEST' } });
+    expect(created.statusCode, created.body).toBe(201);
+    const id = created.json<{ client: { id: string } }>().client.id;
+    const payment = await server.inject({ method: 'POST', url: `/tenant/clients/${id}/payments`, headers: { ...mutation, 'idempotency-key': randomUUID() }, payload: { amountTomans: 10000, method: 'CARD' } });
+    expect(payment.statusCode, payment.body).toBe(201);
+    const otherHeaders = { ...mutation, cookie: second.cookie };
+    const list = await server.inject({ method: 'GET', url: '/tenant/clients?q=ISOLATION-TEST', headers: otherHeaders });
+    expect(list.statusCode).toBe(200); expect(list.json<{ clients: unknown[] }>().clients).toHaveLength(0);
+    expect((await server.inject({ method: 'GET', url: `/tenant/clients/${id}/payments`, headers: otherHeaders })).statusCode).toBe(404);
+    expect((await server.inject({ method: 'POST', url: `/tenant/clients/${id}`, headers: otherHeaders, payload: { firstName: 'Changed', lastName: 'X', mobile: '09000001234' } })).statusCode).toBe(404);
+    expect((await server.inject({ method: 'POST', url: `/tenant/clients/${id}/payments`, headers: { ...otherHeaders, 'idempotency-key': randomUUID() }, payload: { amountTomans: 1, method: 'CASH' } })).statusCode).toBe(404);
+    expect(await withTenantTx(app, second.tenantId, (tx) => tx.clientRecord.findMany({ where: { id } }))).toHaveLength(0);
+    expect(await withTenantTx(app, second.tenantId, (tx) => tx.clientPayment.findMany({ where: { clientId: id } }))).toHaveLength(0);
+    expect(await app.clientRecord.findMany({ where: { id } })).toHaveLength(0);
+    expect((await server.inject({ method: 'GET', url: '/tenant/clients' })).statusCode).toBe(401);
+  });
+
   it('isolates clinic rows using the application database role', async () => {
     const first = clinics[0]!;
     const second = clinics[1]!;

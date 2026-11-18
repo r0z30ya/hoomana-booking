@@ -32,18 +32,96 @@ const app = buildServer({
     redis: () => Promise.resolve({ dependency: 'redis', status: 'ok', latencyMs: 0 }),
   },
   platform: {
-    client: { $queryRaw: query } as unknown as PrismaClient,
+    client: { $queryRaw: query, $transaction: (fn: (tx: { $queryRaw: typeof query }) => Promise<unknown>) => fn({ $queryRaw: query }) } as unknown as PrismaClient,
     smsEncryption: { key, keyVersion: 1 },
   },
 });
 const headers = { cookie: 'hmn_admin_session=testing' };
 
+const centralCredit = vi.fn().mockResolvedValue({ amount: 12345 });
+const saveCentral = vi.fn().mockResolvedValue(undefined);
+const centralStatus = vi.fn().mockResolvedValue({ configured: true, sender: '500012345', otpConfigured: true, otpBodyId: 123, canEdit: true });
+const centralApp = buildServer({
+  logger: createLogger({ name: 'central-sms-test', level: 'silent', environment: 'test' }),
+  exposeDependencyErrors: false,
+  health: { database: () => Promise.resolve({ dependency: 'database', status: 'ok', latencyMs: 0 }), redis: () => Promise.resolve({ dependency: 'redis', status: 'ok', latencyMs: 0 }) },
+  platform: { client: { $queryRaw: query } as unknown as PrismaClient, centralSms: { sender: '500012345', otpConfigured: true, fetchCredit: centralCredit } },
+});
+const centralSettingsApp = buildServer({
+  logger: createLogger({ name: 'central-sms-settings-test', level: 'silent', environment: 'test' }),
+  exposeDependencyErrors: false,
+  health: { database: () => Promise.resolve({ dependency: 'database', status: 'ok', latencyMs: 0 }), redis: () => Promise.resolve({ dependency: 'redis', status: 'ok', latencyMs: 0 }) },
+  platform: { client: { $queryRaw: query } as unknown as PrismaClient, centralSmsSettings: { status: centralStatus, save: saveCentral, fetchCredit: centralCredit } },
+});
+
 beforeEach(() => {
   query.mockClear();
 });
-afterAll(async () => app.close());
+afterAll(async () => { await app.close(); await centralApp.close(); await centralSettingsApp.close(); });
 
 describe('platform domain and SMS management', () => {
+  it('validates and saves all SMS templates as one operation', async () => {
+    const sameOrigin = { ...headers, host: 'admin.localhost:3000', origin: 'http://admin.localhost:3000' };
+    const templates = ['OTP', 'BOOKING', 'RESCHEDULE', 'CANCELLATION', 'REMINDER', 'DOCTOR_BOOKING'].map((event) => ({ event, bodyId: event === 'OTP' ? 123 : null }));
+    expect((await app.inject({ method: 'POST', url: '/platform/sms/templates/batch', headers: sameOrigin, payload: { templates: templates.slice(1) } })).statusCode).toBe(400);
+    expect(query.mock.calls.some(([sql]) => sql.join('?').includes('platform_save_sms_templates'))).toBe(false);
+    expect((await app.inject({ method: 'POST', url: '/platform/sms/templates/batch', headers: sameOrigin, payload: { templates } })).statusCode).toBe(200);
+    expect(query.mock.calls.filter(([sql]) => sql.join('?').includes('platform_save_sms_templates'))).toHaveLength(1);
+  });
+  it('restricts SMS templates to authenticated administrators and validates template mappings', async () => {
+    const payload = { event: 'BOOKING', bodyId: 123 };
+    expect((await app.inject({ method: 'POST', url: '/platform/sms/templates', payload })).statusCode).toBe(401);
+    const sameOrigin = { ...headers, host: 'admin.localhost:3000', origin: 'http://admin.localhost:3000' };
+    expect((await app.inject({ method: 'POST', url: '/platform/sms/templates', headers: { ...sameOrigin, origin: 'http://other.localhost:3000' }, payload })).statusCode).toBe(400);
+    expect((await app.inject({ method: 'POST', url: '/platform/sms/templates', headers: sameOrigin, payload: { ...payload, event: 'OTHER' } })).statusCode).toBe(400);
+    expect((await app.inject({ method: 'POST', url: '/platform/sms/templates', headers: sameOrigin, payload })).statusCode).toBe(200);
+    expect(query.mock.calls.some(([sql]) => sql.join('?').includes('platform_save_central_sms_template'))).toBe(true);
+  });
+  it('only accepts authenticated same-origin, valid central settings without returning the key', async () => {
+    saveCentral.mockClear();
+    const payload = { sender: '50001234', otpBodyId: 123, panelRef: 'panel-reference-secret-123' };
+    expect((await centralSettingsApp.inject({ method: 'POST', url: '/platform/sms/central', payload })).statusCode).toBe(401);
+    expect((await centralSettingsApp.inject({ method: 'POST', url: '/platform/sms/central', headers: { ...headers, host: 'admin.localhost:3000', origin: 'http://evil.example' }, payload })).statusCode).toBe(400);
+    const sameOrigin = { ...headers, host: 'admin.localhost:3000', origin: 'http://admin.localhost:3000' };
+    expect((await centralSettingsApp.inject({ method: 'POST', url: '/platform/sms/central', headers: sameOrigin, payload: { ...payload, otpBodyId: 0 } })).statusCode).toBe(400);
+    const saved = await centralSettingsApp.inject({ method: 'POST', url: '/platform/sms/central', headers: sameOrigin, payload });
+    expect(saved.statusCode).toBe(200);
+    expect(saved.body).not.toContain(payload.panelRef);
+    expect(saveCentral).toHaveBeenCalledTimes(1);
+  });
+  it('restricts central SMS connection checks and returns the provider balance', async () => {
+    centralCredit.mockClear();
+    expect((await centralApp.inject({ method: 'GET', url: '/platform/sms/central' })).statusCode).toBe(401);
+    const status = await centralApp.inject({ method: 'GET', url: '/platform/sms/central', headers });
+    expect(status.json()).toEqual({ configured: true, sender: '500012345', otpConfigured: true, otpBodyId: null, canEdit: false });
+    const denied = await centralApp.inject({ method: 'POST', url: '/platform/sms/central/check', headers: { ...headers, host: 'admin.localhost:3000', origin: 'http://other.localhost:3000' } });
+    expect(denied.statusCode).toBe(400);
+    expect(centralCredit).not.toHaveBeenCalled();
+    const checked = await centralApp.inject({ method: 'POST', url: '/platform/sms/central/check', headers: { ...headers, host: 'admin.localhost:3000', origin: 'http://admin.localhost:3000' } });
+    expect(checked.json()).toEqual({ connected: true, credit: 12345 });
+  });
+  it('validates all package prices before saving them together', async () => {
+    const requestHeaders = { ...headers, host: 'admin.localhost:3000', origin: 'http://admin.localhost:3000' };
+    const invalid = await app.inject({ method: 'POST', url: '/platform/settings/prices/batch', headers: requestHeaders, payload: { practiceType: 'SOLO', prices: [{ durationMonths: 3, priceTomans: 100 }, { durationMonths: 6, priceTomans: -1 }] } });
+    expect(invalid.statusCode).toBe(400);
+    expect(query.mock.calls.filter(([sql]) => sql.join('?').includes('platform_set_practice_price'))).toHaveLength(0);
+    const valid = await app.inject({ method: 'POST', url: '/platform/settings/prices/batch', headers: requestHeaders, payload: { practiceType: 'SOLO', prices: [{ durationMonths: 3, priceTomans: 100 }, { durationMonths: 6, priceTomans: 200 }] } });
+    expect(valid.statusCode).toBe(200);
+    expect(query.mock.calls.filter(([sql]) => sql.join('?').includes('platform_set_practice_price'))).toHaveLength(2);
+  });
+  it('protects annual price updates and validates their values', async () => {
+    const noSession = await app.inject({ method: 'POST', url: '/platform/settings/prices', payload: { practiceType: 'SOLO', priceTomans: 100 } });
+    expect(noSession.statusCode).toBe(401);
+    const crossOrigin = await app.inject({ method: 'POST', url: '/platform/settings/prices', headers: { ...headers, host: 'admin.localhost:3000', origin: 'http://other.localhost:3000' }, payload: { practiceType: 'SOLO', priceTomans: 100 } });
+    expect(crossOrigin.statusCode).toBe(400);
+    const invalid = await app.inject({ method: 'POST', url: '/platform/settings/prices', headers: { ...headers, host: 'admin.localhost:3000', origin: 'http://admin.localhost:3000' }, payload: { practiceType: 'SOLO', priceTomans: -1 } });
+    expect(invalid.statusCode).toBe(400);
+    const invalidDuration = await app.inject({ method: 'POST', url: '/platform/settings/prices', headers: { ...headers, host: 'admin.localhost:3000', origin: 'http://admin.localhost:3000' }, payload: { practiceType: 'SOLO', durationMonths: 4, priceTomans: 100 } });
+    expect(invalidDuration.statusCode).toBe(400);
+    const valid = await app.inject({ method: 'POST', url: '/platform/settings/prices', headers: { ...headers, host: 'admin.localhost:3000', origin: 'http://admin.localhost:3000' }, payload: { practiceType: 'SOLO', durationMonths: 3, priceTomans: 25000000 } });
+    expect(valid.statusCode).toBe(200);
+    expect(query.mock.calls.some(([sql]) => sql.join('?').includes('platform_set_practice_price'))).toBe(true);
+  });
   it('requires a platform session before either operation', async () => {
     for (const path of ['domains', 'sms']) {
       const response = await app.inject({

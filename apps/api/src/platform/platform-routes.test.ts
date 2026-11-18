@@ -22,6 +22,7 @@ const adminMobile = `09${run}91`;
 const ownerMobile = `09${run}92`;
 let adminId = '';
 let tenantId = '';
+let ownerId = '';
 
 function cookieOf(response: { headers: Record<string, unknown> }): string {
   const raw = response.headers['set-cookie'];
@@ -65,6 +66,7 @@ beforeAll(async () => {
 afterAll(async () => {
   if (adminId) await migrator.user.delete({ where: { id: adminId } });
   if (tenantId) await migrator.tenant.delete({ where: { id: tenantId } });
+  if (ownerId) await migrator.user.delete({ where: { id: ownerId } });
   await platform.$disconnect();
   await migrator.$disconnect();
 });
@@ -120,8 +122,13 @@ describe('platform admin routes', () => {
         planTier: 'PRO',
       },
     });
-    expect(created.statusCode).toBe(201);
-    tenantId = created.json<{ account: { tenantId: string } }>().account.tenantId;
+    expect(created.statusCode).toBe(410);
+    expect(created.json<{ error: { code: string } }>().error.code).toBe('USE_VERIFIED_SIGNUP');
+    // Seed a customer independently so the rest of the management test exercises an existing account.
+    const seeded = await migrator.$queryRaw<Array<{ tenantId: string; ownerUserId: string }>>`
+      SELECT * FROM public.platform_create_tenant(${`Platform Test Clinic ${run}`}, ${`platform-test-${run}`}, ${'Clinic Owner'}, ${ownerMobile}, ${'PRO'}, ${adminId}::uuid)`;
+    tenantId = seeded[0]!.tenantId;
+    ownerId = seeded[0]!.ownerUserId;
 
     const domain = await app.inject({
       method: 'POST',

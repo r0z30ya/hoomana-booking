@@ -45,6 +45,14 @@
 
 ## Implementation progress (2026-11-03)
 
+### 2026-11-14 — central panel connection
+
+- The central Melipayamak adapter sends the application-generated login code through a configured shared pattern, and platform administrators can check provider credit. The API key stays server-side. Missing pattern or provider failure prevents reporting an OTP as sent.
+- Validation: focused adapter, platform API, login, and UI tests passed with mocked provider responses and a local test database. No credentials were configured, so actual provider connectivity, message delivery, and the approved pattern were not verified. Appointment messages, per-account quota, and dedicated-panel sending remain outside this change.
+- The platform SMS page now saves the central panel settings with an encrypted API key and an audit record, displays the OTP pattern ID, and checks the provider balance on demand. The migration was applied to the local database; focused tests cover encrypted storage, authorization, UI and OTP handling. A live provider check and delivery remain untested until panel credentials are supplied.
+- Follow-up: the supplied central credentials were configured in the local server environment. The application's central SMS service successfully retrieved the actual provider credit. Appointment template IDs can now be stored for booking, rescheduling, cancellation, and reminders; this does not create or approve provider templates or enable automatic appointment messages. The OTP pattern is still missing and actual SMS delivery remains untested.
+- Follow-up: central connection fields are behind a settings toggle. OTP and doctor-booking template IDs join the other event IDs in one atomic, audited save; OTP delivery reads that setting. Local database batch saving was exercised inside a rolled-back transaction, the app build and 37 focused tests passed, and the admin page displayed the live provider balance. The amount is shown truncated without a unit, as requested; SMS delivery and automatic appointment notifications are still unverified and inactive.
+
 - Platform account details now allow an administrator to store an encrypted Melipayamak panel reference and sender through an audited platform operation. Storing credentials does not verify the provider connection or implement message sending, quota, balance or message history.
 - Focused API/UI and migration policy tests: 13 passed, 1 database integration test skipped (PostgreSQL unavailable). `npm run typecheck` passed. The new database migration has not been applied or verified against PostgreSQL.
 - Clinic SMS connection mutation/check endpoints now deny access and the connection form is removed. Quota accounting, balance and message history remain outstanding.

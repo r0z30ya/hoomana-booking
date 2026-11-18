@@ -18,6 +18,9 @@ describe.skipIf(process.env.HBOOK_ISOLATED_INTEGRATION !== 'yes')('Hoomana to is
       tenantMembership: { findUnique: () => Promise.resolve({ role: 'OWNER' }) },
       tenantSubscription: { findFirst: () => Promise.resolve({ status: 'TRIALING', currentPeriodStart: new Date(Date.now() - 1000), currentPeriodEnd: new Date(Date.now() + 86400000) }) },
       $executeRaw: () => Promise.resolve(1),
+      clientRecord: { findMany: () => Promise.resolve([]), create: ({ data }: { data: { id: string } }) => Promise.resolve(data) },
+      clientBookingLink: { findUnique: () => Promise.resolve(null), create: () => Promise.resolve({}) },
+      doctorServiceAssignment: { findMany: () => Promise.resolve([]), findFirst: () => Promise.resolve(null) },
       schedulingDoctor: {
         create: ({ data }: { data: Record<string, unknown> }) => { const row = { ...data, createdAt: new Date() }; stored.push(row); return Promise.resolve(row); },
         findFirst: ({ where }: { where: { id?: string; tenantId: string } }) => Promise.resolve(stored.find((row) => (!where.id || row.id === where.id) && where.tenantId === tenant) ?? null),
@@ -51,6 +54,10 @@ describe.skipIf(process.env.HBOOK_ISOLATED_INTEGRATION !== 'yes')('Hoomana to is
     const booking = await server.inject({ method: 'POST', url: `/tenant/scheduling/doctors/${id}/bookings`, headers: bookingHeaders, payload: bookingPayload });
     expect(booking.statusCode, booking.body).toBe(201);
     const uid = booking.json<{ booking: { uid: string } }>().booking.uid;
+    const dayQuery = new URLSearchParams({ start: date.toISOString(), end: new Date(date.getTime() + 86_400_000).toISOString() });
+    const listed = await server.inject({ method: 'GET', url: `/tenant/scheduling/doctors/${id}/bookings?${dayQuery.toString()}` });
+    expect(listed.statusCode, listed.body).toBe(200);
+    expect(listed.json<{ bookings: Array<{ uid: string; patientName: string; mobile: string }> }>().bookings).toContainEqual(expect.objectContaining({ uid, patientName: 'Test patient', mobile: '09120000000' }));
     const retry = await server.inject({ method: 'POST', url: `/tenant/scheduling/doctors/${id}/bookings`, headers: bookingHeaders, payload: bookingPayload });
     expect(retry.statusCode, retry.body).toBe(201);
     expect(retry.json<{ booking: { uid: string } }>().booking.uid).toBe(uid);
@@ -59,6 +66,8 @@ describe.skipIf(process.env.HBOOK_ISOLATED_INTEGRATION !== 'yes')('Hoomana to is
     const cancel = await server.inject({ method: 'POST', url: `/tenant/scheduling/doctors/${id}/bookings/${uid}/cancel`, headers, payload: {} });
     expect(cancel.statusCode, cancel.body).toBe(200);
     expect(cancel.json<{ booking: { status: string } }>().booking.status).toBe('CANCELLED');
+    const afterCancel = await server.inject({ method: 'GET', url: `/tenant/scheduling/doctors/${id}/bookings?${dayQuery.toString()}` });
+    expect(afterCancel.json<{ bookings: Array<{ uid: string; status: string }> }>().bookings).toContainEqual(expect.objectContaining({ uid, status: 'CANCELLED' }));
     await server.close();
   });
 });

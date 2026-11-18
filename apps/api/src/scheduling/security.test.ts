@@ -19,6 +19,8 @@ const client = {
   tenant: { findUnique: () => Promise.resolve({ name: 'Test clinic', practiceType: state.practiceType }) },
   tenantMembership: { findUnique: () => Promise.resolve({ role: state.role }) },
   tenantSubscription: { findFirst: () => Promise.resolve({ status: 'TRIALING', currentPeriodStart: new Date(Date.now() - 86400000), currentPeriodEnd: new Date(Date.now() + (state.expired ? -1000 : 86400000)) }) },
+  clinicService: { create: ({ data }: { data: unknown }) => Promise.resolve(data), findMany: () => Promise.resolve([]) },
+  doctorServiceAssignment: { findMany: () => Promise.resolve([]), findFirst: () => Promise.resolve(null) },
   schedulingDoctor: {
     findFirst: ({ where }: { where: { id: string; tenantId: string } }) => Promise.resolve(where.id === id && where.tenantId === tenantA ? doctor : null),
     findMany: ({ where }: { where: { tenantId: string } }) => Promise.resolve(where.tenantId === tenantA ? [{ id, name: 'A', createdAt: doctor.createdAt }] : []),
@@ -76,4 +78,19 @@ describe('scheduling security boundary', () => {
     await expect(engine.request('../auth')).rejects.toThrow();
     expect(send).not.toHaveBeenCalled();
   });
+  it('accepts an optional reservation amount and rejects a deposit above the total', async () => {
+    const headers = { host: 'clinic.localhost:3000', origin: 'http://clinic.localhost:3000' };
+    const base = { title: 'Visit', duration: 30, interval: 30, capacity: 1, totalTomans: 100000 };
+    const valid = await server.inject({ method: 'POST', url: '/tenant/scheduling/catalog', headers, payload: { ...base, depositTomans: null } });
+    expect(valid.statusCode).toBe(201);
+    expect(valid.json<{ service: { depositTomans: number | null } }>().service.depositTomans).toBeNull();
+    const invalid = await server.inject({ method: 'POST', url: '/tenant/scheduling/catalog', headers, payload: { ...base, depositTomans: 100001 } });
+    expect(invalid.statusCode).toBe(400);
+  });
+  it('does not allow reception to modify the shared catalog', async () => {
+    state.role = 'RECEPTION';
+    const r = await server.inject({ method: 'POST', url: '/tenant/scheduling/catalog', headers: { host: 'clinic.localhost:3000', origin: 'http://clinic.localhost:3000' }, payload: { title: 'Visit', duration: 30, interval: 30, capacity: 1, totalTomans: 0 } });
+    expect(r.statusCode).toBe(403);
+  });
+
 });

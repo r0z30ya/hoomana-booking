@@ -23,7 +23,7 @@ export interface SmsSendInput {
 }
 
 export interface SmsOtpInput extends SmsSendInput {
-  /** OTP code to deliver. The panel's OTP pattern is defined on the panel itself. */
+  /** OTP code to deliver through an approved single-variable pattern. */
   readonly code: string;
 }
 

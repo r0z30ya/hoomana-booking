@@ -129,6 +129,8 @@ model Tenant {
 model PlatformSetting {
   id        Int @id @default(1)
   trialDays Int @default(14)
+  soloTrialDays Int @default(14)
+  clinicTrialDays Int @default(14)
   @@map("platform_settings")
 }
 
@@ -150,6 +152,75 @@ model SchedulingDoctor {
   @@map("scheduling_doctors")
 }
 
+
+
+model ClientRecord {
+  id String @id @db.Uuid
+  tenantId String @db.Uuid
+  firstName String @db.VarChar(80)
+  lastName String @db.VarChar(80)
+  fatherName String? @db.VarChar(80)
+  birthDate String? @db.VarChar(10)
+  nationalId String? @db.VarChar(10)
+  fileNumber String? @db.VarChar(80)
+  mobile String @db.VarChar(11)
+  address String? @db.VarChar(500)
+  occupation String? @db.VarChar(120)
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+  @@index([tenantId, mobile])
+  @@map("client_records")
+}
+
+model ClientPayment {
+  id String @id @db.Uuid
+  tenantId String @db.Uuid
+  clientId String @db.Uuid
+  amountTomans Int
+  paidAt DateTime @db.Timestamptz(6)
+  method String @db.VarChar(30)
+  note String? @db.VarChar(500)
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  @@index([tenantId, clientId])
+  @@map("client_payments")
+}
+
+model ClientBookingLink {
+  tenantId String @db.Uuid
+  clientId String @db.Uuid
+  doctorId String @db.Uuid
+  bookingUid String @db.VarChar(100)
+  @@id([tenantId, bookingUid])
+  @@index([tenantId, clientId])
+  @@map("client_booking_links")
+}
+
+model ClinicService {
+  id String @id @db.Uuid
+  tenantId String @db.Uuid
+  title String @db.VarChar(120)
+  duration Int
+  interval Int
+  capacity Int
+  totalTomans Int
+  depositTomans Int?
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  @@index([tenantId])
+  @@map("clinic_services")
+}
+
+model DoctorServiceAssignment {
+  tenantId String @db.Uuid
+  doctorId String @db.Uuid
+  clinicServiceId String @db.Uuid
+  engineServiceId String @db.VarChar(64)
+  active Boolean @default(true)
+  @@id([doctorId, clinicServiceId])
+  @@unique([tenantId, engineServiceId])
+  @@index([tenantId])
+  @@map("doctor_service_assignments")
+}
+
 /// The catalogue of plans. Global: identical for every tenant; a tenant's
 /// current choice lives in tenant_subscriptions (tenant-owned).
 model SubscriptionPlan {
@@ -165,6 +236,16 @@ model SubscriptionPlan {
   subscriptions TenantSubscription[]
 
   @@map("subscription_plans")
+}
+
+/// Prices in tomans for a practice type and subscription duration.
+model PracticePrice {
+  practiceType  String @db.VarChar(10)
+  durationMonths Int
+  priceTomans   Int
+
+  @@id([practiceType, durationMonths])
+  @@map("practice_prices")
 }
 
 // ---------------------------------------------------------------------------

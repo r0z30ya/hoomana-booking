@@ -66,6 +66,7 @@ export interface AuthRoutesOptions {
   readonly clientIp: (request: FastifyRequest) => string;
   /** Injected SMS sender; without it a code is only returned outside production. */
   readonly otpSender?: ((mobile: string, code: string) => Promise<void>) | undefined;
+  readonly otpAvailable?: (() => Promise<boolean>) | undefined;
   /** True outside production: the code comes back in the response for local testing. */
   readonly exposeOtpInResponse?: boolean | undefined;
 }
@@ -189,17 +190,26 @@ export function authRoutes(app: FastifyInstance, options: AuthRoutesOptions): vo
       });
     }
 
+    const smsAvailable = options.otpSender !== undefined && (options.otpAvailable === undefined || await options.otpAvailable());
+    if (!smsAvailable && options.exposeOtpInResponse !== true) {
+      return reply.code(503).send({ error: { code: 'SMS_UNAVAILABLE', message: 'سرویس پیامک در دسترس نیست' } });
+    }
     const code = generateOtpCode();
-    await createOtp(client, {
+    const createdOtp = await createOtp(client, {
       identifier: mobile,
       purpose,
       codeHash: hashOtpCode(code),
       expiresAt: new Date(Date.now() + OTP_TTL_MS),
     });
 
-    if (options.otpSender !== undefined) {
-      await options.otpSender(mobile, code);
-      return reply.code(200).send({ sent: true });
+    if (smsAvailable && options.otpSender !== undefined) {
+      try {
+        await options.otpSender(mobile, code);
+        return reply.code(200).send({ sent: true });
+      } catch {
+        await invalidateOtp(client, createdOtp.id);
+        return reply.code(503).send({ error: { code: 'SMS_UNAVAILABLE', message: 'ارسال کد پیامکی ممکن نشد.' } });
+      }
     }
 
     if (options.exposeOtpInResponse === true) {
@@ -215,7 +225,14 @@ export function authRoutes(app: FastifyInstance, options: AuthRoutesOptions): vo
 
   app.get('/auth/trial', async () => {
     const settings = await client.platformSetting.findUnique({ where: { id: 1 } });
-    return { trialDays: settings?.trialDays ?? null };
+    return { trialDays: settings?.trialDays ?? null, soloTrialDays: settings?.soloTrialDays ?? null, clinicTrialDays: settings?.clinicTrialDays ?? null };
+  });
+
+  app.get('/auth/prices', async () => {
+    const prices = await client.$queryRaw<Array<{ practiceType: string; durationMonths: number; priceTomans: number }>>`
+      SELECT "practiceType", "durationMonths", "priceTomans" FROM public.practice_prices
+      WHERE "durationMonths" IN (3, 6, 12) ORDER BY "practiceType", "durationMonths"`;
+    return { prices };
   });
 
   // Check ownership before revealing whether a number already has an account.

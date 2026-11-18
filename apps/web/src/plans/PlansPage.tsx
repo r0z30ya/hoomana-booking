@@ -9,20 +9,27 @@ export interface PlansPageProps {
 }
 
 const plans = [
-  { type: 'SOLO' as const, name: 'مطب', tag: 'برای مطب‌های مستقل', price: '۲۵٬۰۰۰٬۰۰۰', description: 'همه چیز برای مدیریت برنامه کاری یک پزشک در یک فضای ساده و منظم.', features: ['مدیریت یک پزشک', 'تعریف خدمات و مدت هر نوبت', 'تنظیم ساعت کاری و گام نوبت‌دهی', 'ثبت و مدیریت نوبت‌ها', 'تعیین ظرفیت هم‌زمان هر خدمت'] },
-  { type: 'CLINIC' as const, name: 'کلینیک', tag: 'برای مجموعه‌های چندپزشکی', price: '۳۵٬۰۰۰٬۰۰۰', description: 'برنامه پزشکان و خدمات مجموعه را از یک پنل مدیریت کنید.', features: ['تعریف پزشکان بدون محدودیت تعداد', 'برنامه و خدمات جداگانه برای هر پزشک', 'تنظیم ساعت کاری و ظرفیت نوبت‌ها', 'ثبت و مدیریت نوبت‌های پزشکان', 'دسترسی مدیر و پذیرش به نوبت‌ها'] },
+  { type: 'SOLO' as const, name: 'مطب', tag: 'برای مطب‌های مستقل', description: 'همه چیز برای مدیریت برنامه کاری یک پزشک در یک فضای ساده و منظم.', features: ['مدیریت یک پزشک', 'تعریف خدمات و مدت هر نوبت', 'تنظیم ساعت کاری و گام نوبت‌دهی', 'ثبت و مدیریت نوبت‌ها', 'تعیین ظرفیت هم‌زمان هر خدمت'] },
+  { type: 'CLINIC' as const, name: 'کلینیک', tag: 'برای مجموعه‌های چندپزشکی', description: 'برنامه پزشکان و خدمات مجموعه را از یک پنل مدیریت کنید.', features: ['تعریف پزشکان بدون محدودیت تعداد', 'برنامه و خدمات جداگانه برای هر پزشک', 'تنظیم ساعت کاری و ظرفیت نوبت‌ها', 'ثبت و مدیریت نوبت‌های پزشکان', 'دسترسی مدیر و پذیرش به نوبت‌ها'] },
 ];
 
 export function PlansPage({ onStartFree, onBackToLogin }: PlansPageProps): JSX.Element {
-  const [days, setDays] = useState<number | null>(null);
+  const [days, setDays] = useState<Partial<Record<PracticeType, number>>>({});
+  const [prices, setPrices] = useState<Array<{ practiceType: PracticeType; durationMonths: number; priceTomans: number }>>([]);
   useEffect(() => {
     const controller = new AbortController();
-    void fetch('/auth/trial', { signal: controller.signal }).then(async (r) => r.ok ? r.json() as Promise<{ trialDays?: unknown }> : null)
-      .then((data) => { if (typeof data?.trialDays === 'number') setDays(data.trialDays); })
+    void fetch('/auth/prices', { signal: controller.signal }).then(async (response) => response.ok ? response.json() as Promise<{ prices?: Array<{ practiceType: PracticeType; durationMonths: number; priceTomans: number }> }> : null)
+      .then((body) => { if (Array.isArray(body?.prices)) setPrices(body.prices); }).catch(() => {});
+    return () => controller.abort();
+  }, []);
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetch('/auth/trial', { signal: controller.signal }).then(async (r) => r.ok ? r.json() as Promise<{ soloTrialDays?: unknown; clinicTrialDays?: unknown }> : null)
+      .then((data) => { if (typeof data?.soloTrialDays === 'number' && typeof data.clinicTrialDays === 'number') setDays({ SOLO: data.soloTrialDays, CLINIC: data.clinicTrialDays }); })
       .catch(() => {});
     return () => controller.abort();
   }, []);
-  const trial = days === null ? 'دوره آزمایشی رایگان' : `آزمایش رایگان ${days.toLocaleString('fa-IR')} روزه`;
+  const trial = 'دوره آزمایشی رایگان';
   return <div className="market" dir="rtl">
     <header className="market-nav">
       <a className="market-logo" href="#top"><BrandMark /><strong>هومانا</strong></a>
@@ -61,11 +68,13 @@ export function PlansPage({ onStartFree, onBackToLogin }: PlansPageProps): JSX.E
         <div className="market-section-head"><span className="market-kicker">تعرفه‌های شفاف</span><h2>پکیجی متناسب با مجموعه شما</h2><p>هر دو پکیج با {trial} شروع می‌شوند. پس از آن، برای ادامه اشتراک تهیه کنید.</p></div>
         <div className="market-plans">{plans.map((plan) => <article className={plan.type === 'CLINIC' ? 'market-plan featured' : 'market-plan'} key={plan.type}>
           <div className="market-plan-top"><div><span>{plan.tag}</span><h3>پکیج {plan.name}</h3></div>{plan.type === 'CLINIC' && <b>چندپزشکی</b>}</div>
-          <p>{plan.description}</p><div className="market-price"><strong>{plan.price}</strong> <span>تومان / سال</span></div>
+          <p>{plan.description}</p><div className="market-price"><strong>{prices.find((item) => item.practiceType === plan.type && item.durationMonths === 12)?.priceTomans.toLocaleString('fa-IR') ?? 'قیمت در دسترس نیست'}</strong> <span>تومان / سال</span></div>
+          <p>{days[plan.type] === undefined ? 'مدت دوره رایگان نامشخص' : `آزمایش رایگان ${days[plan.type]?.toLocaleString('fa-IR')} روزه`}</p>
+          {[3, 6].map((months) => <p key={months}>پرو {months.toLocaleString('fa-IR')} ماهه: {prices.find((item) => item.practiceType === plan.type && item.durationMonths === months)?.priceTomans.toLocaleString('fa-IR') ?? 'تعیین نشده'} تومان</p>)}
           <button className={plan.type === 'CLINIC' ? 'market-button' : 'market-outline'} type="button" onClick={() => onStartFree(plan.type)}>شروع رایگان {plan.name} <span>←</span></button>
           <div className="market-includes">امکانات پکیج</div><ul>{plan.features.map((feature) => <li key={feature}><span>✓</span>{feature}</li>)}</ul>
         </article>)}</div>
-        <p className="market-price-note">قیمت‌ها برای اشتراک یک‌ساله و به تومان هستند. پرداخت آنلاین پس از راه‌اندازی درگاه فعال می‌شود.</p>
+        <p className="market-price-note">قیمت‌ها به تومان هستند. پرداخت آنلاین پس از راه‌اندازی درگاه فعال می‌شود.</p>
       </section>
       <section id="questions" className="market-section market-faq"><div><span className="market-kicker">سوالات متداول</span><h2>پیش از شروع بیشتر بدانید.</h2></div><div>
         <details><summary>دوره آزمایشی چگونه شروع می‌شود؟</summary><p>با ثبت‌نام و تأیید شماره مدیر، حساب آزمایشی مجموعه ساخته می‌شود. برای شروع به کارت بانکی نیازی نیست.</p></details>

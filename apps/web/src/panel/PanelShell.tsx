@@ -11,7 +11,9 @@ import {
 import './panel.css';
 import { AccountSettingsPage } from './AccountSettingsPage';
 import { SchedulingPage } from './SchedulingPage';
+import { AppointmentsPage } from './AppointmentsPage';
 import { CheckoutPage } from './CheckoutPage';
+import { ClientsPage } from './ClientsPage';
 
 /**
  * The panel shell: sidebar, top bar, page body, and the mobile bottom bar plus drawer.
@@ -56,7 +58,7 @@ function NavIcon({ item }: { readonly item: PanelNavItem }): JSX.Element {
   );
 }
 
-function PageBody({ item, role }: { readonly item: PanelNavItem; readonly role: PanelRole }): JSX.Element {
+function PageBody({ item, role, appointmentRequest }: { readonly item: PanelNavItem; readonly role: PanelRole; readonly appointmentRequest: number }): JSX.Element {
   if (item.id === 'dashboard') {
     return (
       <>
@@ -107,9 +109,9 @@ function PageBody({ item, role }: { readonly item: PanelNavItem; readonly role: 
     return <AccountSettingsPage />;
   }
 
-  if (item.id === 'doctors' || item.id === 'appointments') {
-    return <SchedulingPage mode={item.id} isOwner={role === 'OWNER'} />;
-  }
+  if (item.id === 'patients') return <ClientsPage />;
+  if (item.id === 'doctors') return <SchedulingPage mode="doctors" isOwner={role === 'OWNER'} />;
+  if (item.id === 'appointments') return <AppointmentsPage openRequest={appointmentRequest} />;
 
   return (
     <>
@@ -147,6 +149,21 @@ export function PanelShell({ profile, tenantName, onSignOut }: PanelShellProps):
   const [collapsed, setCollapsed] = useState(true);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [hash, setHash] = useState<string>(() => window.location.hash);
+  const [subscriptionExpired, setSubscriptionExpired] = useState(false);
+  const [appointmentRequest, setAppointmentRequest] = useState(0);
+
+  useEffect(() => {
+    if (!roleKnown || role !== 'OWNER') return;
+    const controller = new AbortController();
+    void fetch('/tenant/settings', { credentials: 'same-origin', signal: controller.signal })
+      .then(async (response) => response.ok ? response.json() as Promise<{ subscription?: { status: string; currentPeriodEnd: string } | null }> : null)
+      .then((body) => {
+        if (!body || !('subscription' in body)) return;
+        const subscription = body.subscription;
+        setSubscriptionExpired(!subscription || !['TRIALING', 'ACTIVE'].includes(subscription.status) || new Date(subscription.currentPeriodEnd).getTime() <= Date.now());
+      }).catch(() => undefined);
+    return () => controller.abort();
+  }, [role, roleKnown, hash]);
 
   useEffect(() => {
     applyStoredTheme();
@@ -281,6 +298,7 @@ export function PanelShell({ profile, tenantName, onSignOut }: PanelShellProps):
             type="button"
             className="pnl-cta cta"
             onClick={() => {
+              setAppointmentRequest((value) => value + 1);
               go('appointments');
             }}
           >
@@ -298,6 +316,10 @@ export function PanelShell({ profile, tenantName, onSignOut }: PanelShellProps):
         </header>
 
         <main className="pnl-page">
+          {subscriptionExpired && !checkout && <div className="pnl-notice" role="status">
+            <span>دوره آزمایشی یا اشتراک شما پایان یافته است؛ برای ادامه نوبت‌دهی اشتراک تهیه کنید.</span>
+            <button type="button" className="pnl-buy" onClick={() => { window.location.hash = '#/checkout'; setHash('#/checkout'); }}>مشاهده اشتراک</button>
+          </div>}
           {!roleKnown && (
             <p className="pnl-notice" role="status" data-testid="role-notice">
               نقش این کاربر از سرور دریافت نشد؛ فعلاً منوی «مدیر کلینیک» نمایش داده می‌شود.
@@ -305,7 +327,7 @@ export function PanelShell({ profile, tenantName, onSignOut }: PanelShellProps):
             </p>
           )}
 
-          {checkout ? <CheckoutPage /> : currentItem && <PageBody item={currentItem} role={role} />}
+          {checkout ? <CheckoutPage /> : currentItem && <PageBody item={currentItem} role={role} appointmentRequest={appointmentRequest} />}
         </main>
       </div>
 

@@ -16,6 +16,7 @@ export interface SmsEnvironment {
   readonly SMS_PROVIDER: 'melipayamak';
   readonly SMS_MELIPAYAMAK_PANEL_REF?: string | undefined;
   readonly SMS_MELIPAYAMAK_SENDER?: string | undefined;
+  readonly SMS_MELIPAYAMAK_OTP_BODY_ID?: number | undefined;
 }
 
 export interface SmsProviderConfig {
@@ -23,6 +24,7 @@ export interface SmsProviderConfig {
   /** Panel reference. It is confidential and is never logged or echoed in an error. */
   readonly panelRef: string;
   readonly sender: string;
+  readonly otpBodyId?: number | undefined;
   readonly baseUrl?: string;
   readonly timeoutMs?: number;
   /** Injectable for tests. Defaults to the global fetch. */
@@ -50,6 +52,7 @@ export function createSmsProvider(config: SmsProviderConfig): SmsProvider {
       const melipayamak: MelipayamakConfig = {
         panelRef: config.panelRef,
         sender: config.sender,
+        ...(config.otpBodyId === undefined ? {} : { otpBodyId: config.otpBodyId }),
         ...(config.baseUrl === undefined ? {} : { baseUrl: config.baseUrl }),
         ...(config.timeoutMs === undefined ? {} : { timeoutMs: config.timeoutMs }),
         ...(config.fetchImpl === undefined ? {} : { fetchImpl: config.fetchImpl }),
@@ -93,6 +96,7 @@ export function createSmsProviderFromEnvironment(
     provider: environment.SMS_PROVIDER,
     panelRef,
     sender: environment.SMS_MELIPAYAMAK_SENDER ?? '',
+    ...(environment.SMS_MELIPAYAMAK_OTP_BODY_ID === undefined ? {} : { otpBodyId: environment.SMS_MELIPAYAMAK_OTP_BODY_ID }),
     ...options,
   });
 }

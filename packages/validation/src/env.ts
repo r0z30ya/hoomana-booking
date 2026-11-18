@@ -102,6 +102,8 @@ export const environmentSchema = z.object({
     .string()
     .regex(/^\d{5,20}$/)
     .optional(),
+  /** Approved shared pattern containing exactly one variable: our OTP code. */
+  SMS_MELIPAYAMAK_OTP_BODY_ID: z.coerce.number().int().positive().optional(),
 });
 
 export type Environment = z.infer<typeof environmentSchema>;

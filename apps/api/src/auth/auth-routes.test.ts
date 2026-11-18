@@ -107,6 +107,22 @@ afterAll(async () => {
 });
 
 describe.skipIf(!dbAvailable)('auth routes (ADR-0005)', () => {
+  it('invalidates the generated code when the SMS provider fails', async () => {
+    const mobile = testMobile(90);
+    createdMobiles.push(mobile);
+    const failingServer = buildServer({
+      logger, exposeDependencyErrors: false,
+      health: { database: () => Promise.resolve({ dependency: 'database', status: 'ok', latencyMs: 0 }), redis: () => Promise.resolve({ dependency: 'redis', status: 'ok', latencyMs: 0 }) },
+      auth: { client: app, cookieSecure: false, otpSender: async () => { throw new Error('provider failed'); } },
+    });
+    try {
+      const response = await failingServer.inject({ method: 'POST', url: '/auth/otp/send', payload: { mobile, purpose: 'SIGNUP' } });
+      expect(response.statusCode).toBe(503);
+      expect(response.json()).toMatchObject({ error: { code: 'SMS_UNAVAILABLE' } });
+      const saved = await migrator.authOtp.findFirst({ where: { identifier: mobile }, orderBy: { createdAt: 'desc' } });
+      expect(saved?.consumedAt).toBeInstanceOf(Date);
+    } finally { await failingServer.close(); }
+  });
   it('registers a tenant with an OWNER membership and a TRIALING subscription, and sets the session cookie', async () => {
     const mobile = testMobile(1);
     const response = await register(mobile, 'owner');

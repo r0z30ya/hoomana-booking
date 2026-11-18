@@ -48,13 +48,14 @@ function providerWith(fetchImpl: typeof fetch, timeoutMs?: number) {
   return createMelipayamakProvider({
     panelRef: PANEL_FIXTURE,
     sender: SENDER,
+    otpBodyId: 524,
     fetchImpl,
     ...(timeoutMs === undefined ? {} : { timeoutMs }),
   });
 }
 
 describe('melipayamak adapter', () => {
-  it('sends an OTP through the panel OTP endpoint', async () => {
+  it('sends the application-generated OTP through the configured pattern', async () => {
     const fetchImpl = vi.fn(returningJson(3741437414));
     const provider = providerWith(fetchImpl);
 
@@ -63,9 +64,16 @@ describe('melipayamak adapter', () => {
     expect(result.recIds).toEqual(['3741437414']);
 
     const [url, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit];
-    expect(url).toContain(`/api/send/otp/${PANEL_FIXTURE}`);
+    expect(url).toContain(`/api/send/shared/${PANEL_FIXTURE}`);
     expect(init.method).toBe('POST');
-    expect(bodyOf(init)).toEqual({ to: '09123456789' });
+    expect(bodyOf(init)).toEqual({ bodyId: 524, to: '09123456789', args: ['12345'] });
+  });
+
+  it('fails without sending when the OTP pattern is not configured', async () => {
+    const fetchImpl = vi.fn(returningJson(123));
+    const provider = createMelipayamakProvider({ panelRef: PANEL_FIXTURE, sender: SENDER, fetchImpl });
+    await expect(provider.sendOtp({ to: '09123456789', code: '12345' })).rejects.toMatchObject({ kind: 'configuration' });
+    expect(fetchImpl).not.toHaveBeenCalled();
   });
 
   it('sends a shared-service pattern with its variables in order', async () => {
@@ -141,12 +149,21 @@ describe('melipayamak adapter', () => {
     }
   });
 
+  it('does not treat provider error codes as a successful send or credit', async () => {
+    for (const body of [-1, 0, { RetStatus: 0, Value: '42' }]) {
+      await expect(providerWith(returningJson(body)).sendOtp({ to: '09123456789', code: '12345' })).rejects.toBeInstanceOf(SmsProviderError);
+    }
+    expect((await providerWith(returningJson(-1)).fetchCredit()).amount).toBeUndefined();
+  });
+
   it('reads the panel credit from both response shapes', async () => {
     const numeric = providerWith(returningJson(12_500));
     const wrapped = providerWith(returningJson({ Value: '9800' }));
 
     expect((await numeric.fetchCredit()).amount).toBe(12_500);
     expect((await wrapped.fetchCredit()).amount).toBe(9_800);
+    const consoleResponse = providerWith(returningJson({ amount: 170.66593849208928, status: 'عملیات موفق' }));
+    expect((await consoleResponse.fetchCredit()).amount).toBe(170.66593849208928);
   });
 
   it('normalises delivery codes (2 delivered, 3/16 failed, else pending)', async () => {

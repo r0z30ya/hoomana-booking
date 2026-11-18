@@ -15,7 +15,7 @@ import {
  * Melipayamak console adapter (console.melipayamak.com).
  *
  * Implemented against the sample calls the owner supplied (2026-10-12):
- *   POST /api/send/otp/<ref>        { to }                 panel OTP pattern
+ *   POST /api/send/shared/<ref>     { bodyId, to, args }   application OTP pattern
  *   POST /api/send/shared/<ref>     { bodyId, to, args }   shared-service pattern
  *   POST /api/send/simple/<ref>     { from, to, text }     free text, one recipient
  *   POST /api/send/advanced/<ref>   { from, to, text }     one text, many recipients
@@ -33,6 +33,7 @@ export interface MelipayamakConfig {
   readonly panelRef: string;
   /** The panel's sender line, e.g. `50002710077565`. */
   readonly sender: string;
+  readonly otpBodyId?: number | undefined;
   readonly baseUrl?: string;
   readonly timeoutMs?: number;
   /** Injectable for tests. Defaults to the global fetch. */
@@ -111,7 +112,7 @@ function extractNumber(payload: unknown): number | undefined {
 
   if (!isRecord(payload)) return undefined;
 
-  const value = firstDefined(payload, ['Value', 'value', 'Credit', 'credit']);
+  const value = firstDefined(payload, ['amount', 'Amount', 'Value', 'value', 'Credit', 'credit']);
   if (typeof value === 'number' && Number.isFinite(value)) return value;
 
   const valueText = toText(value);
@@ -159,7 +160,10 @@ function parseDeliveryStatuses(payload: unknown): readonly SmsDeliveryStatus[] {
  * throws a non-retryable `unexpected-response` instead of returning an empty list.
  */
 function toSendResult(payload: unknown, provider: string): SmsSendResult {
-  const recIds = extractRecIds(payload);
+  if (isRecord(payload) && payload.RetStatus !== undefined && Number(payload.RetStatus) !== 1) {
+    throw new SmsProviderError('Melipayamak rejected the send request', { kind: 'invalid-request', provider });
+  }
+  const recIds = extractRecIds(payload).filter((id) => /^\d+$/.test(id) && !/^0+$/.test(id));
 
   if (recIds.length === 0) {
     throw new SmsProviderError('Melipayamak accepted the request without a message id', {
@@ -254,7 +258,10 @@ export function createMelipayamakProvider(config: MelipayamakConfig): SmsProvide
 
     async sendOtp(input: SmsOtpInput): Promise<SmsSendResult> {
       assertConfigured();
-      const payload = await request('send/otp', { method: 'POST', body: { to: input.to } });
+      if (!Number.isInteger(config.otpBodyId) || (config.otpBodyId ?? 0) <= 0) {
+        throw new SmsProviderError('The OTP pattern is not configured', { kind: 'configuration', provider: PROVIDER_NAME });
+      }
+      const payload = await request('send/shared', { method: 'POST', body: { bodyId: config.otpBodyId, to: input.to, args: [input.code] } });
       return toSendResult(payload, PROVIDER_NAME);
     },
 
@@ -292,7 +299,9 @@ export function createMelipayamakProvider(config: MelipayamakConfig): SmsProvide
     async fetchCredit(): Promise<SmsCredit> {
       assertConfigured();
       const payload = await request('receive/credit', { method: 'GET' });
-      return { amount: extractNumber(payload) };
+      if (isRecord(payload) && payload.RetStatus !== undefined && Number(payload.RetStatus) !== 1) throw new SmsProviderError('Melipayamak rejected the credit request', { kind: 'invalid-request', provider: PROVIDER_NAME });
+      const amount = extractNumber(payload);
+      return { amount: amount !== undefined && amount >= 0 ? amount : undefined };
     },
 
     async fetchDeliveryStatus(recIds: readonly string[]): Promise<readonly SmsDeliveryStatus[]> {

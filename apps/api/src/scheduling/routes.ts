@@ -1,6 +1,6 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import { withTenantTx, type PrismaClient } from '@hmn/db';
-import { decryptSecret, encryptSecret, DependencyUnavailableError, ForbiddenError, NotFoundError, UnauthorizedError, ValidationError, type SecretEncryptionConfig } from '@hmn/shared';
+import { decryptSecret, encryptSecret, ConflictError, DependencyUnavailableError, ForbiddenError, NotFoundError, UnauthorizedError, ValidationError, type SecretEncryptionConfig } from '@hmn/shared';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { currentSession } from '../auth/session.js';
 import type { SchedulingEngine } from './engine.js';
@@ -57,13 +57,13 @@ export function schedulingRoutes(app: FastifyInstance, options: SchedulingOption
   }
   function doctorId(request: FastifyRequest) { return (request.params as { doctorId: string }).doctorId; }
   type Service = { id: string; hostId: string | null; title: string; durationMin: number; slotIntervalMin: number; capacity: number };
-  type Booking = { uid: string; status: string; startsAt: string; host: { id: string }; eventType: { title: string } };
+  type Booking = { uid: string; status: string; startsAt: string; host: { id: string }; eventType: { id: string; title: string }; attendee?: { name: string; phone: string } };
   async function services(engine: SchedulingEngine, token: string, hostId: string): Promise<Service[]> {
     const items: Service[] = [];
     let cursor: string | null = null;
     do {
       const params = new URLSearchParams({ hostId, limit: '100', ...(cursor ? { cursor } : {}) });
-      const page: { items: Service[]; nextCursor: string | null } = await engine.request(`event-types?${params}`, { token });
+      const page: { items: Service[]; nextCursor: string | null } = await engine.request(`event-types?${params.toString()}`, { token });
       items.push(...page.items);
       cursor = page.nextCursor;
     } while (cursor);
@@ -75,14 +75,69 @@ export function schedulingRoutes(app: FastifyInstance, options: SchedulingOption
     if (service.hostId !== hostId) throw new NotFoundError();
     return service;
   }
+  async function assignedService(tenantId: string, doctorId: string, engineServiceId: string) {
+    return withTenantTx(client, tenantId, (tx) => tx.doctorServiceAssignment.findFirst({ where: { tenantId, doctorId, engineServiceId } }));
+  }
+  async function requireActiveService(tenantId: string, doctorId: string, engineServiceId: string) {
+    const assignment = await assignedService(tenantId, doctorId, engineServiceId);
+    if (assignment && !assignment.active) throw new NotFoundError();
+  }
   function serviceView(service: Service) { return { id: service.id, title: service.title, length: service.durationMin, slotInterval: service.slotIntervalMin, seatsPerTimeSlot: service.capacity }; }
-  function bookingView(booking: Booking) { return { uid: booking.uid, title: booking.eventType.title, start: booking.startsAt, status: booking.status }; }
+  function bookingView(booking: Booking) { return { uid: booking.uid, serviceId: booking.eventType.id, title: booking.eventType.title, start: booking.startsAt, status: booking.status, patientName: booking.attendee?.name ?? '', mobile: booking.attendee?.phone ?? '' }; }
   function operationKey(request: FastifyRequest) {
     const key = request.headers['idempotency-key'];
     if (key === undefined) return randomUUID();
     if (typeof key !== 'string' || !/^[a-zA-Z0-9_-]{8,128}$/.test(key)) throw new ValidationError('Invalid idempotency key');
     return key;
   }
+
+  function catalogInput(value: unknown) {
+    const body = object(value);
+    const totalTomans = int(body.totalTomans, 0, 2_000_000_000);
+    const depositTomans = body.depositTomans === null || body.depositTomans === undefined ? null : int(body.depositTomans, 0, totalTomans);
+    return { title: str(body.title, 120), duration: int(body.duration, 5, 480), interval: int(body.interval, 5, 480), capacity: int(body.capacity, 1, 100), totalTomans, depositTomans };
+  }
+  app.get('/tenant/scheduling/catalog', async (request) => {
+    const ctx = await context(request);
+    return { services: await withTenantTx(client, ctx.tenantId, (tx) => tx.clinicService.findMany({ where: { tenantId: ctx.tenantId }, orderBy: { createdAt: 'asc' } })) };
+  });
+  app.post('/tenant/scheduling/catalog', async (request, reply) => {
+    sameOrigin(request); const ctx = await context(request, true); const data = catalogInput(request.body);
+    const service = await withTenantTx(client, ctx.tenantId, (tx) => tx.clinicService.create({ data: { ...data, id: randomUUID(), tenantId: ctx.tenantId } }));
+    return reply.code(201).send({ service });
+  });
+  app.post('/tenant/scheduling/catalog/:serviceId', async (request) => {
+    sameOrigin(request); const ctx = await context(request, true); const id = (request.params as { serviceId: string }).serviceId; const data = catalogInput(request.body);
+    if (!/^[0-9a-f-]{36}$/i.test(id)) throw new NotFoundError();
+    const found = await withTenantTx(client, ctx.tenantId, (tx) => tx.clinicService.findFirst({ where: { id, tenantId: ctx.tenantId } }));
+    if (!found) throw new NotFoundError();
+    const assignments = await withTenantTx(client, ctx.tenantId, (tx) => tx.doctorServiceAssignment.findMany({ where: { tenantId: ctx.tenantId, clinicServiceId: id } }));
+    for (const assignment of assignments) {
+      const d = await doctor(ctx.tenantId, assignment.doctorId, ctx.encryption);
+      await ownService(ctx.engine, d.token, d.hostId, assignment.engineServiceId);
+      await ctx.engine.request('event-types/' + assignment.engineServiceId, { method: 'PATCH', token: d.token, body: { title: data.title, durationMin: data.duration, slotIntervalMin: data.interval, capacity: data.capacity } });
+    }
+    const service = await withTenantTx(client, ctx.tenantId, (tx) => tx.clinicService.update({ where: { id }, data }));
+    return { service };
+  });
+  app.get('/tenant/scheduling/doctors/:doctorId/catalog', async (request) => {
+    const ctx = await context(request); const id = doctorId(request); await doctor(ctx.tenantId, id, ctx.encryption);
+    return { assignments: await withTenantTx(client, ctx.tenantId, (tx) => tx.doctorServiceAssignment.findMany({ where: { tenantId: ctx.tenantId, doctorId: id } })) };
+  });
+  app.post('/tenant/scheduling/doctors/:doctorId/catalog/:serviceId', async (request) => {
+    sameOrigin(request); const ctx = await context(request, true); const doctorKey = doctorId(request); const d = await doctor(ctx.tenantId, doctorKey, ctx.encryption);
+    const id = (request.params as { serviceId: string }).serviceId; if (!/^[0-9a-f-]{36}$/i.test(id)) throw new NotFoundError();
+    const active = object(request.body).active; if (typeof active !== 'boolean') throw new ValidationError('Invalid assignment');
+    return withTenantTx(client, ctx.tenantId, async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${ctx.tenantId + doctorKey + id}, 0))`;
+      const service = await tx.clinicService.findFirst({ where: { id, tenantId: ctx.tenantId } }); if (!service) throw new NotFoundError();
+      const existing = await tx.doctorServiceAssignment.findUnique({ where: { doctorId_clinicServiceId: { doctorId: doctorKey, clinicServiceId: id } } });
+      if (existing) return { assignment: await tx.doctorServiceAssignment.update({ where: { doctorId_clinicServiceId: { doctorId: doctorKey, clinicServiceId: id } }, data: { active } }) };
+      if (!active) return { assignment: null };
+      const event = await ctx.engine.request<Service>('event-types', { method: 'POST', token: d.token, body: { title: service.title, slug: 'service-' + randomBytes(8).toString('hex'), hostId: d.hostId, durationMin: service.duration, slotIntervalMin: service.interval, capacity: service.capacity } });
+      return { assignment: await tx.doctorServiceAssignment.create({ data: { tenantId: ctx.tenantId, doctorId: doctorKey, clinicServiceId: id, engineServiceId: event.id, active: true } }) };
+    }, { timeout: 20_000, maxWait: 10_000 });
+  });
 
   app.get('/tenant/scheduling/doctors', async (request) => {
     const ctx = await context(request);
@@ -132,7 +187,9 @@ export function schedulingRoutes(app: FastifyInstance, options: SchedulingOption
       const item = windows.get(key) ?? { days: [], startTime: `1970-01-01T${window.start}:00.000Z`, endTime: `1970-01-01T${window.end}:00.000Z` };
       item.days.push(day.weekday); windows.set(key, item);
     }
-    return { doctor: { id: d.row.id, name: d.row.name }, schedules: [{ isDefault: true, availability: [...windows.values()] }], services: eventTypes.map(serviceView) };
+    const assignments = await withTenantTx(client, ctx.tenantId, (tx) => tx.doctorServiceAssignment.findMany({ where: { tenantId: ctx.tenantId, doctorId: d.row.id } }));
+    const inactive = new Set(assignments.filter((assignment) => !assignment.active).map((assignment) => assignment.engineServiceId));
+    return { doctor: { id: d.row.id, name: d.row.name }, schedules: [{ isDefault: true, availability: [...windows.values()] }], services: eventTypes.filter((event) => !inactive.has(event.id)).map(serviceView) };
   });
   app.post('/tenant/scheduling/doctors/:doctorId/schedule', async (request) => {
     sameOrigin(request);
@@ -168,6 +225,7 @@ export function schedulingRoutes(app: FastifyInstance, options: SchedulingOption
     const ctx = await context(request, true);
     const d = await doctor(ctx.tenantId, doctorId(request), ctx.encryption);
     const serviceId = (request.params as { serviceId: string }).serviceId;
+    if (await assignedService(ctx.tenantId, d.row.id, serviceId)) throw new ValidationError('Edit shared services in the catalog');
     await ownService(ctx.engine, d.token, d.hostId, serviceId);
     const body = object(request.body);
     const updated = await ctx.engine.request<Service>(`event-types/${serviceId}`, { method: 'PATCH', token: d.token, body: {
@@ -181,6 +239,7 @@ export function schedulingRoutes(app: FastifyInstance, options: SchedulingOption
     const query = object(request.query);
     const serviceId = str(query.serviceId, 64);
     const start = str(query.start, 40), end = str(query.end, 40);
+    await requireActiveService(ctx.tenantId, d.row.id, serviceId);
     await ownService(ctx.engine, d.token, d.hostId, serviceId);
     const params = new URLSearchParams({ eventTypeId: serviceId, from: start, to: end, timezone: 'Asia/Tehran' });
     const result = await ctx.engine.request<{ slots: { startsAt: string; seatsRemaining: number }[] }>(`slots?${params.toString()}`, { token: d.token });
@@ -189,15 +248,34 @@ export function schedulingRoutes(app: FastifyInstance, options: SchedulingOption
   app.get('/tenant/scheduling/doctors/:doctorId/bookings', async (request) => {
     const ctx = await context(request);
     const d = await doctor(ctx.tenantId, doctorId(request), ctx.encryption);
+    const query = object(request.query);
+    let from = new Date().toISOString();
+    let to: string | undefined;
+    if (query.start !== undefined || query.end !== undefined) {
+      const start = new Date(str(query.start, 40));
+      const end = new Date(str(query.end, 40));
+      if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || end <= start || end.getTime() - start.getTime() > 31 * 86400000) throw new ValidationError('Invalid booking date range');
+      from = start.toISOString();
+      to = end.toISOString();
+    }
     const bookings: Booking[] = [];
     let cursor: string | null = null;
     do {
-      const params = new URLSearchParams({ hostId: d.hostId, from: new Date().toISOString(), limit: '100', ...(cursor ? { cursor } : {}) });
-      const page: { items: Booking[]; nextCursor: string | null } = await ctx.engine.request(`bookings?${params}`, { token: d.token });
-      bookings.push(...page.items.filter((booking) => booking.status !== 'CANCELLED'));
+      const params = new URLSearchParams({ hostId: d.hostId, from, ...(to ? { to } : {}), limit: '100', ...(cursor ? { cursor } : {}) });
+      const page: { items: Booking[]; nextCursor: string | null } = await ctx.engine.request(`bookings?${params.toString()}`, { token: d.token });
+      bookings.push(...page.items);
       cursor = page.nextCursor;
     } while (cursor);
     return { bookings: bookings.map(bookingView) };
+  });
+  app.get('/tenant/scheduling/clients/:clientId/bookings', async (request) => {
+    const ctx = await context(request); const clientId = (request.params as { clientId: string }).clientId;
+    if (!/^[0-9a-f-]{36}$/i.test(clientId)) throw new NotFoundError();
+    const clientRecord = await withTenantTx(client, ctx.tenantId, (tx) => tx.clientRecord.findFirst({ where: { id: clientId, tenantId: ctx.tenantId } }));
+    if (!clientRecord) throw new NotFoundError();
+    const links = await withTenantTx(client, ctx.tenantId, (tx) => tx.clientBookingLink.findMany({ where: { tenantId: ctx.tenantId, clientId } }));
+    const records = await Promise.all(links.map(async (link) => { const d = await doctor(ctx.tenantId, link.doctorId, ctx.encryption); const booking = await ctx.engine.request<Booking>(`bookings/${link.bookingUid}`, { token: d.token }); if (booking.host.id !== d.hostId) throw new NotFoundError(); return { ...bookingView(booking), doctorName: d.row.name }; }));
+    return { bookings: records.sort((a, b) => b.start.localeCompare(a.start)) };
   });
   app.post('/tenant/scheduling/doctors/:doctorId/bookings', async (request, reply) => {
     sameOrigin(request);
@@ -207,8 +285,33 @@ export function schedulingRoutes(app: FastifyInstance, options: SchedulingOption
     const eventTypeId = str(body.serviceId, 64);
     const name = str(body.name, 80), mobile = str(body.mobile, 20), start = str(body.start, 40);
     if (!/^09\d{9}$/.test(mobile)) throw new ValidationError('Invalid mobile');
+    const words = name.split(/\s+/); const fallbackFirst = words.shift() ?? name; const fallbackLast = words.join(' ');
+    const firstName = body.firstName === undefined ? fallbackFirst : str(body.firstName, 80);
+    const lastName = body.lastName === undefined ? fallbackLast : str(body.lastName, 80);
+    let clientId: string | undefined;
+    if (body.clientId !== undefined) {
+      const selectedClientId = str(body.clientId, 36); clientId = selectedClientId; if (!/^[0-9a-f-]{36}$/i.test(selectedClientId)) throw new ValidationError('Invalid client');
+      const patient = await withTenantTx(client, ctx.tenantId, (tx) => tx.clientRecord.findFirst({ where: { id: selectedClientId, tenantId: ctx.tenantId, mobile } }));
+      if (!patient) throw new NotFoundError();
+    } else {
+      const candidates = await withTenantTx(client, ctx.tenantId, (tx) => tx.clientRecord.findMany({ where: { tenantId: ctx.tenantId, mobile, firstName, lastName }, take: 2 }));
+      if (candidates.length > 1) throw new ConflictError('Multiple matching client records; select a client', { code: 'CLIENT_AMBIGUOUS' });
+    }
+    await requireActiveService(ctx.tenantId, d.row.id, eventTypeId);
     await ownService(ctx.engine, d.token, d.hostId, eventTypeId);
     const booking = await ctx.engine.request<Booking>('bookings', { method: 'POST', token: d.token, idempotencyKey: operationKey(request), body: { eventTypeId, start, attendee: { name, phone: mobile, timezone: 'Asia/Tehran' } } });
+    await withTenantTx(client, ctx.tenantId, async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${ctx.tenantId + ':' + mobile}, 0))`;
+      const prior = await tx.clientBookingLink.findUnique({ where: { tenantId_bookingUid: { tenantId: ctx.tenantId, bookingUid: booking.uid } } });
+      if (prior) { if ((clientId && prior.clientId !== clientId) || prior.doctorId !== d.row.id) throw new ConflictError('Booking is linked to a different client'); return; }
+      let selectedClient = clientId;
+      if (!selectedClient) {
+        const matches = await tx.clientRecord.findMany({ where: { tenantId: ctx.tenantId, mobile, firstName, lastName }, take: 2 });
+        if (matches.length > 1) throw new ConflictError('Multiple matching client records; select a client', { code: 'CLIENT_AMBIGUOUS' });
+        selectedClient = matches[0]?.id ?? (await tx.clientRecord.create({ data: { id: randomUUID(), tenantId: ctx.tenantId, firstName, lastName, mobile } })).id;
+      }
+      await tx.clientBookingLink.create({ data: { tenantId: ctx.tenantId, clientId: selectedClient, doctorId: d.row.id, bookingUid: booking.uid } });
+    });
     return reply.code(201).send({ booking: bookingView(booking) });
   });
   app.post('/tenant/scheduling/doctors/:doctorId/bookings/:uid/cancel', async (request) => {

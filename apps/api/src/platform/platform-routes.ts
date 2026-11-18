@@ -57,6 +57,8 @@ export interface PlatformRoutesOptions {
   readonly client: PrismaClient;
   readonly mfa?: MfaConfig;
   readonly smsEncryption?: SecretEncryptionConfig;
+  readonly centralSms?: { readonly sender: string; readonly otpConfigured: boolean; readonly fetchCredit: () => Promise<{ amount: number | undefined }> };
+  readonly centralSmsSettings?: { readonly status: () => Promise<{ configured: boolean; sender: string | null; otpConfigured: boolean; otpBodyId: number | null; canEdit: boolean }>; readonly save: (actor: string, input: { panelRef?: string; sender: string; otpBodyId: number | null }) => Promise<void>; readonly fetchCredit: () => Promise<{ amount: number | undefined }> };
 }
 
 type TokenPayload = {
@@ -319,6 +321,80 @@ function mapCustomer(row: CustomerRow): CustomerRow & { readonly state: string }
 export function platformRoutes(app: FastifyInstance, options: PlatformRoutesOptions): void {
   const { client, mfa } = options;
 
+  app.get('/platform/sms/central', async (request) => {
+    await requirePlatformSession(client, request);
+    if (options.centralSmsSettings) return options.centralSmsSettings.status();
+    return { configured: options.centralSms !== undefined && options.centralSms.sender !== '', sender: options.centralSms?.sender || null, otpConfigured: options.centralSms?.otpConfigured ?? false, otpBodyId: null, canEdit: false };
+  });
+
+  app.post('/platform/sms/central', async (request, reply) => {
+    const actor = await requirePlatformSession(client, request);
+    let sameOrigin = false;
+    try { const origin = new URL(request.headers.origin ?? ''); sameOrigin = ['http:', 'https:'].includes(origin.protocol) && origin.host === request.headers.host; } catch { /* reject */ }
+    if (!sameOrigin) throw new ValidationError('A same-origin request is required');
+    if (!options.centralSmsSettings) return reply.code(503).send({ error: { code: 'SMS_ENCRYPTION_UNAVAILABLE', message: 'کلید رمزنگاری پیامک در سرور تنظیم نشده است.' } });
+    const sender = field(request.body, 'sender');
+    const panelRef = field(request.body, 'panelRef');
+    const otpBodyId = field(request.body, 'otpBodyId');
+    if (typeof sender !== 'string' || !/^\d{5,20}$/.test(sender) || (otpBodyId !== null && (typeof otpBodyId !== 'number' || !Number.isSafeInteger(otpBodyId) || otpBodyId < 1 || otpBodyId > 2147483647)) || (panelRef !== undefined && (typeof panelRef !== 'string' || panelRef.length < 16 || panelRef.length > 512))) throw new ValidationError('Invalid SMS settings');
+    const status = await options.centralSmsSettings.status();
+    if (!panelRef && !status.configured) throw new ValidationError('SMS panel reference required');
+    await options.centralSmsSettings.save(actor.userId, { sender, otpBodyId, ...(typeof panelRef === 'string' ? { panelRef } : {}) });
+    return options.centralSmsSettings.status();
+  });
+
+  app.get('/platform/sms/templates', async (request) => {
+    await requirePlatformSession(client, request);
+    const templates = await client.$queryRaw<Array<{ event: string; bodyId: number | null }>>`SELECT event, body_id AS "bodyId" FROM public.central_sms_templates`;
+    return { templates };
+  });
+
+  app.post('/platform/sms/templates/batch', async (request) => {
+    const actor = await requirePlatformSession(client, request);
+    let sameOrigin = false;
+    try { const origin = new URL(request.headers.origin ?? ''); sameOrigin = ['http:', 'https:'].includes(origin.protocol) && origin.host === request.headers.host; } catch { /* reject */ }
+    if (!sameOrigin) throw new ValidationError('A same-origin request is required');
+    const templates = field(request.body, 'templates');
+    const allowed = ['OTP', 'BOOKING', 'RESCHEDULE', 'CANCELLATION', 'REMINDER', 'DOCTOR_BOOKING'];
+    if (!Array.isArray(templates) || templates.length !== allowed.length) throw new ValidationError('Invalid SMS templates');
+    const seen = new Set<string>();
+    for (const item of templates) {
+      const event = field(item, 'event');
+      const bodyId = field(item, 'bodyId');
+      if (typeof event !== 'string' || !allowed.includes(event) || seen.has(event) || (bodyId !== null && (typeof bodyId !== 'number' || !Number.isSafeInteger(bodyId) || bodyId < 1 || bodyId > 2147483647))) throw new ValidationError('Invalid SMS templates');
+      seen.add(event);
+    }
+    await client.$queryRaw`SELECT public.platform_save_sms_templates(${actor.userId}::uuid, ${JSON.stringify(templates)}::jsonb)`;
+    return { saved: true };
+  });
+
+  app.post('/platform/sms/templates', async (request) => {
+    const actor = await requirePlatformSession(client, request);
+    let sameOrigin = false;
+    try { const origin = new URL(request.headers.origin ?? ''); sameOrigin = ['http:', 'https:'].includes(origin.protocol) && origin.host === request.headers.host; } catch { /* reject */ }
+    if (!sameOrigin) throw new ValidationError('A same-origin request is required');
+    const event = field(request.body, 'event');
+    const bodyId = field(request.body, 'bodyId');
+    if (typeof event !== 'string' || !['BOOKING', 'RESCHEDULE', 'CANCELLATION', 'REMINDER'].includes(event) || (bodyId !== null && (typeof bodyId !== 'number' || !Number.isSafeInteger(bodyId) || bodyId < 1 || bodyId > 2147483647))) throw new ValidationError('Invalid SMS template');
+    await client.$queryRaw`SELECT public.platform_save_central_sms_template(${actor.userId}::uuid, ${event}, ${bodyId}::integer)`;
+    return { saved: true };
+  });
+
+  app.post('/platform/sms/central/check', async (request, reply) => {
+    await requirePlatformSession(client, request);
+    let sameOrigin = false;
+    try { const origin = new URL(request.headers.origin ?? ''); sameOrigin = ['http:', 'https:'].includes(origin.protocol) && origin.host === request.headers.host; } catch { /* reject */ }
+    if (!sameOrigin) throw new ValidationError('A same-origin request is required');
+    if (!options.centralSmsSettings && (!options.centralSms || !options.centralSms.sender)) return reply.code(503).send({ error: { code: 'SMS_UNAVAILABLE', message: 'پنل مرکزی تنظیم نشده است.' } });
+    try {
+      const credit = await (options.centralSmsSettings ?? options.centralSms!).fetchCredit();
+      if (credit.amount === undefined || !Number.isFinite(credit.amount)) throw new Error('Unexpected credit response');
+      return { connected: true, credit: credit.amount };
+    } catch {
+      return reply.code(503).send({ error: { code: 'SMS_UNAVAILABLE', message: 'بررسی اتصال پنل مرکزی انجام نشد.' } });
+    }
+  });
+
   app.post('/platform/auth/login', async (request, reply) => {
     if (mfa === undefined)
       return reply
@@ -467,7 +543,52 @@ export function platformRoutes(app: FastifyInstance, options: PlatformRoutesOpti
     await requirePlatformSession(client, request);
     const setting = await client.platformSetting.findUnique({ where: { id: 1 } });
     if (!setting) throw new NotFoundError('Trial settings not found');
-    return { trialDays: setting.trialDays };
+    return { trialDays: setting.trialDays, soloTrialDays: setting.soloTrialDays, clinicTrialDays: setting.clinicTrialDays };
+  });
+
+  app.get('/platform/settings/prices', async (request) => {
+    await requirePlatformSession(client, request);
+    const prices = await client.$queryRaw<Array<{ practiceType: string; durationMonths: number; priceTomans: number }>>`
+      SELECT "practiceType", "durationMonths", "priceTomans" FROM public.practice_prices WHERE "durationMonths" IN (3, 6, 12) ORDER BY "practiceType", "durationMonths"`;
+    return { prices };
+  });
+
+  app.post('/platform/settings/prices', async (request) => {
+    const actor = await requirePlatformSession(client, request);
+    let sameOrigin = false;
+    try { const origin = new URL(request.headers.origin ?? ''); sameOrigin = ['http:', 'https:'].includes(origin.protocol) && origin.host === request.headers.host; } catch { /* reject */ }
+    if (!sameOrigin) throw new ValidationError('A same-origin request is required');
+    const practiceType = field(request.body, 'practiceType');
+    const price = field(request.body, 'priceTomans');
+    const months = field(request.body, 'durationMonths');
+    if ((practiceType !== 'SOLO' && practiceType !== 'CLINIC') || typeof months !== 'number' || ![3, 6, 12].includes(months) || typeof price !== 'number' || !Number.isInteger(price) || price < 0 || price > 2_000_000_000) throw new ValidationError('Invalid price');
+    await client.$queryRaw`SELECT public.platform_set_practice_price(${actor.userId}::uuid, ${practiceType}, ${months}::integer, ${price}::integer)`;
+    return { ok: true };
+  });
+
+  app.post('/platform/settings/prices/batch', async (request) => {
+    const actor = await requirePlatformSession(client, request);
+    let sameOrigin = false;
+    try { const origin = new URL(request.headers.origin ?? ''); sameOrigin = ['http:', 'https:'].includes(origin.protocol) && origin.host === request.headers.host; } catch { /* reject */ }
+    if (!sameOrigin) throw new ValidationError('A same-origin request is required');
+    const practiceType = field(request.body, 'practiceType');
+    const prices = field(request.body, 'prices');
+    if ((practiceType !== 'SOLO' && practiceType !== 'CLINIC') || !Array.isArray(prices) || prices.length < 1 || prices.length > 3) throw new ValidationError('Invalid prices');
+    const seen = new Set<number>();
+    for (const item of prices) {
+      const months = field(item, 'durationMonths');
+      const price = field(item, 'priceTomans');
+      if (typeof months !== 'number' || ![3, 6, 12].includes(months) || seen.has(months) || typeof price !== 'number' || !Number.isInteger(price) || price < 0 || price > 2_000_000_000) throw new ValidationError('Invalid prices');
+      seen.add(months);
+    }
+    await client.$transaction(async (tx) => {
+      for (const item of prices) {
+        const months = field(item, 'durationMonths') as number;
+        const price = field(item, 'priceTomans') as number;
+        await tx.$queryRaw`SELECT public.platform_set_practice_price(${actor.userId}::uuid, ${practiceType}, ${months}::integer, ${price}::integer)`;
+      }
+    });
+    return { ok: true };
   });
 
   app.post('/platform/settings/trial', async (request) => {
@@ -477,7 +598,9 @@ export function platformRoutes(app: FastifyInstance, options: PlatformRoutesOpti
     if (!sameOrigin) throw new ValidationError('A same-origin request is required');
     const days = field(request.body, 'trialDays');
     if (typeof days !== 'number' || !Number.isInteger(days) || days < 1 || days > 365) throw new ValidationError('Trial duration must be between 1 and 365 days');
-    await client.$queryRaw`SELECT public.platform_set_trial_days(${actor.userId}::uuid, ${days}::integer)`;
+    const type = field(request.body, 'practiceType');
+    if (type !== 'SOLO' && type !== 'CLINIC') throw new ValidationError('Invalid practice type');
+    await client.$queryRaw`SELECT public.platform_set_practice_trial_days(${actor.userId}::uuid, ${type}, ${days}::integer)`;
     return { trialDays: days };
   });
 
@@ -621,18 +744,11 @@ export function platformRoutes(app: FastifyInstance, options: PlatformRoutesOpti
     return reply.send({ ok: true });
   });
 
+  // Account ownership must be established by the normal verified signup flow.
+  // The legacy admin endpoint created inaccessible users and ignored trial settings.
   app.post('/platform/accounts', async (request, reply) => {
-    const actor = await requirePlatformSession(client, request);
-    const body = request.body as AccountBody | undefined;
-    const name = validText(field(body, 'name'), 'NAME_REQUIRED');
-    const slug = validSlug(field(body, 'slug'));
-    const ownerName = validText(field(body, 'ownerName'), 'OWNER_NAME_REQUIRED');
-    const ownerMobile = validMobile(field(body, 'ownerMobile'));
-    const planTier = validTier(field(body, 'planTier') ?? 'FREE');
-    const rows = await client.$queryRaw<
-      Array<{ tenantId: string; ownerUserId: string }>
-    >`SELECT * FROM public.platform_create_tenant(${name}, ${slug}, ${ownerName}, ${ownerMobile}, ${planTier}, ${actor.userId}::uuid)`;
-    return reply.code(201).send({ account: rows[0] });
+    await requirePlatformSession(client, request);
+    return reply.code(410).send({ error: { code: 'USE_VERIFIED_SIGNUP', message: 'Create accounts through verified signup' } });
   });
 
   app.patch('/platform/accounts/:id', async (request, reply) => {

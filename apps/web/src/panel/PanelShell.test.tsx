@@ -32,6 +32,7 @@ beforeEach(() => {
 
 afterEach(() => {
   document.documentElement.dataset.theme = 'light';
+  vi.unstubAllGlobals();
 });
 
 describe('PanelShell navigation', () => {
@@ -63,7 +64,7 @@ describe('PanelShell navigation', () => {
       .getAllByRole('link')
       .map((link) => link.textContent);
 
-    expect(labels).toEqual(['داشبورد', 'نوبت‌ها', 'بیماران']);
+    expect(labels).toEqual(['داشبورد', 'نوبت‌ها', 'مراجعین']);
   });
 
   it('marks the section named by the hash as the current page', () => {
@@ -71,8 +72,8 @@ describe('PanelShell navigation', () => {
 
     renderShell({ role: 'OWNER' });
 
-    expect(screen.getByRole('heading', { name: 'بیماران' })).toBeDefined();
-    expect(within(sidebar()).getByRole('link', { name: 'بیماران' })).toHaveAttribute(
+    expect(screen.getByRole('heading', { name: 'مراجعین' })).toBeDefined();
+    expect(within(sidebar()).getByRole('link', { name: 'مراجعین' })).toHaveAttribute(
       'aria-current',
       'page',
     );
@@ -97,6 +98,17 @@ describe('PanelShell navigation', () => {
 });
 
 describe('PanelShell chrome', () => {
+  it('guides an owner with an expired trial to the subscription page', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve({ subscription: { status: 'TRIALING', currentPeriodEnd: '2020-01-01T00:00:00.000Z' } }),
+    })));
+    renderShell({ role: 'OWNER' });
+    fireEvent.click(await screen.findByRole('button', { name: 'مشاهده اشتراک' }));
+    expect(window.location.hash).toBe('#/checkout');
+    expect(screen.queryByText(/دوره آزمایشی یا اشتراک شما پایان یافته/)).toBeNull();
+  });
+
   it('starts collapsed and expands on the top-bar toggle', () => {
     renderShell({ role: 'OWNER' });
 

@@ -153,7 +153,8 @@ export async function registerTenant(
   const now = input.now ?? new Date();
   const settings = await client.platformSetting.findUnique({ where: { id: 1 } });
   if (!settings) throw new Error('Trial settings are missing');
-  const trialEnd = new Date(now.getTime() + settings.trialDays * 24 * 60 * 60 * 1000);
+  const trialDays = input.practiceType === 'CLINIC' ? settings.clinicTrialDays : settings.soloTrialDays;
+  const trialEnd = new Date(now.getTime() + trialDays * 24 * 60 * 60 * 1000);
 
   const user = await client.user.create({
     data: {

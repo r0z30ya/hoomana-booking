@@ -7,6 +7,7 @@ import { authRoutes } from './auth/auth-routes.js';
 import { platformRoutes, type PlatformRoutesOptions } from './platform/platform-routes.js';
 import { tenantAccountRoutes, type TenantAccountRoutesOptions } from './tenant/account-routes.js';
 import { schedulingRoutes, type SchedulingOptions } from './scheduling/routes.js';
+import { clientRoutes } from './clients/routes.js';
 
 export interface HealthChecks {
   readonly database: () => Promise<HealthProbeResult>;
@@ -22,6 +23,7 @@ export interface AuthOptions {
   readonly clientIp?: (request: FastifyRequest) => string;
   /** Injected SMS sender; without it a code is only revealed outside production. */
   readonly otpSender?: ((mobile: string, code: string) => Promise<void>) | undefined;
+  readonly otpAvailable?: (() => Promise<boolean>) | undefined;
   /** True outside production: the OTP comes back in the response for local testing. */
   readonly exposeOtpInResponse?: boolean | undefined;
 }
@@ -96,11 +98,13 @@ export function buildServer(options: ServerOptions) {
   if (options.auth !== undefined) {
     // Registered synchronously on purpose: Fastify loads plugins on ready(), which
     // `inject()` and `listen()` trigger, so buildServer stays a plain factory.
+    void app.register(clientRoutes, { client: options.auth.client });
     void app.register(authRoutes, {
       client: options.auth.client,
       cookieSecure: options.auth.cookieSecure,
       clientIp: options.auth.clientIp ?? ((request) => request.ip),
       ...(options.auth.otpSender === undefined ? {} : { otpSender: options.auth.otpSender }),
+      ...(options.auth.otpAvailable === undefined ? {} : { otpAvailable: options.auth.otpAvailable }),
       ...(options.auth.exposeOtpInResponse === undefined
         ? {}
         : { exposeOtpInResponse: options.auth.exposeOtpInResponse }),
