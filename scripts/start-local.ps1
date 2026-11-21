@@ -55,6 +55,29 @@ Write-Host 'Building project...'
 npm run build
 if ($LASTEXITCODE -ne 0) { Stop-WithMessage 'Build failed. See the output above.' }
 
+if (-not (Test-Path 'hbook-v2/.env')) {
+    Stop-WithMessage 'Missing hbook-v2/.env. Configure the booking engine environment before starting.'
+}
+if (-not (Test-Path 'hbook-v2/node_modules/.bin/tsx.cmd')) {
+    Write-Host 'Installing booking engine dependencies...'
+    npm ci --prefix hbook-v2
+    if ($LASTEXITCODE -ne 0) { Stop-WithMessage 'Booking engine dependency installation failed.' }
+}
+Write-Host 'Applying booking engine migrations...'
+npm run db:migrate --prefix hbook-v2
+if ($LASTEXITCODE -ne 0) { Stop-WithMessage 'Booking engine migration failed. Check the output above.' }
+
+if (-not (Test-Url 'http://127.0.0.1:3105/health')) {
+    if (Test-Listening 3105) { Stop-WithMessage 'Port 3105 is in use by another process.' }
+    Start-Process -FilePath 'cmd.exe' -ArgumentList '/k', 'npm run dev' -WorkingDirectory (Join-Path (Get-Location).Path 'hbook-v2')
+}
+$engineReady = $false
+for ($i = 0; $i -lt 30; $i++) {
+    if (Test-Url 'http://127.0.0.1:3105/health') { $engineReady = $true; break }
+    Start-Sleep -Seconds 1
+}
+if (-not $engineReady) { Stop-WithMessage 'Booking engine did not start. Check the hbook-v2 window for errors.' }
+
 if (-not (Test-Url 'http://127.0.0.1:3001/health')) {
     if (Test-Listening 3001) { Stop-WithMessage 'Port 3001 is in use by another process.' }
     Start-Process -FilePath 'cmd.exe' -ArgumentList '/k', 'npm run dev --workspace @hmn/api' -WorkingDirectory (Get-Location).Path
@@ -77,6 +100,7 @@ for ($i = 0; $i -lt 30; $i++) {
 }
 if (-not $webReady) { Stop-WithMessage 'Web app did not start. Check the web window for errors.' }
 Write-Host '`nProject is running at http://admin.localhost:3000' -ForegroundColor Green
-Write-Host 'Keep the API and web windows open. Close them to stop the app.'
+Write-Host 'Booking engine: http://127.0.0.1:3105/health' -ForegroundColor Green
+Write-Host 'Keep the booking engine, API and web windows open. Close them to stop the app.'
 Start-Process 'http://admin.localhost:3000'
 
